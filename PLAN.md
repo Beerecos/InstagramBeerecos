@@ -40,7 +40,9 @@ Choix structurants :
 - **Un seul dépôt, une seule app Next.js**, un agent eve racine `agent/` (BEE MARKETING ORCHESTRATOR) avec 4 subagents déclarés (Content Director, Video Director, Sales Concierge, Growth Analyst). Pas d'agent quand une fonction déterministe suffit (matching, scoring, quality gate = code testé, appelé comme tool).
 - **Validation humaine garantie côté backend** : table `approval_requests` + politiques d'approbation des tools eve (`always()` sur publication, DM sensible, invitation, budget, Autopilot). L'UI ne fait qu'afficher.
 - **Adapters partout** : le métier ne connaît que des interfaces (`src/providers/types.ts`).
-- **Capability matrix** par provider, découverte dynamique (Metricool MCP : on liste les tools réellement exposés avant de les appeler).
+- **Capability matrix** par provider, découverte dynamique quand le fournisseur le permet.
+- **Intégrations directes, sans abonnement tiers** (décision du 19/10/2026) : API officielle Instagram (Meta) pour publier, lire les statistiques et répondre aux commentaires par DM ; API officielle LinkedIn pour publier sur le profil de Cédric et la page BeeRecos. Metricool et ManyChat ne sont plus prévus (adapters possibles plus tard grâce aux interfaces).
+- **Programmation** : ni Instagram ni LinkedIn ne programment côté API ; `PUBLISHING_WORKFLOW` (Vercel Workflow) publie à l'heure prévue, avec idempotence et statut confirmé par le réseau.
 
 ## Arborescence cible
 
@@ -56,11 +58,11 @@ agent/                      # eve : orchestrateur
 src/
   app/(app)/…               # Accueil, Créer, Studio, Médias, Calendrier, Conversations, Leads, Clubs, Analytics, Stratégie IA, Réglages, Système
   app/login, app/auth/…     # Supabase Auth (lien magique)
-  app/api/webhooks/…        # Instagram / ManyChat / Metricool (signature + timestamp + anti-rejeu + idempotence)
+  app/api/webhooks/…        # Instagram (signature + timestamp + anti-rejeu + idempotence)
   components/ui/            # design system
   components/shell/         # navigation, barre « Demander à BeeMarketing »
   domain/                   # types et règles métier pures (statuts, rôles, scoring, matching…)
-  providers/                # interfaces + adapters (Veo, Runway, Metricool, ManyChat, Meta, Anthropic…)
+  providers/                # interfaces + adapters (Meta Instagram, LinkedIn, Veo, Runway, Anthropic…)
   server/                   # DAL, services, workflows (Vercel Workflow), audit, budgets
   lib/                      # env (zod), supabase, marque
 supabase/migrations/        # schéma versionné, RLS sur toutes les tables
@@ -92,9 +94,9 @@ Détail et politiques RLS : `docs/DATABASE.md`.
 | 1 | Next.js, design system, Supabase (schéma fondation + RLS + Auth), layout, navigation, réglages intégrations, validation env | ✅ (voir résumé) |
 | 2 | Moteur éditorial : stratégie (pondérations), idées, scripts, bibliothèque, calendrier drag & drop, agent eve + premiers tools, barre « Demander à BeeMarketing » branchée | ⏭ suivante |
 | 3 | Studio vidéo : upload, transcription, détection de clips, génération IA (Veo/Runway), hybride, rendu FFmpeg, recherche sémantique | |
-| 4 | Publication : Metricool MCP (découverte des capacités), planning, approvals, analytics | |
-| 5 | Ventes Instagram : commentaires → DM (ManyChat), leads, qualification, inbox, handoff | |
-| 6 | Clubs : clubs, réunions, matching, invitations, rappels, suivi post-visite | |
+| 4 | Publication : adapters Instagram et LinkedIn directs, programmation par workflow, approvals, statistiques des deux réseaux, déclinaison d'un contenu par réseau | |
+| 5 | Ventes Instagram : commentaires → DM (API Meta directe, webhook signé), leads, qualification, inbox, handoff | |
+| 6 | Clubs : clubs, réunions, matching, invitations, rappels, suivi post-visite, **page d'invitation publique** (CTA LinkedIn et lien en bio Instagram) | |
 | 7 | Croissance : attribution, dashboard business, insights avec seuils statistiques | |
 | 8 | Durcissement : sécurité, evals A→G, E2E complets, performance, page Système | |
 

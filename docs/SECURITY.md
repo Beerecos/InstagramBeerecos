@@ -12,7 +12,7 @@
 - **Webhook Instagram** : signature HMAC-SHA256 vérifiée en temps constant, déduplication, 503 propre si non configuré.
 
 ## À venir
-- Webhooks : horodatage + protection anti-rejeu + idempotence en base (phase 5) ; ManyChat, Metricool.
+- Webhooks : horodatage + protection anti-rejeu + idempotence en base (phase 5) pour les webhooks Instagram.
 - `approval_requests` garanties par les workflows (phase 4).
 - Rétention configurable, export/suppression/anonymisation d'une personne, historique de consentement (phase 5).
 - Logs sans email/téléphone/contenu privé ; audit de toute publication, suppression, DM automatique, changement de lead, invitation, Autopilot.

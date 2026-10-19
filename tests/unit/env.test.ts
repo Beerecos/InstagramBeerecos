@@ -19,6 +19,12 @@ describe("validation de l'environnement", () => {
     expect(() => parseServerEnv({ NEXT_PUBLIC_SUPABASE_URL: SUPA.NEXT_PUBLIC_SUPABASE_URL })).toThrow(/vont ensemble/);
     expect(() => parseServerEnv({ ...SUPA, SUPABASE_SECRET_KEY: "sb_publishable_oops" })).toThrow(/clé secrète/);
   });
+  it("valide les identifiants LinkedIn", () => {
+    expect(parseServerEnv({ LINKEDIN_ORGANIZATION_URN: "urn:li:organization:123", LINKEDIN_API_VERSION: "202610" }).LINKEDIN_API_VERSION).toBe("202610");
+    expect(() => parseServerEnv({ LINKEDIN_ORGANIZATION_URN: "BeeRecos" })).toThrow(EnvError);
+    expect(() => parseServerEnv({ LINKEDIN_API_VERSION: "2026-10" })).toThrow(EnvError);
+  });
+
   it("rejette une URL invalide", () => {
     expect(() => parseServerEnv({ NEXT_PUBLIC_SUPABASE_URL: "pas-une-url", NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "k" })).toThrow(EnvError);
   });

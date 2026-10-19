@@ -1,6 +1,6 @@
 ---
 name: beerecos-publishing
-description: Use when choosing the date, time, caption and CTA for a BeeRecos content item and scheduling, updating or cancelling it through the social publishing provider, always respecting approvals and the autonomy mode.
+description: Use when choosing the date, time, caption and CTA for a BeeRecos content item and scheduling, updating or cancelling it on Instagram or LinkedIn, always respecting approvals and the autonomy mode.
 ---
 
 # Publication BeeRecos
@@ -13,7 +13,8 @@ description: Use when choosing the date, time, caption and CTA for a BeeRecos co
      Hors limites → `request_approval`.
    Le tool `schedule_social_post` est protégé côté serveur : ne pas tenter de le contourner.
 3. Horaire : `get_best_posting_times` si le provider le fournit ; sinon créneaux par défaut des réglages.
-4. Vérifier la capability matrix du provider (Reels, cover, première ligne, etc.) avant d'appeler.
+4. Vérifier la capability matrix du réseau avant d'appeler. Décliner le contenu par réseau (`references/reseaux.md`) :
+   jamais le même texte copié-collé sur Instagram et LinkedIn.
 5. Après appel : un contenu n'est `PUBLISHED` que sur confirmation du provider (identifiant de post).
    Échec → statut `FAILED` + raison lisible dans Système / Runs. Jamais « supposé publié ».
 6. Relier le post au contenu (`content_id → publication_id`) et au CTA pour l'attribution.

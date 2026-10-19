@@ -56,7 +56,7 @@ test("parcours Créer : trois modes", async ({ page }) => {
 test("intégrations : aucune clé exposée, statut « À configurer »", async ({ page }) => {
   await page.goto("/reglages/integrations");
   await expect(page.getByText("À configurer").first()).toBeVisible();
-  await expect(page.locator("article")).toHaveCount(8);
+  await expect(page.locator("article")).toHaveCount(7);
 });
 
 test("webhook Instagram : vérification refusée sans jeton", async ({ request }) => {

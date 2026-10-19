@@ -62,12 +62,17 @@ export type SocialCapability =
   | "analytics"
   | "bestTimes"
   | "comments";
-export type SocialAccount = { id: string; network: "instagram"; handle: string };
+export type SocialNetwork = "instagram" | "linkedin";
+export type SocialAccount = { id: string; network: SocialNetwork; handle: string; kind: "business" | "member" | "organization" };
 export type ScheduledPost = { id: string; accountId: string; scheduledAt: string; caption: string; mediaUrls: string[]; status: "scheduled" | "published" | "failed" | "cancelled"; externalPostId?: string };
 export interface SocialPublishingProvider extends ProviderBase<SocialCapability> {
   getAccounts(): Promise<SocialAccount[]>;
   getScheduledPosts(accountId: string): Promise<ScheduledPost[]>;
-  schedulePost(input: { idempotencyKey: string; accountId: string; scheduledAt: string; caption: string; mediaUrls: string[]; kind: "reel" | "post" | "story" }): Promise<ScheduledPost>;
+  /**
+   * Les API directes (Instagram, LinkedIn) publient immédiatement : la programmation est assurée par
+   * PUBLISHING_WORKFLOW (Vercel Workflow), qui appelle `schedulePost` à l'heure prévue avec `scheduledAt` = maintenant.
+   */
+  schedulePost(input: { idempotencyKey: string; accountId: string; scheduledAt: string; caption: string; mediaUrls: string[]; kind: "reel" | "post" | "story" | "video" | "image" | "text" | "document" }): Promise<ScheduledPost>;
   updateScheduledPost(id: string, patch: Partial<Pick<ScheduledPost, "scheduledAt" | "caption">>): Promise<ScheduledPost>;
   cancelScheduledPost(id: string): Promise<void>;
   fetchAnalytics(input: { accountId: string; from: string; to: string }): Promise<Array<{ externalPostId: string; metrics: Record<string, number> }>>;

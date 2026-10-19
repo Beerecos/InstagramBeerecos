@@ -25,11 +25,21 @@ export const serverEnvSchema = clientEnvSchema.extend({
   ANTHROPIC_API_KEY: optionalString,
   AI_GATEWAY_API_KEY: optionalString,
 
-  METRICOOL_MCP_URL: z.url().optional(),
-  METRICOOL_API_TOKEN: optionalString,
-
-  MANYCHAT_API_TOKEN: optionalString,
-  MANYCHAT_WEBHOOK_SECRET: optionalString,
+  // LinkedIn (API officielle) : profil membre (w_member_social) et page entreprise (Community Management API)
+  LINKEDIN_CLIENT_ID: optionalString,
+  LINKEDIN_CLIENT_SECRET: optionalString,
+  LINKEDIN_ORGANIZATION_URN: z
+    .string()
+    .trim()
+    .regex(/^urn:li:organization:\d+$/, "format attendu : urn:li:organization:<id>")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  LINKEDIN_API_VERSION: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "format attendu : AAAAMM")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 
   IG_ACCESS_TOKEN: optionalString,
   IG_USER_ID: optionalString,

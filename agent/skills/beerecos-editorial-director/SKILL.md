@@ -14,8 +14,10 @@ Charge d'abord `beerecos-brand`.
 3. Réutiliser avant de produire : chercher des rushs studio (`search_media`) avant de proposer une vidéo IA.
 4. Pour chaque idée, remplir la fiche de `references/fiche-contenu.md` (pilier, sous-thème, objectif,
    audience, format, hook, tension, enseignement, preuve, CTA, funnel, date recommandée).
-5. Équilibrer : respecter la pondération à ±10 points sur la période ; au moins un contenu par semaine
+5. Réseaux : décider pour chaque idée Instagram, LinkedIn ou les deux, avec une déclinaison par réseau
+   (`beerecos-publishing/references/reseaux.md`). Le fichier « Beerecos_20_Posts_LinkedIn_Club_Affaires » sert de banque de sujets, jamais republié tel quel.
+6. Équilibrer : respecter la pondération à ±10 points sur la période ; au moins un contenu par semaine
    relié explicitement à la vie des clubs.
-6. Créer via `create_content_idea` (statut IDEA). Ne jamais programmer : c'est `beerecos-publishing`.
+7. Créer via `create_content_idea` (statut IDEA). Ne jamais programmer : c'est `beerecos-publishing`.
 
 Formats disponibles et quand les utiliser : `references/formats.md`. Audiences : `references/audiences.md`.

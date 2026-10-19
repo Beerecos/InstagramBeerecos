@@ -59,7 +59,7 @@ async function Dashboard() {
           <MetricCard label="Adhésions" value={snap.kpis.memberships} />
         </div>
         {!snap.connected ? (
-          <p className="mt-2 text-xs text-ink-3">« — » : donnée pas encore disponible. Les chiffres apparaîtront une fois Instagram et Metricool connectés.</p>
+          <p className="mt-2 text-xs text-ink-3">« — » : donnée pas encore disponible. Les chiffres apparaîtront une fois Instagram et LinkedIn connectés.</p>
         ) : null}
       </section>
 

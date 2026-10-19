@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/shell/page-header";
 export const metadata: Metadata = { title: "Réglages" };
 
 const SECTIONS = [
-  { href: "/reglages/integrations", icon: Plug, title: "Intégrations", text: "Instagram, Metricool, ManyChat, Claude, Veo, Runway, Google Drive, Supabase.", ready: true },
+  { href: "/reglages/integrations", icon: Plug, title: "Intégrations", text: "Instagram, LinkedIn, Claude, Veo, Runway, Google Drive, Supabase.", ready: true },
   { href: "/reglages", icon: Gauge, title: "Autonomie & budgets", text: "Manuel, Validation ou Autopilot (désactivé par défaut), limites et budgets IA.", ready: false },
   { href: "/reglages", icon: Palette, title: "Marque", text: "Import de la charte et des logos officiels BeeRecos.", ready: false },
   { href: "/reglages", icon: Users, title: "Équipe & rôles", text: "Administrateur, responsable contenu, responsable de club, commercial, lecteur.", ready: false },

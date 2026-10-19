@@ -15,8 +15,8 @@ Next.js sur Vercel ──────────────┬─────�
                                                 ▼
              Supabase (Postgres + RLS, Auth, Storage, Realtime, pgvector)
                                                 │
-             Providers (adapters) : Anthropic/AI Gateway · Veo · Runway · Metricool MCP ·
-             ManyChat · Meta Instagram · Google Drive · FFmpeg/Hyperframes
+             Providers (adapters) : Anthropic/AI Gateway · Veo · Runway · Meta Instagram (direct) ·
+             LinkedIn (direct) · Google Drive · FFmpeg/Hyperframes
 ```
 
 ## Identité

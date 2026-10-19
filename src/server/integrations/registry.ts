@@ -2,7 +2,7 @@ import "server-only";
 import type { ServerEnv } from "@/lib/env/schema";
 import type { ConnectionStatus } from "@/providers/types";
 
-export type IntegrationId = "instagram" | "metricool" | "manychat" | "claude" | "veo" | "runway" | "google_drive" | "supabase";
+export type IntegrationId = "instagram" | "linkedin" | "claude" | "veo" | "runway" | "google_drive" | "supabase";
 
 export type IntegrationCard = {
   id: IntegrationId;
@@ -20,9 +20,8 @@ export const INTEGRATIONS: IntegrationCard[] = [
   { id: "google_drive", name: "Google Drive", role: "Import des contenus et médias BeeRecos existants", requiredEnv: ["GOOGLE_DRIVE_CLIENT_ID", "GOOGLE_DRIVE_CLIENT_SECRET"], permissions: ["Lecture des fichiers choisis"], phase: 2 },
   { id: "veo", name: "Google Veo", role: "Génération de scènes vidéo IA", requiredEnv: ["GOOGLE_VEO_API_KEY"], permissions: ["Génération vidéo (payant)"], phase: 3 },
   { id: "runway", name: "Runway", role: "Génération et transformation vidéo IA", requiredEnv: ["RUNWAY_API_KEY"], permissions: ["Génération vidéo (payant)"], phase: 3 },
-  { id: "metricool", name: "Metricool", role: "Programmation des publications et statistiques", requiredEnv: ["METRICOOL_MCP_URL", "METRICOOL_API_TOKEN"], permissions: ["Programmer, modifier, annuler", "Lire les statistiques"], phase: 4 },
-  { id: "manychat", name: "ManyChat", role: "Commentaires → DM Instagram", requiredEnv: ["MANYCHAT_API_TOKEN", "MANYCHAT_WEBHOOK_SECRET"], permissions: ["Envoyer des messages en réponse", "Recevoir les événements"], phase: 5 },
-  { id: "instagram", name: "Instagram (Meta)", role: "Connexion directe au compte (option)", requiredEnv: ["IG_ACCESS_TOKEN", "IG_USER_ID", "IG_APP_SECRET"], permissions: ["instagram_business_basic", "instagram_business_content_publish", "instagram_business_manage_comments", "instagram_business_manage_messages"], phase: 5 },
+  { id: "instagram", name: "Instagram", role: "Publication des Reels et posts, statistiques, commentaires → DM (API officielle Meta, sans abonnement)", requiredEnv: ["IG_ACCESS_TOKEN", "IG_USER_ID", "IG_APP_SECRET", "IG_VERIFY_TOKEN"], permissions: ["instagram_business_basic", "instagram_business_content_publish", "instagram_business_manage_comments", "instagram_business_manage_messages"], phase: 4 },
+  { id: "linkedin", name: "LinkedIn", role: "Publication sur ton profil et la page BeeRecos, statistiques (API officielle)", requiredEnv: ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"], permissions: ["w_member_social (profil)", "w_organization_social et r_organization_social (page, après validation LinkedIn)"], phase: 4 },
 ];
 
 export type IntegrationState = IntegrationCard & { status: ConnectionStatus; missing: string[]; verified: boolean };

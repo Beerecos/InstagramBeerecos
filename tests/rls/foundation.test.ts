@@ -87,3 +87,11 @@ describe("RLS fondation", () => {
     void orgB;
   });
 });
+
+describe("fournisseurs directs", () => {
+  it("accepte LinkedIn et refuse un fournisseur inconnu", async () => {
+    const orgId = (await db.query<{ id: string }>("select id from public.organizations where slug = 'beerecos-lyon'")).rows[0].id;
+    await asUser(db, ALICE, () => db.query("insert into public.provider_connections (organization_id, provider) values ($1, 'linkedin')", [orgId]));
+    await expect(asUser(db, ALICE, () => db.query("insert into public.provider_connections (organization_id, provider) values ($1, 'tiktok')", [orgId]))).rejects.toThrow(/check constraint/);
+  });
+});
