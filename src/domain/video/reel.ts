@@ -51,6 +51,10 @@ function theme(kind: ReelSpec["scenes"][number]["kind"], index: number) {
   return kind === "cta" || index % 2 === 1 ? "blue" : "white";
 }
 
+/** Logo BeeRecos version principale : ratio du fichier officiel (176,152 × 188,103). */
+export const LOGO_WIDTH = 220;
+export const LOGO_HEIGHT = Math.round((LOGO_WIDTH * 188.103) / 176.152);
+
 /** Largeur utile entre les marges de sécurité (px). */
 const SAFE_WIDTH = REEL_WIDTH - 90 - 170;
 
@@ -91,7 +95,8 @@ export function buildReelComposition(input: ReelSpec, opts: { assetBase: string;
         `          <h1 id="${id}-title" class="${scene.kind}" style="font-size: ${titleSize(scene)}px">${escapeHtml(scene.text)}</h1>`,
         scene.detail ? `          <p id="${id}-detail" class="detail">${escapeHtml(scene.detail)}</p>` : "",
         items.length ? `          <ul id="${id}-list">${items.map((it, j) => `<li id="${id}-i${j}" style="font-size: ${fitFontSize(it, 52, 0.66, 32)}px">${escapeHtml(it)}</li>`).join("")}</ul>` : "",
-        scene.kind === "cta" ? `          <p id="${id}-brand" class="brand">BeeRecos</p>` : "",
+        // Logo officiel (brandguide p. 9), blanc sur bleu, ≥ 150 px, jamais déformé : seule son opacité est animée.
+        scene.kind === "cta" ? `          <img id="${id}-brand" class="brand" src="${base}/brand/beerecos-logo-white.svg" alt="BeeRecos" width="${LOGO_WIDTH}" height="${LOGO_HEIGHT}" />` : "",
         `        </div>`,
         `      </section>`,
       ]
@@ -133,7 +138,8 @@ export function buildReelComposition(input: ReelSpec, opts: { assetBase: string;
       li { font-weight: 600; padding-left: 44px; position: relative; }
       li::before { content: ""; position: absolute; left: 0; top: 24px; width: 18px; height: 18px; border-radius: 50%; background: ${accent}; }
       .keyword { margin: 0; align-self: flex-start; padding: 18px 44px; border-radius: 28px; background: #ffffff; color: #2851FF; font-size: 120px; font-weight: 700; letter-spacing: 4px; }
-      .brand { margin: 0; font-size: 48px; font-weight: 600; }
+      /* Zone de sécurité du logo : marge libre d'1/6 de sa largeur (brandguide p. 13). */
+      .brand { display: block; margin: ${Math.round(LOGO_WIDTH / 6)}px 0 0; width: ${LOGO_WIDTH}px; height: ${LOGO_HEIGHT}px; }
     </style>
   </head>
   <body>

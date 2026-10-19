@@ -12,7 +12,8 @@ Typographie : Poppins — grands mots en Light/Regular, mots-clés en SemiBold/B
 Formes : uniquement celles de la charte (cercle, hexagone arrondi, carré, carré arrondi, formes
 organiques arrondies en traits fins blancs) ; masques d'image arrondis.
 Mouvements : expo et ease-in-out, révélations masquées, passage du flou au net ; le hook (0–3 s) est le plus fort.
-Logo : fichiers officiels uniquement (public/brand/), jamais animé par déformation, rotation ou découpage.
+Logo : fichiers officiels uniquement (public/brand/beerecos-logo-*.svg), ≥ 150 px, marge libre 1/6 de sa largeur,
+seule l'opacité s'anime ; jamais déformé, tourné, découpé, ombré ni placé dans une forme.
 Interdit : rebonds, flashs, couleurs fluo hors charte, effets « gourou », personne détourée sur faux fond,
 logo modifié, foule « membres » générée présentée comme réelle.
 Format : 1080×1920, 60 i/s, sous-titres Poppins blanc ou noir selon le fond, hors des 20 % du bas.

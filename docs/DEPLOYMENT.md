@@ -12,7 +12,7 @@
 | # | Action (une seule instruction) | Débloque |
 |---|---|---|
 | 1 | Créer un projet Supabase et m'envoyer « OK Supabase » — je peux ensuite appliquer les migrations via l'intégration Supabase connectée à cette session. | Connexion, données (phase 1) |
-| 2 | ✅ Fait — charte BeeRecos 2026 et logo BeeMarketing intégrés. Si possible, fournir le logo en SVG (vectoriel) pour une netteté parfaite. | Design aux couleurs officielles |
+| 2 | ✅ Fait — charte BeeRecos 2026, logo BeeMarketing et logos officiels BeeRecos en SVG (extraits du brandguide) intégrés. Reste : logo BeeMarketing complet en SVG. | Design aux couleurs officielles |
 | 3 | Fournir la liste des clubs (nom, ville, adresse, jours/heures de réunion, responsable, places visiteurs) en CSV ou Google Sheet. | Matching et invitations (phase 6) |
 | 4 | Confirmer s'il existe des règles d'exclusivité par profession dans les clubs (oui/non, lesquelles). | Matching (phase 6) |
 | 5 | Créer une clé API Anthropic (console.anthropic.com) et l'ajouter dans Vercel sous `ANTHROPIC_API_KEY`. | Orchestrateur (phase 2) |

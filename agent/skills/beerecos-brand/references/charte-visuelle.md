@@ -20,6 +20,17 @@ vert = croissance ; violet = imagination et créativité. Peu de couleurs à la 
 ## Typographie
 Poppins : Thin, Regular, SemiBold, Bold. Grands titres en Regular/Light, accents en SemiBold/Bold.
 
+## Logo — fichiers officiels (SVG extraits sans modification du brandguide 2026)
+| Fichier (`public/brand/`) | Version | Usage |
+|---|---|---|
+| `beerecos-logo-blue.svg` | principale, bleue (p. 9) | fonds blancs |
+| `beerecos-logo-white.svg` | principale, blanche (p. 9) | fonds bleus, noirs, violets (fin des Reels) |
+| `beerecos-logo-horizontal-blue.svg` | secondaire horizontale (p. 10) | bandeaux, en-têtes clairs |
+| `beerecos-logo-horizontal-white.svg` | secondaire horizontale (p. 10) | bandeaux sur bleu |
+
+Zone de sécurité : marge libre d'environ 1/6 de la largeur du logo tout autour (grille p. 13).
+En vidéo, seule l'opacité du logo s'anime (apparition en fondu).
+
 ## Logo — interdits
 Ajouter un contour ou une ombre ; poser sur un fond chargé qui le rend illisible ; déformer ;
 modifier les proportions ou l'espace symbole/nom ; bichromie ou autres couleurs ; rotation ;

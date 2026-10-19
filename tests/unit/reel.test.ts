@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildReelComposition, DEMO_REEL, escapeHtml, fitFontSize, reelDuration, ReelSpecSchema, type ReelSpec } from "@/domain/video/reel";
+import { buildReelComposition, DEMO_REEL, LOGO_WIDTH, escapeHtml, fitFontSize, reelDuration, ReelSpecSchema, type ReelSpec } from "@/domain/video/reel";
 import { MISSION_TEMPLATES } from "@/domain/missions/templates";
 import type { AIProvider } from "@/providers/ai/types";
 import { advanceMission } from "@/server/missions/engine";
@@ -26,6 +26,13 @@ describe("Reel motion design (Hyperframes)", () => {
     expect(html()).toContain("https://app.test/hyperframes/gsap-3.14.2.min.js");
     expect(html()).not.toContain("hyperframe.runtime");
     expect(html(DEMO_REEL, true)).toContain("https://app.test/hyperframes/hyperframe.runtime-0.8.126.iife.js");
+  });
+
+  it("termine sur le logo officiel BeeRecos, à au moins 150 px de large (brandguide)", () => {
+    const out = html();
+    expect(out).toContain('src="https://app.test/hyperframes/brand/beerecos-logo-white.svg"');
+    expect(LOGO_WIDTH).toBeGreaterThanOrEqual(150);
+    expect(out).not.toMatch(/beerecos-logo[^"]*"[^>]*style="[^"]*(rotate|skew|scale)/);
   });
 
   it("échappe tout texte : aucune balise ni script ne peut être injecté", () => {

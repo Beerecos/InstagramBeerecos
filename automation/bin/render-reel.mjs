@@ -19,9 +19,10 @@ const name = basename(input).replace(/\.html?$/i, "");
 const project = join(root, "projets", name);
 mkdirSync(project, { recursive: true });
 
-// Ressources locales (polices Poppins, GSAP) à la place des URL de l'application.
+// Ressources locales (polices Poppins, GSAP, logo officiel BeeRecos) à la place des URL de l'application.
 cpSync(join(root, "public/hyperframes/fonts"), join(project, "fonts"), { recursive: true });
 cpSync(join(root, "public/hyperframes/gsap-3.14.2.min.js"), join(project, "gsap-3.14.2.min.js"));
+cpSync(join(root, "public/hyperframes/brand"), join(project, "brand"), { recursive: true });
 const html = readFileSync(input, "utf8").replace(/https?:\/\/[^"']+\/hyperframes\//g, "./");
 writeFileSync(join(project, "index.html"), html);
 
