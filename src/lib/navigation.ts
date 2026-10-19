@@ -6,6 +6,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/missions", label: "Missions", icon: "target", mobile: true },
   { href: "/approvals", label: "Validations", icon: "check", mobile: true },
   { href: "/team", label: "Équipe IA", icon: "team" },
+  { href: "/watchdog", label: "Chien de garde", icon: "shield" },
   { href: "/studio", label: "Studio", icon: "layers" },
   { href: "/video", label: "Vidéo", icon: "clapperboard" },
   { href: "/calendar", label: "Calendrier", icon: "calendar" },

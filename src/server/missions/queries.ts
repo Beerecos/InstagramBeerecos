@@ -1,5 +1,5 @@
 import "server-only";
-import { AGENT_KEYS, type AgentKey, type Deliverable, type MissionTask } from "@/domain/missions/types";
+import { AGENT_KEYS, type AgentKey, type Deliverable, type MissionTask, type WorkerAgentKey } from "@/domain/missions/types";
 import { progress } from "@/domain/missions/graph";
 import { userStore } from "./service";
 
@@ -22,7 +22,7 @@ export async function getMissionWorkspace(id: string) {
 }
 
 export type AgentState = {
-  agent: AgentKey;
+  agent: WorkerAgentKey;
   state: "working" | "waiting_validation" | "blocked" | "idle";
   current: (MissionTask & { missionTitle: string; isDemo: boolean }) | null;
   done: number;
@@ -33,7 +33,7 @@ export type AgentState = {
 export async function getTeam(): Promise<AgentState[]> {
   const { store, orgId } = await userStore();
   const [tasks, activity] = await Promise.all([store.listTasks(orgId), store.listActivity(orgId, { limit: 300 })]);
-  return AGENT_KEYS.filter((k) => k !== "queen_bee").map((agent) => {
+  return AGENT_KEYS.filter((k): k is WorkerAgentKey => k !== "queen_bee" && k !== "watchdog").map((agent) => {
     const own = tasks.filter((t) => t.agent === agent);
     const pick = (s: MissionTask["status"][]) => own.find((t) => s.includes(t.status)) ?? null;
     const working = pick(["in_progress", "analysis"]);

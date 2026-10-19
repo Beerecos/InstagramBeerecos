@@ -1,6 +1,7 @@
 import { AGENTS, CAPABILITY_LABELS } from "@/domain/missions/agents";
 import { brandIssues } from "@/domain/missions/brand-check";
 import { deriveMissionStatus, readyTasks } from "@/domain/missions/graph";
+import { WATCHDOG_PAUSE_PREFIX } from "@/domain/missions/watchdog";
 import { AgentOutputSchema } from "@/domain/missions/schema";
 import type { AgentOutput, BrandMemory, Capability, Mission, MissionTask } from "@/domain/missions/types";
 import { PILLAR_LABELS } from "@/domain/content";
@@ -36,6 +37,7 @@ export async function advanceMission(missionId: string, deps: EngineDeps): Promi
 
     let progressed = false;
     for (const task of readyTasks(tasks)) {
+      if (task.waitingReason?.startsWith(WATCHDOG_PAUSE_PREFIX)) continue; // pause posée par le Watchdog
       const missing = task.needs.filter((c) => !capabilities.has(c) || (c === "llm" && !deps.ai));
       if (missing.length > 0) {
         const reason = `Connexion requise : ${missing.map((c) => CAPABILITY_LABELS[c]).join(", ")}.`;

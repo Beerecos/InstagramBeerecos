@@ -13,8 +13,12 @@ export const AGENT_KEYS = [
   "lead_agent",
   "analytics_agent",
   "brand_guardian",
+  "watchdog",
 ] as const;
 export type AgentKey = (typeof AGENT_KEYS)[number];
+/** Agents qui exécutent des tâches (Queen Bee orchestre, le Watchdog supervise). */
+export type WorkerAgentKey = Exclude<AgentKey, "queen_bee" | "watchdog">;
+export const WORKER_AGENT_KEYS = AGENT_KEYS.filter((k): k is WorkerAgentKey => k !== "queen_bee" && k !== "watchdog");
 
 export const TASK_STATUSES = [
   "todo",
@@ -102,7 +106,7 @@ export type AgentOutput = {
 
 export type TaskSpec = {
   key: string;
-  agent: Exclude<AgentKey, "queen_bee">;
+  agent: WorkerAgentKey;
   title: string;
   dependsOn: string[];
   needs: Capability[];
@@ -142,7 +146,7 @@ export type MissionTask = {
   id: string;
   missionId: string;
   key: string;
-  agent: Exclude<AgentKey, "queen_bee">;
+  agent: WorkerAgentKey;
   title: string;
   instruction: string;
   status: TaskStatus;

@@ -25,6 +25,30 @@ Demande → Queen Bee (planification) → Mission + graphe de tâches
 | Analytics Agent | Analyse des données réelles uniquement (`analytics_data` requis) | beerecos-growth-analyst |
 | Brand Guardian | Relecture + **contrôles déterministes** (casse BeeRecos/BeeMarketing/BeeSchool, mots interdits) | beerecos-quality-control, beerecos-brand, beerecos-compliance |
 
+## Watchdog — chien de garde
+Agent **déterministe** (aucun appel IA, aucun coût) qui surveille toutes les missions et tous les agents.
+
+| Constat | Gravité | Réparation automatique |
+|---|---|---|
+| Tâche « En cours » depuis plus de 10 min (exécution interrompue) | critique | remise en file + relance (si un essai reste) |
+| Tâche en erreur | critique | dernier essai si un essai reste ; **jamais** pour un contenu refusé par un humain |
+| Ressource attendue désormais connectée | info | relance |
+| Ressource toujours manquante | alerte | — (raison affichée) |
+| Travail prêt mais aucun agent dessus depuis 2 min | alerte | relance de l'équipe |
+| Validation en attente depuis plus de 24 h | alerte | — (rappel) |
+| Livrable vide, limites signalées par un agent, corrections de marque | alerte / info | — |
+| Plus de 3 essais par tâche en moyenne (boucle coûteuse) | critique | **pause** de la mission jusqu'à relance humaine |
+
+- Santé d'une mission : 100 − 30 par constat critique − 10 par alerte. Santé d'un agent : part de ses tâches sans erreur ni blocage.
+- Chaque intervention est journalisée dans le fil d'activité (acteur « Watchdog »). Toutes les modifications sont conditionnées
+  au statut observé : deux tournées simultanées ne font jamais le travail deux fois.
+- Missions de démonstration : inspectées, jamais modifiées.
+- Déclenchement : impulsion de l'interface ouverte (au plus toutes les 3 min par organisation), bouton « Lancer une inspection »
+  sur `/watchdog`, et tâche planifiée Vercel Cron `GET /api/cron/watchdog` (protégée par `CRON_SECRET`). `vercel.json` la planifie
+  une fois par jour (limite du plan Hobby) ; sur le plan Pro, passer à `*/15 * * * *`.
+- « Relancer l'équipe » sur une mission lève les pauses posées par le Watchdog.
+- Code : règles `src/domain/missions/watchdog.ts`, exécutant `src/server/missions/watchdog-runner.ts`, tests `tests/unit/watchdog.test.ts`.
+
 ## Garanties « pas de fausse IA »
 - Une tâche n'est « En cours » que lorsqu'un appel réel au modèle est en train d'être fait (réservation conditionnelle en base).
 - Sans clé Claude, sans vidéo importée, sans moteur vidéo ou sans statistiques : la tâche passe « En attente » avec la raison exacte.

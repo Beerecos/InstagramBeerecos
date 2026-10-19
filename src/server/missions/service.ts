@@ -12,6 +12,8 @@ import { getCurrentUser, requirePermission, type CurrentUser } from "@/server/au
 import { availableCapabilities } from "./capabilities";
 import { seedDemo } from "./demo-seed";
 import { advanceMission } from "./engine";
+import { inspect, runWatchdog } from "./watchdog-runner";
+import { WATCHDOG_PAUSE_PREFIX } from "@/domain/missions/watchdog";
 import { MemoryMissionStore } from "./memory-store";
 import type { MissionStore } from "./store";
 import { SupabaseMissionStore } from "./supabase-store";
@@ -81,6 +83,11 @@ export async function resumeMission(missionId: string): Promise<void> {
   const store = await engineStore(orgId);
   const loaded = await store.getMission(missionId);
   if (!loaded || loaded.mission.organizationId !== orgId) throw new Error("Mission introuvable.");
+  // Relance humaine : lève les pauses posées par le Watchdog.
+  for (const t of loaded.tasks.filter((x) => x.waitingReason?.startsWith(WATCHDOG_PAUSE_PREFIX))) {
+    await store.updateTask(t.id, { status: "todo", waitingReason: null, attempts: 0 }, "waiting");
+  }
+  await store.addActivity(orgId, { missionId, taskId: null, actor: "user", message: "Équipe relancée." });
   runInBackground(orgId, missionId);
 }
 
@@ -137,4 +144,55 @@ export async function currentAutonomyMode(): Promise<AutonomyMode> {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.from("organization_settings").select("autonomy_mode").eq("organization_id", user.organization.id).maybeSingle();
   return (data?.autonomy_mode as AutonomyMode | undefined) ?? "manual";
+}
+
+const lastWatchdogRun = (globalThis as unknown as { __bmWatchdog?: Map<string, number> }).__bmWatchdog ??= new Map();
+const WATCHDOG_MIN_INTERVAL_MS = 3 * 60_000;
+
+/** Tournée du Watchdog pour l'organisation de l'utilisateur (bouton, ou impulsion périodique de l'interface). */
+export async function runWatchdogNow(opts: { force?: boolean } = {}) {
+  const user = await requirePermission("content:edit");
+  const orgId = requireOrg(user);
+  const last = lastWatchdogRun.get(orgId) ?? 0;
+  if (!opts.force && Date.now() - last < WATCHDOG_MIN_INTERVAL_MS) return { skipped: true as const };
+  lastWatchdogRun.set(orgId, Date.now());
+  const res = await runWatchdog({ store: await engineStore(orgId), orgId, ai: aiProvider(), capabilities: availableCapabilities(serverEnv()) });
+  return { skipped: false as const, actions: res.actions, relaunched: res.relaunched.length, inspected: res.inspections.length };
+}
+
+/** Tournée planifiée (cron) sur toutes les organisations. */
+export async function runWatchdogAllOrganizations() {
+  const caps = availableCapabilities(serverEnv());
+  if (isDemoMode()) return [];
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin.from("organizations").select("id");
+  if (error) throw new Error(error.message);
+  const store = new SupabaseMissionStore(admin);
+  const out = [];
+  for (const { id } of data ?? []) {
+    const r = await runWatchdog({ store, orgId: id as string, ai: aiProvider(), capabilities: caps });
+    out.push({ organizationId: id as string, actions: r.actions, relaunched: r.relaunched.length, inspected: r.inspections.length });
+  }
+  return out;
+}
+
+/** Inspections en lecture seule pour l'affichage. */
+export async function watchdogReport() {
+  const { store, orgId } = await userStore();
+  const caps = availableCapabilities(serverEnv());
+  const missions = await store.listMissions(orgId);
+  const inspections = [];
+  for (const m of missions) {
+    const i = await inspect(store, orgId, m.id, caps);
+    if (i) inspections.push({ mission: m, ...i });
+  }
+  const activity = (await store.listActivity(orgId, { limit: 300 })).filter((e) => e.actor === "watchdog").slice(0, 20);
+  return { inspections, activity, tasks: await store.listTasks(orgId) };
+}
+
+export async function missionWatchdog(missionId: string) {
+  const { store, orgId } = await userStore();
+  const loaded = await store.getMission(missionId);
+  if (!loaded || loaded.mission.organizationId !== orgId) return null;
+  return inspect(store, orgId, missionId, availableCapabilities(serverEnv()));
 }

@@ -90,6 +90,14 @@ export const AGENTS: Record<AgentKey, AgentProfile> = {
       "Tu analyses les performances réelles (portée, rétention, leads, visites, adhésions) et produis des recommandations actionnables. Sans données réelles, tu le dis et proposes seulement le plan de mesure.",
     skills: ["beerecos-growth-analyst"],
   },
+  watchdog: {
+    key: "watchdog",
+    name: "Watchdog",
+    role: "Chien de garde",
+    instructions:
+      "Tu surveilles toutes les missions et tous les agents : tâches bloquées, erreurs, attentes, validations oubliées, livrables vides, corrections de marque non appliquées, boucles d'essais. Tu relances ce qui peut l'être et tu alertes sur le reste.",
+    skills: ["beerecos-quality-control"],
+  },
   brand_guardian: {
     key: "brand_guardian",
     name: "Brand Guardian",

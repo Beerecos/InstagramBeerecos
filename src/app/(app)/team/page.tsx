@@ -40,6 +40,13 @@ async function Team() {
           <p className="text-sm text-white/85">{AGENTS.queen_bee.instructions}</p>
         </div>
       </article>
+      <Link href="/watchdog" className="mb-4 flex items-center gap-4 rounded-card bg-surface-1 p-5 ring-1 ring-line transition hover:ring-brand">
+        <AgentAvatar agent="watchdog" size="lg" />
+        <div>
+          <h2 className="font-semibold text-ink-1">Watchdog — chien de garde</h2>
+          <p className="text-sm text-ink-3">{AGENTS.watchdog.instructions}</p>
+        </div>
+      </Link>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {team.map((a) => (
           <article key={a.agent} className="flex flex-col rounded-card bg-surface-1 p-5 ring-1 ring-line">

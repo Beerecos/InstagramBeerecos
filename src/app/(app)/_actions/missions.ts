@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { normalizeWeights } from "@/domain/content";
 import { DEFAULT_BRAND_MEMORY } from "@/domain/missions/brand-defaults";
-import { createMissionFromRequest, decideApproval, resumeMission, saveBrandMemory, type ApprovalAction } from "@/server/missions/service";
+import { createMissionFromRequest, decideApproval, resumeMission, runWatchdogNow, saveBrandMemory, type ApprovalAction } from "@/server/missions/service";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -26,6 +26,11 @@ export async function createMissionAction(_prev: ActionState, form: FormData): P
 export async function resumeMissionAction(missionId: string): Promise<void> {
   await resumeMission(missionId);
   revalidatePath(`/missions/${missionId}`);
+}
+
+export async function runWatchdogAction(): Promise<void> {
+  await runWatchdogNow({ force: true });
+  revalidatePath("/watchdog");
 }
 
 export async function decideApprovalAction(approvalId: string, action: ApprovalAction, form: FormData): Promise<void> {

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { WatchdogPulse } from "@/components/missions/watchdog-pulse";
 import { CommandBar } from "@/components/shell/command-bar";
 import { MobileHeader } from "@/components/shell/mobile-header";
 import { MobileNav, MobileNavView } from "@/components/shell/mobile-nav";
@@ -33,6 +34,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         </main>
       </div>
       <CommandBar />
+      <WatchdogPulse />
       <Suspense fallback={<MobileNavView pathname="" />}>
         <MobileNav />
       </Suspense>

@@ -7,6 +7,8 @@ import { resumeMissionAction } from "@/app/(app)/_actions/missions";
 import { ActivityFeed } from "@/components/missions/activity-feed";
 import { AgentAvatar } from "@/components/missions/agent-avatar";
 import { AutoRefresh } from "@/components/missions/auto-refresh";
+import { HealthBadge, WatchdogFindings } from "@/components/missions/watchdog-findings";
+import { missionWatchdog } from "@/server/missions/service";
 import { AgentOutputView } from "@/components/missions/deliverables";
 import { DemoBadge, MissionStatusBadge, TaskStatusBadge } from "@/components/missions/task-status";
 import { Button, Card, CardHeader } from "@/components/ui";
@@ -26,7 +28,7 @@ export default function MissionPage({ params }: PageProps<"/missions/[id]">) {
 
 async function Workspace({ params }: { params: PageProps<"/missions/[id]">["params"] }) {
   const { id } = await params;
-  const w = await getMissionWorkspace(id);
+  const [w, guard] = await Promise.all([getMissionWorkspace(id), missionWatchdog(id)]);
   if (!w) notFound();
   const { mission, tasks, activity, progress } = w;
   const agents = [...new Set(tasks.map((t) => t.agent))];
@@ -102,10 +104,18 @@ async function Workspace({ params }: { params: PageProps<"/missions/[id]">["para
             ))}
           </ol>
         </section>
-        <Card className="h-fit lg:col-span-2">
-          <CardHeader title="Activité en direct" />
-          <ActivityFeed events={activity} />
-        </Card>
+        <div className="space-y-6 lg:col-span-2">
+          {guard ? (
+            <Card>
+              <CardHeader title="Chien de garde" action={<HealthBadge health={guard.health} />} />
+              <WatchdogFindings findings={guard.findings} empty={mission.status === "done" ? "Mission terminée." : "Rien à signaler : l'équipe avance."} />
+            </Card>
+          ) : null}
+          <Card className="h-fit">
+            <CardHeader title="Activité en direct" />
+            <ActivityFeed events={activity} />
+          </Card>
+        </div>
       </div>
     </div>
   );

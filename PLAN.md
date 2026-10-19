@@ -94,6 +94,7 @@ en graphe de tâches, fil d'activité réel, boîte de validation, mémoire de m
 | MVP | Contenu | Statut |
 |---|---|---|
 | 1 | Accueil, Queen Bee, Missions, Équipe IA, workflow de tâches, fil d'activité, mémoire de marque, Content Studio, calendrier (propositions), validations | ✅ (agents actifs dès la clé Claude) |
+| 1+ | **Watchdog** (chien de garde) : surveillance, réparations sûres, pause anti-boucle, page `/watchdog`, cron | ✅ |
 | 2 | Video Studio (import, transcription, moteurs vidéo), bibliothèque média, intégration Instagram/LinkedIn, analytics, génération de leads | à faire |
 | 3 | Autopilot, publication multi-plateforme, optimisation de campagnes, analytics avancés, automatisation CRM | à faire |
 

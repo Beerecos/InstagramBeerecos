@@ -82,3 +82,16 @@ test("webhook Instagram : refus propre quand non configuré", async ({ request }
   const res = await request.get("/api/webhooks/instagram?hub.mode=subscribe&hub.verify_token=faux&hub.challenge=1");
   expect(res.status()).toBe(503);
 });
+
+test("chien de garde : santé, constats réels et inspection manuelle", async ({ page }) => {
+  await page.goto("/watchdog");
+  await expect(page.getByText("Santé globale")).toBeVisible();
+  await expect(page.getByText(/attend : .*vidéo importée/).first()).toBeVisible();
+  await page.getByRole("button", { name: "Lancer une inspection" }).click();
+  await expect(page.getByText("Santé globale")).toBeVisible();
+});
+
+test("cron du Watchdog : refus sans secret", async ({ request }) => {
+  const res = await request.get("/api/cron/watchdog");
+  expect(res.status()).toBe(503);
+});

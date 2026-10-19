@@ -22,6 +22,9 @@ export const serverEnvSchema = clientEnvSchema.extend({
     .optional()
     .transform((v) => v === "1"),
 
+  // Secret des tâches planifiées Vercel Cron (Watchdog) : envoyé par Vercel en « Authorization: Bearer … »
+  CRON_SECRET: optionalString,
+
   ANTHROPIC_API_KEY: optionalString,
   // Modèle des agents (défaut : claude-opus-5-5)
   ANTHROPIC_MODEL: optionalString,

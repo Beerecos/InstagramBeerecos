@@ -14,6 +14,7 @@ const INITIALS: Record<AgentKey, string> = {
   lead_agent: "Le",
   analytics_agent: "An",
   brand_guardian: "BG",
+  watchdog: "WD",
 };
 
 /** Monogramme sobre (pas d'avatar cartoon). Queen Bee porte la couleur de marque, les agents un ton neutre. */
@@ -26,7 +27,7 @@ export function AgentAvatar({ agent, size = "md", active = false }: { agent: Age
       className={cn(
         "relative inline-flex shrink-0 items-center justify-center rounded-xl font-semibold tracking-tight",
         s,
-        agent === "queen_bee" ? "bg-brand text-white" : "bg-surface-2 text-ink-1 ring-1 ring-line",
+        agent === "queen_bee" ? "bg-brand text-white" : agent === "watchdog" ? "bg-brand-black text-white dark:bg-white dark:text-black" : "bg-surface-2 text-ink-1 ring-1 ring-line",
       )}
     >
       {INITIALS[agent]}
