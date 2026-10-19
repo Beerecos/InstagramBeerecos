@@ -1,0 +1,10 @@
+.claude/
+rush/
+export/
+projets/
+assets/
+content/
+docs/
+supabase/
+automation/test/
+automation/bin/

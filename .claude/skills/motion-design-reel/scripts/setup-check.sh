@@ -48,6 +48,17 @@ else
   fi
 fi
 
+echo "Voix IA locale (Hyperframes tts)"
+if python3 -c 'import kokoro_onnx, soundfile' 2>/dev/null; then
+  ok "kokoro-onnx soundfile"
+else
+  ko "kokoro-onnx / soundfile manquants (voix locale)"
+  if [ "$INSTALL" = 1 ]; then
+    uv pip install --system kokoro-onnx soundfile >/dev/null 2>&1 || pip3 install --quiet kokoro-onnx soundfile
+    python3 -c 'import kokoro_onnx, soundfile' 2>/dev/null && { ok "installées"; missing=$((missing - 1)); }
+  fi
+fi
+
 echo "Clé ElevenLabs (transcription Video-Use, optionnelle)"
 if [ -n "${ELEVENLABS_API_KEY:-}" ] || grep -q '^ELEVENLABS_API_KEY=..' "$VIDEO_USE/.env" 2>/dev/null; then
   ok "ELEVENLABS_API_KEY trouvée"

@@ -8,14 +8,26 @@ Pour toute demande de montage, de Reel, de storyboard, de sous-titres ou de moti
 charge le skill **`motion-design-reel`**. Il orchestre les autres skills et impose les
 trois portes de validation (coupes → storyboard → planche contact) avant tout rendu.
 
+Pour une vidéo **100 % IA** (sans tournage), sa **publication** ou un **call to action
+« commente MOT → DM »** : charge le skill **`reel-ia-autopilot`**. Publier est public et
+irréversible : jamais sans OK explicite, sauf `autopilote: oui` dans `content/autopilote.md`.
+
 ## Organisation
 - `rush/` — vidéos brutes (hors git). Sorties de travail Video-Use dans `rush/edit/`.
 - `briefs/` — une fiche brief par vidéo (`AAAA-MM-JJ-sujet.md`).
 - `assets/sfx/` — effets sonores (Pixabay).
 - `export/` — rendus finaux (hors git).
 - `STYLE.md` — phrase de style du compte, à lire avant chaque projet.
+- `content/` — idées de Reels, ressources offertes en DM, réglages autopilote, journal.
+- `projets/` — un dossier par Reel IA (script, storyboard, voix, composition Hyperframes).
+- `automation/` — CLI `ig.mjs` (publication, campagnes CTA, jeton) et `voice.mjs` (voix IA).
+- `api/instagram-webhook.mjs` — webhook Vercel qui envoie les DM sur mot-clé.
+- `supabase/migrations/` — tables des campagnes CTA + bucket des vidéos.
+- Configuration Instagram / Meta / Supabase / Vercel : `docs/SETUP-INSTAGRAM.md`.
+- Tests : `npm test`.
 
 ## Skills installés (`.claude/skills/`)
+- `reel-ia-autopilot` — vidéo 100 % IA → publication → CTA en DM.
 - `motion-design-reel` — méthode, repères, prompts, scripts QA (spécifique à ce dépôt).
 - `hyperframes`, `hyperframes-*`, `embedded-captions`, `talking-head-recut`,
   `motion-graphics`, `media-use`, etc. — skills officiels heygen-com/hyperframes (Apache-2.0).
