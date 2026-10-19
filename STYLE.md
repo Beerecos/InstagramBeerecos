@@ -1,4 +1,4 @@
-# Phrase de style — Beerecos
+# Phrase de style — BeeRecos
 
 Direction artistique du compte, à rappeler au début de chaque demande de montage.
 Claude la lit automatiquement (skill `motion-design-reel`). Tant que les champs ci-dessous

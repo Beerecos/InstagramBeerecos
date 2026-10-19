@@ -58,7 +58,7 @@ test('webhook : vérification Meta et signature', async () => {
   process.env.IG_VERIFY_TOKEN = 'verif';
   process.env.IG_APP_SECRET = 'secret';
   process.env.IG_USER_ID = '1784';
-  const { GET, POST } = await import('../../api/instagram-webhook.mjs');
+  const { GET, POST } = await import('../lib/webhook.mjs');
 
   const ok = GET(new Request('https://x/api/instagram-webhook?hub.mode=subscribe&hub.verify_token=verif&hub.challenge=42'));
   assert.equal(ok.status, 200);

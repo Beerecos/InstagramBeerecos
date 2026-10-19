@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens BeeSocial.
+ * Couleurs de marque provisoires (charte BeeRecos à importer) : modifier ici uniquement.
+ * Les couleurs de données (piliers, statuts, séquentiel) suivent la palette validée dataviz.
+ */
+:root {
+  color-scheme: light;
+  --surface-0: #f6f4ef;
+  --surface-1: #fcfcfb;
+  --surface-2: #efece5;
+  --ink-1: #14130f;
+  --ink-2: #52514e;
+  --ink-3: #7a786f;
+  --line: #e2ded4;
+  --brand: #14130f;
+  --brand-ink: #fcfcfb;
+  --honey: #e9a514;
+  --honey-soft: #fbf0d4;
+  --focus: #2a78d6;
+
+  --pillar-reseau: #2a78d6;
+  --pillar-formation: #eb6834;
+  --pillar-ia: #1baf7a;
+
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+
+  --seq-1: #2a78d6;
+  --seq-track: #e8eef7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-0: #121211;
+    --surface-1: #1a1a19;
+    --surface-2: #232321;
+    --ink-1: #f0efec;
+    --ink-2: #c3c2b7;
+    --ink-3: #8f8d84;
+    --line: #2f2f2c;
+    --brand: #f0efec;
+    --brand-ink: #14130f;
+    --honey-soft: #3a2e10;
+    --pillar-reseau: #3987e5;
+    --pillar-formation: #d95926;
+    --pillar-ia: #199e70;
+    --seq-1: #3987e5;
+    --seq-track: #22303f;
+  }
+}
+
+@theme inline {
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-ink-1: var(--ink-1);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-honey: var(--honey);
+  --color-honey-soft: var(--honey-soft);
+  --color-pillar-reseau: var(--pillar-reseau);
+  --color-pillar-formation: var(--pillar-formation);
+  --color-pillar-ia: var(--pillar-ia);
+  --color-status-good: var(--status-good);
+  --color-status-warning: var(--status-warning);
+  --color-status-serious: var(--status-serious);
+  --color-status-critical: var(--status-critical);
+  --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-display-serif);
+  --radius-card: 1.25rem;
+}
+
+body {
+  background: var(--surface-0);
+  color: var(--ink-1);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

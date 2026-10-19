@@ -1,7 +1,15 @@
-# InstagramBeerecos — montage motion design avec Claude
+# BeeSocial AI — système commercial Instagram de BeeRecos
 
-Ce dépôt sert à transformer des rushs verticaux en Reels montés en motion design
-(méthode du guide OPUS : Claude Code + Hyperframes + Video-Use).
+Application Next.js 16 + Supabase + agent eve (voir `PLAN.md`, `docs/`). Toujours écrire **BeeRecos**
+(B et R majuscules). Node 24. Avant de coder : lire la doc embarquée (`node_modules/next/dist/docs/`,
+`node_modules/eve/docs/`) — ces versions diffèrent des connaissances d'entraînement.
+
+Vérifications obligatoires avant de livrer : `npm run lint`, `npm run typecheck`, `npm test`
+(+ `npm run test:e2e` si l'UI change). Chaque nouvelle table : RLS + tests dans `tests/rls/`.
+
+Skills métier : `agent/skills/beerecos-*` (liés dans `.claude/skills/`).
+
+La chaîne vidéo historique ci-dessous (motion design, rushs) reste disponible.
 
 ## Point d'entrée
 Pour toute demande de montage, de Reel, de storyboard, de sous-titres ou de motion :

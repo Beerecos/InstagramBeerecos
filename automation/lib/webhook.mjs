@@ -1,8 +1,8 @@
 // Webhook Instagram (fonction Vercel) : vérification Meta + réponse automatique aux commentaires-mots-clés.
-import { env } from '../automation/lib/env.mjs';
-import { verifySignature, extractComments, handleComment } from '../automation/lib/cta.mjs';
-import { sendPrivateReply, replyToComment } from '../automation/lib/instagram.mjs';
-import { listCampaigns, claimReply, finishReply } from '../automation/lib/supabase.mjs';
+import { env } from './env.mjs';
+import { verifySignature, extractComments, handleComment } from './cta.mjs';
+import { sendPrivateReply, replyToComment } from './instagram.mjs';
+import { listCampaigns, claimReply, finishReply } from './supabase.mjs';
 
 // Vérification de l'abonnement, faite une fois par Meta lors de la configuration.
 export function GET(request) {
