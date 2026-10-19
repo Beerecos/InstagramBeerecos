@@ -15,5 +15,5 @@ export function Logo({ variant = "color", width = 180, className, priority }: { 
 /** Symbole seul (version secondaire officielle). */
 export function LogoSymbol({ variant = "color", size = 28, className }: { variant?: "color" | "white"; size?: number; className?: string }) {
   const src = variant === "white" ? "/brand/beemarketing-symbol-white.png" : "/brand/beemarketing-symbol.png";
-  return <Image src={src} alt="" aria-hidden width={Math.round((size * 235) / 363)} height={size} className={cn("select-none", className)} />;
+  return <Image src={src} alt="" aria-hidden width={Math.round((size * 215) / 389)} height={size} className={cn("select-none", className)} />;
 }
