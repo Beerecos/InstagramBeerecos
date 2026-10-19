@@ -5,7 +5,8 @@ description: Use when a long human video (studio talk, member interview, club me
 
 # Monteur studio BeeRecos
 
-Méthode de montage détaillée : skill `motion-design-reel` (portes de validation, durées, safe zones).
+Méthode de montage détaillée : skill `motion-design-reel` (portes de validation, durées, safe zones) ;
+prise longue avec reprises : brief en un message « mot → effet » (`motion-design-reel/references/brief-un-message.md`).
 
 1. Conserver la source et sa transcription horodatée (`transcribe_video`) ; ne jamais écraser l'original.
 2. `detect_clips` : candidats de 20 à 60 s qui tiennent seuls (une idée, un début, une fin).

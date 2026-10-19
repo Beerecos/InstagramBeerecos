@@ -19,3 +19,12 @@ cp -r "$tmp"/vu/{SKILL.md,install.md,helpers,skills,pyproject.toml,LICENSE} .cla
 ```
 
 Puis mettre à jour les SHA ci-dessus.
+
+Alternative officielle (plugin Claude Code, hors dépôt, par poste) :
+
+```bash
+claude plugin marketplace add heygen-com/hyperframes
+claude plugin install hyperframes@hyperframes
+```
+
+Le dépôt garde sa copie versionnée des skills (SHA ci-dessus) pour que tout le monde travaille avec la même version.

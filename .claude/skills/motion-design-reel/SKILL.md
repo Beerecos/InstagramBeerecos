@@ -29,6 +29,8 @@ Ne franchis jamais une porte sans un OK explicite.
    Installe ce qui manque en expliquant chaque étape avant de la lancer.
 3. Si l'utilisateur fournit une fiche brief (`references/fiche-brief.md`), pars d'elle.
    Sinon, pose les questions de la fiche (une seule fois, groupées).
+   Pour une **prise longue** (plusieurs minutes, reprises, « une seule prise ») : utilise le brief
+   en un seul message de `references/brief-un-message.md` (tournage, « mot → effet », son, livraison).
 
 ## 1. Qui fait quoi
 
@@ -81,6 +83,9 @@ motion, sinon toute l'animation est à refaire à chaque changement.
   `npx hyperframes render --quality delivery --fps 60 --output export/final.mp4`
 - Ajoute le sound design (`references/sound-design.md`), puis lance le contrôle final :
   `bash .claude/skills/motion-design-reel/scripts/qa-reel.sh export/final.mp4`.
+- Livre aussi une **version sans musique**, et transcris le rendu final
+  (`npx hyperframes transcribe export/final.mp4`) pour vérifier qu'**aucun mot ne manque** ni n'est coupé.
+- Corrections : demande un message unique, une phrase par problème ; réponds par une synthèse en 3 lignes.
 
 ## 3. Repères (non négociables sauf demande explicite)
 
@@ -100,6 +105,9 @@ motion, sinon toute l'animation est à refaire à chaque changement.
 - Tout animer en même temps → une seule chose bouge à la fois.
 - Trop de couleurs → 2 neutres + 1 accent maximum.
 - Animations décalées de la voix → transcrire avant d'animer.
+- Coupe au milieu d'un mot → vérifier chaque coupe à l'oreille ; couper les silences > 0,3 s seulement.
+- Effet qui masque la bouche → jamais.
+- Image figée entre deux phrases → placer les blancs où le sujet ne bouge pas, ou sous un effet.
 - Construire sans plan validé → storyboard d'abord, toujours.
 - Un élément réapparaît hors de son moment → vérifier la visibilité de chaque élément en
   dehors de sa fenêtre `data-start` / `data-duration`.
@@ -108,7 +116,7 @@ motion, sinon toute l'animation est à refaire à chaque changement.
 - Rien d'important dans le **bas ≈ 20 %** ni sur le **bord droit** (l'appli les cache).
 - Textes à lire ≥ 1,5 s à l'écran.
 - Export **1080 × 1920**, **30 ou 60 i/s** (60 = plus fluide), **avec le son d'origine**.
-- Volume intégré ≈ **−14 LUFS**, effets ≈ 8 dB sous la voix.
+- Volume intégré ≈ **−14 LUFS**, effets ≈ 8 dB sous la voix, musique ≈ 20 dB sous la voix.
 
 ## 4. Quand le résultat déçoit
 - « Ça fait cheap » → plus de retenue et plus de réalisme, pas plus d'effets
@@ -119,6 +127,7 @@ motion, sinon toute l'animation est à refaire à chaque changement.
 
 ## Références
 - `references/fiche-brief.md` — fiche à remplir avant chaque vidéo + plan 45 min + défi 7 jours.
+- `references/brief-un-message.md` — prise longue : tournage, brief complet en un message, « mot → effet », son, pièges, livraison.
 - `references/hook-et-structure.md` — formule du hook 7 s, « montrer au lieu de dire », étude de cas OPUS 38 s.
 - `references/effets-et-prompts.md` — 8 effets, 6 prompts premium, 5 ingrédients.
 - `references/sound-design.md` — 6 sons, 3 règles de mixage, mesure LUFS.

@@ -18,13 +18,15 @@ obligatoire. Le skill `media-use` peut aussi résoudre un SFX en fichier local, 
 
 **Toujours montrer la liste des sons trouvés avant de télécharger.** Ranger dans `assets/sfx/`.
 
-## Les 3 règles de mixage
+## Les 4 règles de mixage
 
 1. **Caler au bon endroit** : un swoosh ou un riser se cale sur son moment le plus fort ;
    un impact ou un clic sur son début (= le `data-start` de l'élément).
 2. **Toujours sous la voix** : effets environ **8 dB en dessous**, jamais plus forts que la voix.
    Discret, jamais de bruitage cartoon.
-3. **Volume final ≈ −14 LUFS** (standard Instagram, TikTok, YouTube), true peak ≤ −1 dBTP.
+3. **Musique** libre de droits (Mixkit, licence à lire pour chaque morceau) calée sur les temps,
+   **≈ 20 dB sous la voix** — tester sur un haut-parleur de téléphone.
+4. **Volume final ≈ −14 LUFS** (standard Instagram, TikTok, YouTube), true peak ≤ −1 dBTP.
 
 ## Mesurer et normaliser
 
