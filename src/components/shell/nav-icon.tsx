@@ -1,16 +1,18 @@
-import { BarChart3, CalendarDays, Clapperboard, Compass, Home, Library, Map, MessagesSquare, Plus, Settings, Users, type LucideIcon } from "lucide-react";
+import { BadgeCheck, BarChart3, CalendarDays, CheckCheck, Clapperboard, Home, Layers, Library, Megaphone, Settings, Target, Users, UsersRound, type LucideIcon } from "lucide-react";
 
 const ICONS: Record<string, LucideIcon> = {
   home: Home,
-  plus: Plus,
+  target: Target,
+  check: CheckCheck,
+  team: UsersRound,
+  layers: Layers,
   clapperboard: Clapperboard,
-  library: Library,
   calendar: CalendarDays,
-  messages: MessagesSquare,
+  megaphone: Megaphone,
   users: Users,
-  map: Map,
   chart: BarChart3,
-  compass: Compass,
+  library: Library,
+  badge: BadgeCheck,
   settings: Settings,
 };
 

@@ -1,107 +1,116 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { Bot, CalendarClock, Clapperboard, Flame, Inbox, Lightbulb, ShieldCheck, Sparkles, Ticket, Upload, Users } from "lucide-react";
-import { ButtonLink, Card, CardHeader, EmptyState, FunnelChart, MetricCard } from "@/components/ui";
+import { AlertTriangle, ArrowRight, CalendarClock, CheckCheck, Target, UsersRound } from "lucide-react";
+import { ActivityFeed } from "@/components/missions/activity-feed";
+import { AgentAvatar } from "@/components/missions/agent-avatar";
+import { QueenBeeComposer } from "@/components/missions/queen-bee-composer";
+import { Card, CardHeader, FunnelChart, MetricCard } from "@/components/ui";
+import { AGENTS } from "@/domain/missions/agents";
 import { getCurrentUser } from "@/server/auth/dal";
-import { getHomeSnapshot } from "@/server/dashboard/home";
+import { FUNNEL_STAGES } from "@/server/dashboard/home";
+import { getDashboard, getTeam } from "@/server/missions/queries";
 
 export default function HomePage() {
   return (
-    <>
-      <Suspense fallback={<GreetingSkeleton />}>
-        <Greeting />
+    <div className="space-y-10">
+      <section className="mx-auto max-w-3xl pt-2 text-center sm:pt-6">
+        <Suspense fallback={<div className="mx-auto mb-3 h-5 w-40 animate-pulse rounded bg-surface-2" />}>
+          <Greeting />
+        </Suspense>
+        <h1 className="text-3xl font-light tracking-tight text-ink-1 sm:text-5xl">
+          Que voulez-vous <span className="font-semibold text-brand">accomplir</span> aujourd&apos;hui&nbsp;?
+        </h1>
+        <div className="mt-8 text-left">
+          <QueenBeeComposer />
+        </div>
+      </section>
+
+      <Suspense fallback={<div className="h-80 animate-pulse rounded-card bg-surface-2" />}>
+        <Today />
       </Suspense>
-      <Suspense fallback={<div className="h-96 animate-pulse rounded-card bg-surface-2" />}>
-        <Dashboard />
-      </Suspense>
-    </>
+    </div>
   );
 }
 
 async function Greeting() {
   const user = await getCurrentUser();
   if (!user.organization) redirect("/bienvenue");
-  return (
-    <header className="mb-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">{user.organization?.name ?? "BeeRecos"}</p>
-      <h1 className="mt-1 text-4xl font-light tracking-tight text-ink-1 sm:text-6xl">
-        Bonjour <span className="font-semibold text-brand">{user.firstName || "à toi"}</span>
-      </h1>
-    </header>
-  );
+  return <p className="mb-3 text-sm text-ink-3">Bonjour {user.firstName || ""} · {user.organization.name}</p>;
 }
 
-function GreetingSkeleton() {
-  return <div className="mb-8 h-24 animate-pulse rounded-2xl bg-surface-2" />;
-}
-
-async function Dashboard() {
-  const snap = await getHomeSnapshot();
+async function Today() {
+  const [d, team] = await Promise.all([getDashboard(), getTeam()]);
   return (
-    <div className="space-y-6">
-      <section aria-labelledby="aujourdhui" className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <h2 id="aujourdhui" className="sr-only">Aujourd&apos;hui</h2>
-        <TodayTile icon={<CalendarClock size={18} />} label="Prochaine publication" value={snap.today.nextPublication ?? "Aucune programmée"} />
-        <TodayTile icon={<ShieldCheck size={18} />} label="Contenus à valider" value={String(snap.today.toReview ?? "—")} />
-        <TodayTile icon={<Inbox size={18} />} label="DM entrants" value={String(snap.today.inboundDms ?? "—")} />
-        <TodayTile icon={<Flame size={18} />} label="Prospects chauds" value={String(snap.today.hotLeads ?? "—")} />
-        <TodayTile icon={<Ticket size={18} />} label="Invitations" value={String(snap.today.invitations ?? "—")} />
-        <TodayTile icon={<Users size={18} />} label="Visiteurs à venir" value={String(snap.today.upcomingVisitors ?? "—")} />
+    <div className="space-y-8">
+      <section aria-labelledby="aujourdhui">
+        <h2 id="aujourdhui" className="mb-3 text-sm font-semibold text-ink-2">Aujourd&apos;hui</h2>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Tile href="/approvals" icon={<CheckCheck size={18} />} label="Contenus à valider" value={String(d.pendingApprovals)} highlight={d.pendingApprovals > 0} />
+          <Tile href="/missions" icon={<Target size={18} />} label="Missions actives" value={String(d.activeMissions)} />
+          <Tile href="/team" icon={<UsersRound size={18} />} label="Agents au travail" value={String(d.activeAgents)} />
+          <Tile href="/calendar" icon={<CalendarClock size={18} />} label="Publications prévues" value="—" hint="Connexion Instagram requise" />
+        </div>
+        {d.urgent.length > 0 ? (
+          <div className="mt-3 rounded-2xl bg-[#fdf1d6] p-4 text-sm text-[#6b4700] dark:bg-[#3a2e10] dark:text-[#f6c860]">
+            <p className="mb-1 flex items-center gap-2 font-semibold"><AlertTriangle size={16} aria-hidden /> Actions requises</p>
+            <ul className="space-y-1">
+              {d.urgent.map((t) => (
+                <li key={t.id}>
+                  <Link href={`/missions/${t.missionId}`} className="underline-offset-2 hover:underline">{t.title} — {t.waitingReason ?? t.error}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </section>
 
-      <section aria-labelledby="kpis">
-        <h2 id="kpis" className="mb-3 text-sm font-semibold text-ink-2">Les 30 derniers jours</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-          <MetricCard label="Vues" value={snap.kpis.views} />
-          <MetricCard label="Leads" value={snap.kpis.leads} />
-          <MetricCard label="Invitations" value={snap.kpis.invitations} />
-          <MetricCard label="Visites" value={snap.kpis.visits} emphasis hint="KPI principal" />
-          <MetricCard label="Adhésions" value={snap.kpis.memberships} />
+      <section aria-labelledby="equipe">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 id="equipe" className="text-sm font-semibold text-ink-2">Votre équipe IA</h2>
+          <Link href="/team" className="inline-flex items-center gap-1 text-sm text-brand">Voir l&apos;équipe <ArrowRight size={14} aria-hidden /></Link>
         </div>
-        {!snap.connected ? (
-          <p className="mt-2 text-xs text-ink-3">« — » : donnée pas encore disponible. Les chiffres apparaîtront une fois Instagram et LinkedIn connectés.</p>
-        ) : null}
+        <div className="flex gap-3 overflow-x-auto pb-1">
+          {team.map((a) => (
+            <Link key={a.agent} href="/team" className="flex w-44 shrink-0 items-center gap-3 rounded-2xl bg-surface-1 p-3 ring-1 ring-line transition hover:ring-brand">
+              <AgentAvatar agent={a.agent} active={a.state === "working"} />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-ink-1">{AGENTS[a.agent].name}</span>
+                <span className="block truncate text-xs text-ink-3">{STATE_LABEL[a.state]}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-3">
-          <CardHeader title="Du Reel à l'adhésion" description="Chaque étape du tunnel commercial Instagram." />
-          <FunnelChart title="Tunnel commercial Instagram, 30 derniers jours" stages={snap.funnel} />
+          <CardHeader title="Performance" description="Des vues aux adhésions. Données affichées uniquement quand elles sont réelles." />
+          <div className="mb-5 grid grid-cols-3 gap-3">
+            <MetricCard label="Leads" value={null} />
+            <MetricCard label="Visites" value={null} emphasis hint="KPI principal" />
+            <MetricCard label="Adhésions" value={null} />
+          </div>
+          <FunnelChart title="Tunnel commercial" stages={FUNNEL_STAGES.map((s) => ({ ...s, value: null }))} />
         </Card>
         <Card className="lg:col-span-2">
-          <CardHeader title={<span className="inline-flex items-center gap-2"><Lightbulb aria-hidden size={16} className="text-accent" />Insight Claude</span>} />
-          {snap.insight ? (
-            <p className="text-ink-1">{snap.insight}</p>
-          ) : (
-            <EmptyState title="Pas encore assez de données">
-              Claude formule un insight seulement au-dessus d&apos;un seuil minimum de contenus et de leads. Aucune conclusion n&apos;est tirée d&apos;un petit échantillon.
-            </EmptyState>
-          )}
+          <CardHeader title="Activité de l'équipe" action={<Link href="/missions" className="text-sm text-brand">Missions</Link>} />
+          <ActivityFeed events={d.activity} emptyLabel="Donnez un objectif à Queen Bee pour mettre l'équipe au travail." />
         </Card>
       </div>
-
-      <section aria-labelledby="actions">
-        <h2 id="actions" className="mb-3 text-sm font-semibold text-ink-2">Que veux-tu faire ?</h2>
-        <div className="flex flex-wrap gap-2">
-          <ButtonLink href="/creer/ai" variant="primary" icon={<Bot size={16} />}>Créer une vidéo IA</ButtonLink>
-          <ButtonLink href="/creer/human" variant="secondary" icon={<Upload size={16} />}>Importer ma vidéo</ButtonLink>
-          <ButtonLink href="/creer/hybrid" variant="secondary" icon={<Sparkles size={16} />}>Créer hybride</ButtonLink>
-          <ButtonLink href="/calendrier" variant="secondary" icon={<Clapperboard size={16} />}>Préparer ma semaine</ButtonLink>
-          <ButtonLink href="/leads?filtre=chauds" variant="secondary" icon={<Flame size={16} />}>Voir mes leads chauds</ButtonLink>
-        </div>
-      </section>
     </div>
   );
 }
 
-function TodayTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+const STATE_LABEL = { working: "Travaille", waiting_validation: "Attend votre validation", blocked: "En attente", idle: "Disponible" } as const;
+
+function Tile({ href, icon, label, value, hint, highlight }: { href: string; icon: React.ReactNode; label: string; value: string; hint?: string; highlight?: boolean }) {
   return (
-    <div className="flex flex-col gap-2 rounded-2xl bg-surface-1 p-4 ring-1 ring-line sm:flex-row sm:items-center sm:gap-3">
+    <Link href={href} className={`flex flex-col gap-2 rounded-2xl p-4 ring-1 transition hover:ring-brand ${highlight ? "bg-accent-soft ring-brand/30" : "bg-surface-1 ring-line"}`}>
       <span aria-hidden className="flex size-9 items-center justify-center rounded-xl bg-accent-soft text-brand">{icon}</span>
-      <div className="min-w-0">
-        <p className="text-xs text-ink-3">{label}</p>
-        <p className="font-medium text-ink-1 sm:truncate">{value}</p>
-      </div>
-    </div>
+      <span className="text-xs text-ink-3">{label}</span>
+      <span className="text-2xl font-semibold tabular-nums text-ink-1">{value}</span>
+      {hint ? <span className="text-xs text-ink-3">{hint}</span> : null}
+    </Link>
   );
 }

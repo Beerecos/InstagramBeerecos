@@ -19,6 +19,20 @@ Fonctions : `is_member(org)`, `has_role(org, roles[])` (SECURITY DEFINER, `searc
 Historique conservé : `20261019000000_cta.sql` (`cta_campaigns`, `cta_replies`, bucket `reels`) — RLS activée sans politique (accès serveur uniquement) ;
 remplacé en phase 5.
 
+## Équipe IA (`20261019130000_missions.sql`)
+
+| Table | Rôle | RLS |
+|---|---|---|
+| brand_memory | Mémoire de marque utilisée par tous les agents | lecture membres ; écriture admin / responsable contenu |
+| agent_profiles | Personnalisation des agents par organisation | idem |
+| campaigns | Campagnes | idem |
+| missions | Objectif, modèle, statut dérivé des tâches, marqueur démo | idem |
+| mission_tasks | Tâches : agent, statut, besoins, entrée/sortie, raison d'attente, erreur, essais | idem |
+| task_dependencies | Graphe (pas d'auto-dépendance) | idem |
+| activity_logs | Fil d'activité réel | lecture membres ; **aucune écriture client** (moteur serveur) |
+| approvals | Validations humaines | lecture membres ; décision admin / responsable contenu ; **chaque décision auditée** |
+| content_items | Contenus planifiés | lecture membres ; écriture admin / responsable contenu |
+
 ## Phases suivantes
 
 Voir `PLAN.md` § Modèle de données. Chaque nouvelle table : `organization_id`, `created_at`/`updated_at`, index sur les clés de filtre,

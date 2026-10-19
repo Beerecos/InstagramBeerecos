@@ -30,13 +30,13 @@ describe("pondérations", () => {
 });
 
 describe("navigation", () => {
-  it("contient les 11 entrées dans l'ordre demandé", () => {
-    expect(NAV_ITEMS.map((i) => i.label)).toEqual(["Accueil", "Créer", "Studio", "Médias", "Calendrier", "Conversations", "Leads", "Clubs", "Analytics", "Stratégie IA", "Réglages"]);
+  it("suit la navigation de l'équipe marketing IA", () => {
+    expect(NAV_ITEMS.map((i) => i.label)).toEqual(["Accueil", "Missions", "Validations", "Équipe IA", "Studio", "Vidéo", "Calendrier", "Campagnes", "Leads", "Analytics", "Bibliothèque", "Marque", "Paramètres"]);
   });
   it("détecte la page active", () => {
     expect(isActive("/", "/")).toBe(true);
     expect(isActive("/leads", "/")).toBe(false);
-    expect(isActive("/reglages/integrations", "/reglages")).toBe(true);
+    expect(isActive("/settings/integrations", "/settings")).toBe(true);
   });
 });
 

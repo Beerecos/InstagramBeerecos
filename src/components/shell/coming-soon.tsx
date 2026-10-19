@@ -8,7 +8,7 @@ export function ComingSoon({ phase, features, children }: { phase: number; featu
     <div className="space-y-6">
       {children}
       <Card className="bg-surface-2/60">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">Arrive en phase {phase}</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">{phase === 2 ? "Arrive au MVP 2" : `Arrive en phase ${phase}`}</p>
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
           {features.map((f) => (
             <li key={f} className="flex items-start gap-2 text-sm text-ink-2">

@@ -86,6 +86,17 @@ docs/                       # ARCHITECTURE, AGENTS, SKILLS, PROVIDERS, DATABASE,
 
 Détail et politiques RLS : `docs/DATABASE.md`.
 
+## Évolution — équipe marketing IA (19/10/2026)
+
+BeeMarketing devient le *Marketing Operating System* de BeeRecos : Queen Bee + 10 agents spécialisés, missions
+en graphe de tâches, fil d'activité réel, boîte de validation, mémoire de marque. Détail : `docs/AGENTS.md`.
+
+| MVP | Contenu | Statut |
+|---|---|---|
+| 1 | Accueil, Queen Bee, Missions, Équipe IA, workflow de tâches, fil d'activité, mémoire de marque, Content Studio, calendrier (propositions), validations | ✅ (agents actifs dès la clé Claude) |
+| 2 | Video Studio (import, transcription, moteurs vidéo), bibliothèque média, intégration Instagram/LinkedIn, analytics, génération de leads | à faire |
+| 3 | Autopilot, publication multi-plateforme, optimisation de campagnes, analytics avancés, automatisation CRM | à faire |
+
 ## Plan d'exécution
 
 | Phase | Contenu | Statut |

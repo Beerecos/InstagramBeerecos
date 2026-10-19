@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Intégrations" };
 export default function IntegrationsPage() {
   return (
     <>
-      <PageHeader eyebrow="Réglages" title="Intégrations" description="BeeMarketing reste utilisable même si une intégration n'est pas encore configurée. Aucune clé n'est jamais affichée ni envoyée au navigateur." />
+      <PageHeader eyebrow="Paramètres" title="Intégrations" description="BeeMarketing reste utilisable même si une intégration n'est pas encore configurée. Aucune clé n'est jamais affichée ni envoyée au navigateur." />
       <Suspense fallback={<div className="h-64 animate-pulse rounded-card bg-surface-2" />}>
         <IntegrationGrid />
       </Suspense>

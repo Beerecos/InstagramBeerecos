@@ -9,7 +9,11 @@ import { Logo } from "./logo";
 import { NavIcon } from "./nav-icon";
 
 export function Sidebar({ footer }: { footer?: React.ReactNode }) {
-  const pathname = usePathname();
+  return <SidebarView pathname={usePathname()} footer={footer} />;
+}
+
+/** Rendu sans hook : sert aussi de version statique pendant le chargement de l'URL. */
+export function SidebarView({ pathname, footer }: { pathname: string; footer?: React.ReactNode }) {
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-surface-1 px-3 py-6 lg:flex">
       <Link href="/" className="mb-1 px-3" aria-label="BeeMarketing — accueil">

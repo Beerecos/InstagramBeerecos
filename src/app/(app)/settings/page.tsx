@@ -3,20 +3,23 @@ import Link from "next/link";
 import { ChevronRight, Gauge, Palette, Plug, ShieldCheck, Users } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 
-export const metadata: Metadata = { title: "Réglages" };
+export const metadata: Metadata = { title: "Paramètres" };
 
 const SECTIONS = [
-  { href: "/reglages/integrations", icon: Plug, title: "Intégrations", text: "Instagram, LinkedIn, Claude, Veo, Runway, Google Drive, Supabase.", ready: true },
-  { href: "/reglages", icon: Gauge, title: "Autonomie & budgets", text: "Manuel, Validation ou Autopilot (désactivé par défaut), limites et budgets IA.", ready: false },
-  { href: "/reglages", icon: Palette, title: "Marque", text: "Import de la charte et des logos officiels BeeRecos.", ready: false },
-  { href: "/reglages", icon: Users, title: "Équipe & rôles", text: "Administrateur, responsable contenu, responsable de club, commercial, lecteur.", ready: false },
-  { href: "/reglages", icon: ShieldCheck, title: "RGPD", text: "Durées de conservation, consentements, export et suppression.", ready: false },
+  { href: "/settings/integrations", icon: Plug, title: "Intégrations", text: "Instagram, LinkedIn, Claude, Veo, Runway, Google Drive, Supabase.", ready: true },
+  { href: "/settings", icon: Gauge, title: "Autonomie & budgets", text: "Manuel, Validation ou Autopilot (désactivé par défaut), limites et budgets IA.", ready: false },
+  { href: "/brand", icon: Palette, title: "Marque", text: "Mémoire de marque, charte et logos officiels.", ready: true },
+  { href: "/settings", icon: Users, title: "Équipe & rôles", text: "Administrateur, responsable contenu, responsable de club, commercial, lecteur.", ready: false },
+  { href: "/conversations", icon: Users, title: "Conversations", text: "Inbox des DM Instagram (phase ventes).", ready: true },
+  { href: "/clubs", icon: Users, title: "Clubs", text: "Clubs et réunions BeeRecos.", ready: true },
+  { href: "/systeme", icon: Gauge, title: "Système / Runs", text: "Journal d'audit et exécutions.", ready: true },
+  { href: "/settings", icon: ShieldCheck, title: "RGPD", text: "Durées de conservation, consentements, export et suppression.", ready: false },
 ] as const;
 
 export default function SettingsPage() {
   return (
     <>
-      <PageHeader eyebrow="Réglages" title="Réglages" />
+      <PageHeader eyebrow="Paramètres" title="Paramètres" />
       <ul className="divide-y divide-line overflow-hidden rounded-card bg-surface-1 ring-1 ring-line">
         {SECTIONS.map(({ href, icon: Icon, title, text, ready }) => (
           <li key={title}>

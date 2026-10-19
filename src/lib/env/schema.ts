@@ -23,6 +23,8 @@ export const serverEnvSchema = clientEnvSchema.extend({
     .transform((v) => v === "1"),
 
   ANTHROPIC_API_KEY: optionalString,
+  // Modèle des agents (défaut : claude-opus-5-5)
+  ANTHROPIC_MODEL: optionalString,
   AI_GATEWAY_API_KEY: optionalString,
 
   // LinkedIn (API officielle) : profil membre (w_member_social) et page entreprise (Community Management API)

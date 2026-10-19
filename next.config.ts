@@ -18,6 +18,18 @@ const nextConfig: NextConfig = {
       "*.css": { loaders: ["@tailwindcss/turbopack"], as: "*.css" },
     },
   },
+  // Anciennes adresses françaises conservées (liens existants) vers la nouvelle navigation.
+  async redirects() {
+    return [
+      { source: "/creer", destination: "/video", permanent: false },
+      { source: "/creer/:mode", destination: "/video", permanent: false },
+      { source: "/calendrier", destination: "/calendar", permanent: false },
+      { source: "/medias", destination: "/library", permanent: false },
+      { source: "/strategie", destination: "/brand", permanent: false },
+      { source: "/reglages", destination: "/settings", permanent: false },
+      { source: "/reglages/integrations", destination: "/settings/integrations", permanent: false },
+    ];
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
