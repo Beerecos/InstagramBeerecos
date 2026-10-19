@@ -96,7 +96,7 @@ async function Workspace({ params }: { params: PageProps<"/missions/[id]">["para
                   <div className="border-t border-line p-4">
                     {t.waitingReason ? <p className="mb-3 text-sm text-[#6b4700] dark:text-[#f6c860]">{t.waitingReason}</p> : null}
                     {t.error ? <p className="mb-3 text-sm text-status-critical">{t.error}</p> : null}
-                    {t.output ? <AgentOutputView output={t.output} /> : !t.waitingReason && !t.error ? <p className="text-sm text-ink-3">{t.status === "in_progress" ? "L'agent travaille…" : "Pas encore produit."}</p> : null}
+                    {t.output ? <AgentOutputView output={t.output} taskId={t.id} /> : !t.waitingReason && !t.error ? <p className="text-sm text-ink-3">{t.status === "in_progress" ? "L'agent travaille…" : "Pas encore produit."}</p> : null}
                     {t.status === "to_validate" ? <Link href="/approvals" className="mt-3 inline-block text-sm font-medium text-brand">Valider dans la boîte de validation →</Link> : null}
                   </div>
                 </details>

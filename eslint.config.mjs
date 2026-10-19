@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     ".claude/**",
     "automation/**",
+    // Fichiers tiers minifiés servis tels quels (GSAP, runtime Hyperframes).
+    "public/hyperframes/**",
     "projets/**",
     "playwright-report/**",
     "test-results/**",

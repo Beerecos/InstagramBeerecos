@@ -17,10 +17,12 @@
     "test:e2e": "playwright test",
     "check": "npm run lint && npm run typecheck && npm test",
     "ig": "node automation/bin/ig.mjs",
-    "voice": "node automation/bin/voice.mjs"
+    "voice": "node automation/bin/voice.mjs",
+    "reel:render": "node automation/bin/render-reel.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
+    "@hyperframes/player": "0.8.126",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
     "clsx": "^2.1.1",

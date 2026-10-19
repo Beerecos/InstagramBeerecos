@@ -108,3 +108,17 @@ test("la Ruche : bureau pixel piloté par l'état réel des agents", async ({ pa
   await expect(page.getByText(/Attend votre validation · « /)).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test("Studio vidéo : aperçu Hyperframes d'un Reel motion design et composition téléchargeable", async ({ page, request }) => {
+  await page.goto("/video");
+  const preview = page.getByTestId("reel-preview").first();
+  await expect(preview.locator("hyperframes-player")).toHaveCount(1, { timeout: 15_000 });
+  const href = await page.getByRole("link", { name: "Télécharger la composition" }).first().getAttribute("href");
+  const res = await request.get(href!);
+  expect(res.status()).toBe(200);
+  expect(res.headers()["content-disposition"]).toContain("attachment");
+  const body = await res.text();
+  expect(body).toContain('data-composition-id="main"');
+  expect(body).toContain("Une recommandation, ça vaut combien ?");
+  expect((await request.get("/api/compositions/inconnu")).status()).toBe(404);
+});

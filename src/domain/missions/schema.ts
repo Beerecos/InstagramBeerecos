@@ -8,7 +8,7 @@ export const AgentOutputSchema = z.object({
     z.object({
       kind: z.enum([
         "strategy_brief", "research_note", "idea", "calendar_entry", "hook", "script", "caption", "carousel", "post", "story",
-        "email", "linkedin_post", "landing_copy", "storyboard", "visual_brief", "publication_plan", "lead_funnel", "kpi_plan", "brand_review",
+        "email", "linkedin_post", "landing_copy", "storyboard", "visual_brief", "publication_plan", "lead_funnel", "kpi_plan", "brand_review", "motion_reel",
       ]),
       title: z.string(),
       content: z.string().describe("Contenu complet, prêt à relire"),

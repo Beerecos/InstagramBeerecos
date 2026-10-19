@@ -1,10 +1,12 @@
 import { PillarTag } from "@/components/ui/pillar-tag";
 import type { AgentOutput } from "@/domain/missions/types";
+import { ReelPreview } from "@/components/video/reel-preview";
 
 const PLATFORM: Record<string, string> = { instagram: "Instagram", linkedin: "LinkedIn", facebook: "Facebook", tiktok: "TikTok", youtube: "YouTube", email: "Email", landing: "Page d'atterrissage" };
 
 /** Affiche la production d'un agent : résumé, décisions, livrables, limites. Jamais de raisonnement interne. */
-export function AgentOutputView({ output }: { output: AgentOutput }) {
+export function AgentOutputView({ output, taskId }: { output: AgentOutput; taskId?: string }) {
+  let reelIndex = 0;
   return (
     <div className="space-y-4 text-sm">
       <p className="text-ink-1">{output.summary}</p>
@@ -24,7 +26,11 @@ export function AgentOutputView({ output }: { output: AgentOutput }) {
                 {d.platform ? <span className="text-xs text-ink-3">{PLATFORM[d.platform]}</span> : null}
                 {d.pillar ? <PillarTag pillar={d.pillar} /> : null}
               </header>
-              <p className="whitespace-pre-line text-ink-2">{d.content}</p>
+              {d.kind === "motion_reel" ? (
+                taskId ? <ReelPreview taskId={taskId} index={reelIndex++} title={d.title} /> : <p className="text-ink-3">Reel motion design prêt à prévisualiser.</p>
+              ) : (
+                <p className="whitespace-pre-line text-ink-2">{d.content}</p>
+              )}
             </article>
           ))}
         </div>

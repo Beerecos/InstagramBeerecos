@@ -1,6 +1,7 @@
 import { deriveMissionStatus } from "@/domain/missions/graph";
 import { MISSION_TEMPLATES } from "@/domain/missions/templates";
 import type { AgentOutput, MissionTask, MissionTemplateKey, TaskStatus } from "@/domain/missions/types";
+import { DEMO_REEL } from "@/domain/video/reel";
 import type { MemoryMissionStore } from "./memory-store";
 
 /**
@@ -76,8 +77,8 @@ const SEEDS: { template: MissionTemplateKey; title: string; request: string; min
       strategy: { status: "done", output: out("Angle 2 retenu.", [{ kind: "strategy_brief", title: "Angle", content: "La recommandation suivie jusqu'au contrat. CTA : CLUB." }]) },
       script: { status: "validated", output: out("Script de 28 s et 2 hooks alternatifs.", [{ kind: "script", title: "Script", content: "Hook : Une recommandation, ça vaut combien ?\nValeur : dans un réseau monétisé, chaque mise en relation est suivie jusqu'au contrat signé.\nCTA : Commente CLUB pour découvrir un club BeeRecos.", pillar: "reseau_monetise", mode: "ai", platform: "instagram" }]) },
       storyboard: { status: "done", output: out("5 scènes 9:16 prêtes pour un moteur vidéo.", [{ kind: "storyboard", title: "Storyboard", content: "Scène 1 (3 s) : gros plan, deux mains qui se serrent, lumière douce, fond bureau.\nScène 2 (6 s) : interface sobre, une ligne relie deux entreprises.\n… (texte et logo ajoutés au montage, jamais par le moteur)" }]) },
-      generation: { status: "waiting", waitingReason: "Connexion requise : moteur de génération vidéo." },
-      brand_review: { status: "done", output: out("Conforme à la marque.", [{ kind: "brand_review", title: "Contrôle", content: "Orthographe des marques correcte, CTA conforme, aucune promesse chiffrée." }]) },
+      motion: { status: "to_validate", approval: true, output: out("Reel motion design de 16,5 s, 4 scènes, CTA CLUB.", [{ kind: "motion_reel", title: DEMO_REEL.title, content: JSON.stringify(DEMO_REEL), platform: "instagram", pillar: DEMO_REEL.pillar, mode: "ai" }], ["Alternance fond blanc / plein écran bleu, accent violet unique, révélations flou → net."]) },
+      brand_review: { status: "todo" },
       publication_plan: { status: "todo" },
     },
   },

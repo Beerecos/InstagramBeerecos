@@ -83,7 +83,8 @@ export type DeliverableKind =
   | "publication_plan"
   | "lead_funnel"
   | "kpi_plan"
-  | "brand_review";
+  | "brand_review"
+  | "motion_reel";
 
 export type Deliverable = {
   kind: DeliverableKind;

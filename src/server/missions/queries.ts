@@ -2,6 +2,7 @@ import "server-only";
 import { AGENT_KEYS, type AgentKey, type Deliverable, type MissionTask, type WorkerAgentKey } from "@/domain/missions/types";
 import { progress } from "@/domain/missions/graph";
 import { AGENTS } from "@/domain/missions/agents";
+import { ReelSpecSchema } from "@/domain/video/reel";
 import { userStore, watchdogReport } from "./service";
 
 export async function listMissions() {
@@ -118,4 +119,25 @@ export async function getHive(): Promise<HiveAgent[]> {
       isDemo: a.current?.isDemo ?? false,
     })),
   ];
+}
+
+/** Reel motion design d'une tâche (livrable `motion_reel`), après vérification de l'organisation. */
+export async function getTaskReel(taskId: string, index = 0) {
+  const { store, orgId } = await userStore();
+  const task = (await store.listTasks(orgId)).find((t) => t.id === taskId);
+  const reels = task?.output?.deliverables.filter((d) => d.kind === "motion_reel") ?? [];
+  const d = reels[index];
+  if (!task || !d) return null;
+  const parsed = ReelSpecSchema.safeParse(JSON.parse(d.content));
+  return parsed.success ? { task, spec: parsed.data } : null;
+}
+
+/** Reels motion design produits par l'équipe (toutes missions), du plus récent au plus ancien. */
+export async function getReels() {
+  const { store, orgId } = await userStore();
+  return (await store.listTasks(orgId)).flatMap((t) =>
+    (t.output?.deliverables ?? [])
+      .filter((d) => d.kind === "motion_reel")
+      .map((d, index) => ({ taskId: t.id, index, title: d.title, missionId: t.missionId, missionTitle: t.missionTitle, status: t.status, isDemo: t.isDemo })),
+  );
 }

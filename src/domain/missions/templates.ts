@@ -78,9 +78,9 @@ export const MISSION_TEMPLATES: Record<MissionTemplateKey, MissionTemplate> = {
       { key: "strategy", agent: "strategist", title: "Angle et CTA", dependsOn: ["research"], needs: L, instruction: "Choisis un angle, la promesse et le CTA." },
       { key: "script", agent: "copywriter", title: "Hook et script", dependsOn: ["strategy"], needs: L, requiresApproval: true, instruction: "Écris le hook et le script (20–35 s), plus 2 hooks alternatifs." },
       { key: "storyboard", agent: "video_director", title: "Storyboard et prompts vidéo", dependsOn: ["script"], needs: L, instruction: "Découpe en scènes de 2–8 s : plan, mouvement, sujet, texte écran, son, prompt moteur 9:16." },
-      { key: "generation", agent: "video_director", title: "Génération des scènes", dependsOn: ["storyboard"], needs: ["video_provider"], instruction: "Envoie chaque scène au moteur vidéo connecté et assemble le rendu." },
-      guard(["script", "storyboard"]),
-      publicationPlan(["brand_review", "generation"]),
+      { key: "motion", agent: "video_director", title: "Reel motion design (Hyperframes)", dependsOn: ["storyboard"], needs: L, requiresApproval: true, instruction: "Transforme le script et le storyboard en Reel motion design : scènes courtes (hook d'abord, CTA en dernier), texte écran bref, durée totale 15–45 s." },
+      guard(["script", "storyboard", "motion"]),
+      publicationPlan(["brand_review"]),
     ],
   },
   content_ideas: {

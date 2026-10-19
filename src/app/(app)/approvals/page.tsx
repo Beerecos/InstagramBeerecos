@@ -51,7 +51,7 @@ async function Inbox() {
                   </div>
                   {a.isDemo ? <DemoBadge /> : null}
                 </header>
-                <div className="max-h-[28rem] overflow-y-auto p-4">{a.task?.output ? <AgentOutputView output={a.task.output} /> : <p className="text-sm text-ink-3">Production indisponible.</p>}</div>
+                <div className="max-h-[28rem] overflow-y-auto p-4">{a.task?.output ? <AgentOutputView output={a.task.output} taskId={a.task.id} /> : <p className="text-sm text-ink-3">Production indisponible.</p>}</div>
                 {canDecide ? (
                   <form className="flex flex-col gap-3 border-t border-line p-4 sm:flex-row sm:items-center">
                     <label htmlFor={`c-${a.id}`} className="sr-only">Commentaire</label>

@@ -3,6 +3,8 @@ import { brandIssues } from "@/domain/missions/brand-check";
 import { deriveMissionStatus, readyTasks } from "@/domain/missions/graph";
 import { WATCHDOG_PAUSE_PREFIX } from "@/domain/missions/watchdog";
 import { AgentOutputSchema } from "@/domain/missions/schema";
+import { ReelSpecSchema } from "@/domain/video/reel";
+import { z } from "zod";
 import type { AgentOutput, BrandMemory, Capability, Mission, MissionTask } from "@/domain/missions/types";
 import { PILLAR_LABELS } from "@/domain/content";
 import { ProviderError } from "@/providers/errors";
@@ -114,9 +116,39 @@ const GLOBAL_RULES = [
   "Ne donne pas ton raisonnement interne : seulement décisions (avec justification courte), livrables complets et limites.",
 ].join("\n");
 
+/** Tâches dont la sortie est un Reel motion design : le modèle fournit des données, le code génère la composition Hyperframes. */
+export const MOTION_TASK_KEYS = new Set(["motion"]);
+
+const MotionOutputSchema = z.object({
+  summary: AgentOutputSchema.shape.summary,
+  decisions: AgentOutputSchema.shape.decisions,
+  limitations: AgentOutputSchema.shape.limitations,
+  reel: ReelSpecSchema,
+});
+
+const MOTION_RULES = [
+  "Ta sortie « reel » décrit les scènes d'un Reel 1080×1920 en motion design, rendu par Hyperframes aux couleurs de la charte.",
+  "Première scène : kind « hook » (le plus fort, 2 à 3 s). Dernière scène : kind « cta » avec le mot-clé à commenter.",
+  "Textes très courts (idéalement moins de 12 mots), au moins 1,5 s par scène, durée totale 15 à 45 s.",
+  "Aucun chiffre, témoignage ou résultat inventé à l'écran.",
+].join("\n");
+
 async function runAgentTask(input: { mission: Mission; task: MissionTask; tasks: MissionTask[]; brand: BrandMemory; ai: AIProvider }): Promise<AgentOutput> {
   const { mission, task, tasks, brand, ai } = input;
   const profile = AGENTS[task.agent];
+  if (MOTION_TASK_KEYS.has(task.key)) {
+    const { data } = await ai.generateStructured({
+      system: `${GLOBAL_RULES}\n\nRôle : ${profile.name} — ${profile.role}.\n${profile.instructions}\n\n${MOTION_RULES}`,
+      prompt: buildTaskPrompt(mission, task, tasks, brand),
+      schema: MotionOutputSchema,
+    });
+    return {
+      summary: data.summary,
+      decisions: data.decisions,
+      limitations: data.limitations,
+      deliverables: [{ kind: "motion_reel", title: data.reel.title, content: JSON.stringify(data.reel), platform: "instagram", pillar: data.reel.pillar, mode: "ai" }],
+    };
+  }
   const { data, sources } = await ai.generateStructured({
     system: `${GLOBAL_RULES}\n\nRôle : ${profile.name} — ${profile.role}.\n${profile.instructions}`,
     prompt: buildTaskPrompt(mission, task, tasks, brand),

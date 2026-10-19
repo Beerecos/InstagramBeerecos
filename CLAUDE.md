@@ -28,7 +28,9 @@ irréversible : jamais sans OK explicite, sauf `autopilote: oui` dans `content/a
 - `STYLE.md` — phrase de style du compte, à lire avant chaque projet.
 - `content/` — idées de Reels, ressources offertes en DM, réglages autopilote, journal.
 - `projets/` — un dossier par Reel IA (script, storyboard, voix, composition Hyperframes).
-- `automation/` — CLI `ig.mjs` (publication, campagnes CTA, jeton) et `voice.mjs` (voix IA).
+- `automation/` — CLI `ig.mjs` (publication, campagnes CTA, jeton), `voice.mjs` (voix IA) et `render-reel.mjs`
+  (`npm run reel:render -- <reel.html>` : rendu MP4 Hyperframes d'un Reel téléchargé depuis le Studio vidéo).
+- `src/domain/video/reel.ts` — modèle de Reel motion design BeeRecos (données IA → composition Hyperframes).
 - `api/instagram-webhook.mjs` — webhook Vercel qui envoie les DM sur mot-clé.
 - `supabase/migrations/` — tables des campagnes CTA + bucket des vidéos.
 - Configuration Instagram / Meta / Supabase / Vercel : `docs/SETUP-INSTAGRAM.md`.
