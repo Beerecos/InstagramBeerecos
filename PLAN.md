@@ -95,6 +95,7 @@ en graphe de tâches, fil d'activité réel, boîte de validation, mémoire de m
 |---|---|---|
 | 1 | Accueil, Queen Bee, Missions, Équipe IA, workflow de tâches, fil d'activité, mémoire de marque, Content Studio, calendrier (propositions), validations | ✅ (agents actifs dès la clé Claude) |
 | 1+ | **Watchdog** (chien de garde) : surveillance, réparations sûres, pause anti-boucle, page `/watchdog`, cron | ✅ |
+| 1+ | **La Ruche** : bureau pixel art (moteur Pixel Agents, MIT) animé par l'état réel des agents | ✅ |
 | 2 | Video Studio (import, transcription, moteurs vidéo), bibliothèque média, intégration Instagram/LinkedIn, analytics, génération de leads | à faire |
 | 3 | Autopilot, publication multi-plateforme, optimisation de campagnes, analytics avancés, automatisation CRM | à faire |
 

@@ -1,7 +1,8 @@
 import "server-only";
 import { AGENT_KEYS, type AgentKey, type Deliverable, type MissionTask, type WorkerAgentKey } from "@/domain/missions/types";
 import { progress } from "@/domain/missions/graph";
-import { userStore } from "./service";
+import { AGENTS } from "@/domain/missions/agents";
+import { userStore, watchdogReport } from "./service";
 
 export async function listMissions() {
   const { store, orgId } = await userStore();
@@ -95,4 +96,26 @@ export async function getNotifications() {
   for (const t of tasks.filter((x) => x.status === "waiting").slice(0, 3)) items.push({ id: t.id, text: `${t.title} : ${t.waitingReason ?? "en attente"}`, href: `/missions/${t.missionId}` });
   for (const t of tasks.filter((x) => x.status === "error").slice(0, 3)) items.push({ id: t.id, text: `Erreur sur « ${t.title} »`, href: `/missions/${t.missionId}` });
   return items;
+}
+
+export type HiveAgent = { key: AgentKey; name: string; role: string; state: AgentState["state"]; detail: string | null; missionId: string | null; isDemo: boolean };
+
+/** État de chaque agent pour la Ruche (bureau pixel) : uniquement des statuts réels de tâches. */
+export async function getHive(): Promise<HiveAgent[]> {
+  const [team, guard] = await Promise.all([getTeam(), watchdogReport()]);
+  const critical = guard.inspections.filter((i) => i.mission.status !== "done").flatMap((i) => i.findings).filter((f) => f.severity === "critical");
+  const anyWorking = team.some((a) => a.state === "working");
+  return [
+    { key: "queen_bee", name: AGENTS.queen_bee.name, role: AGENTS.queen_bee.role, state: anyWorking ? "working" : "idle", detail: anyWorking ? "Coordonne l'équipe" : null, missionId: null, isDemo: false },
+    { key: "watchdog", name: AGENTS.watchdog.name, role: AGENTS.watchdog.role, state: critical.length ? "blocked" : "idle", detail: critical[0]?.message ?? "Fait sa ronde : rien à signaler", missionId: critical[0]?.missionId ?? null, isDemo: false },
+    ...team.map((a) => ({
+      key: a.agent,
+      name: AGENTS[a.agent].name,
+      role: AGENTS[a.agent].role,
+      state: a.state,
+      detail: a.current ? `« ${a.current.title} »${a.current.waitingReason ? ` — ${a.current.waitingReason}` : ""}` : null,
+      missionId: a.current?.missionId ?? null,
+      isDemo: a.current?.isDemo ?? false,
+    })),
+  ];
 }

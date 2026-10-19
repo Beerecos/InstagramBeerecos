@@ -95,3 +95,16 @@ test("cron du Watchdog : refus sans secret", async ({ request }) => {
   const res = await request.get("/api/cron/watchdog");
   expect(res.status()).toBe(503);
 });
+
+test("la Ruche : bureau pixel piloté par l'état réel des agents", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/ruche");
+  await expect(page.getByRole("img", { name: /Bureau de l'équipe IA/ })).toBeVisible();
+  await expect(page.getByText("Ouverture de la Ruche…")).toBeHidden({ timeout: 15_000 });
+  const list = page.getByRole("list", { name: "État des agents" });
+  await expect(list.getByRole("listitem")).toHaveCount(12);
+  await list.getByRole("button", { name: /Copywriter/ }).click();
+  await expect(page.getByText(/Attend votre validation · « /)).toBeVisible();
+  expect(errors).toEqual([]);
+});

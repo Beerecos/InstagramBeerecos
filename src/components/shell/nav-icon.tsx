@@ -1,4 +1,4 @@
-import { BadgeCheck, BarChart3, CalendarDays, CheckCheck, Clapperboard, Home, Layers, Library, Megaphone, Settings, ShieldCheck, Target, Users, UsersRound, type LucideIcon } from "lucide-react";
+import { BadgeCheck, BarChart3, CalendarDays, CheckCheck, Clapperboard, Hexagon, Home, Layers, Library, Megaphone, Settings, ShieldCheck, Target, Users, UsersRound, type LucideIcon } from "lucide-react";
 
 const ICONS: Record<string, LucideIcon> = {
   home: Home,
@@ -15,6 +15,7 @@ const ICONS: Record<string, LucideIcon> = {
   badge: BadgeCheck,
   settings: Settings,
   shield: ShieldCheck,
+  hive: Hexagon,
 };
 
 export function NavIcon({ name, size = 18 }: { name: string; size?: number }) {

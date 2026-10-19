@@ -49,6 +49,24 @@ Agent **déterministe** (aucun appel IA, aucun coût) qui surveille toutes les m
 - « Relancer l'équipe » sur une mission lève les pauses posées par le Watchdog.
 - Code : règles `src/domain/missions/watchdog.ts`, exécutant `src/server/missions/watchdog-runner.ts`, tests `tests/unit/watchdog.test.ts`.
 
+## La Ruche — bureau pixel (`/ruche`)
+Vue ludique de l'équipe, construite sur le moteur MIT de [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents)
+(copie dans `src/vendor/pixel-agents/`, sprites pré-décodés dans `public/pixel-agents/`).
+
+| État réel (tâches) | Personnage |
+|---|---|
+| Tâche « En cours » | s'assoit à son poste ; tape (rédaction) ou lit (Researcher, Brand Guardian, Analytics, Watchdog) |
+| Contenu « À valider » | bulle « … » |
+| En attente / erreur / alerte critique du Watchdog | bulle « ! » |
+| Disponible | se promène dans le bureau |
+
+L'animation ne fait que refléter les statuts enregistrés : aucun état n'est inventé. Données rafraîchies toutes les 5 s.
+Non repris de Pixel Agents : extension VS Code, serveur local, hooks dans `~/.claude/settings.json`, terminaux.
+
+Pistes : plan de bureau BeeRecos (couleurs de la charte, un poste par agent, salle de validation) avec l'éditeur
+de Pixel Agents ; personnages BeeRecos sur mesure ; clic sur un poste pour ouvrir la tâche ; Watchdog en animal
+qui fait sa ronde ; bulles de livrables ; vue « réunion » quand Queen Bee planifie une mission.
+
 ## Garanties « pas de fausse IA »
 - Une tâche n'est « En cours » que lorsqu'un appel réel au modèle est en train d'être fait (réservation conditionnelle en base).
 - Sans clé Claude, sans vidéo importée, sans moteur vidéo ou sans statistiques : la tâche passe « En attente » avec la raison exacte.
