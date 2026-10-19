@@ -1,0 +1,19 @@
+# Rushs et rendus : lourds, hors git
+rush/*
+!rush/.gitkeep
+export/*
+!export/.gitkeep
+renders/
+**/edit/
+.hyperframes/
+node_modules/
+
+# Secrets
+.env
+.claude/skills/video-use/.env
+.claude/settings.local.json
+
+# Fichiers générés par les scripts de QA
+*-planche.jpg
+*-zones.jpg
+.DS_Store
