@@ -1,18 +1,19 @@
 # Phrase de style — BeeRecos
 
-Direction artistique du compte, à rappeler au début de chaque demande de montage.
-Claude la lit automatiquement (skill `motion-design-reel`). Tant que les champs ci-dessous
-restent à « À définir », c'est le prompt maître « luxe » qui s'applique
-(`.claude/skills/motion-design-reel/references/prompt-maitre.md`).
+Direction artistique des vidéos, issue de la charte BeeRecos (octobre 2026). Claude la lit
+automatiquement (skills `motion-design-reel`, `reel-ia-autopilot`, `beerecos-*`). Elle remplace
+le prompt maître « luxe » générique du guide.
 
-Pas encore de style ? Demande à Claude :
-> Mon compte parle de [ton thème]. Propose-moi 3 directions artistiques pour mes vidéos :
-> palette, polices, type de mouvement, et ce qu'il faut éviter.
-
-- **Couleurs (2 neutres + 1 accent) :** À définir
-- **Polices (titres / texte) :** À définir
-- **Mouvement :** À définir (ex. expo et ease-in-out, révélations masquées, flou → net)
-- **Textures des pleins écrans :** À définir (ex. sombre, papier, blanc quadrillé, 3D)
-- **Sons :** discrets, ≈ 8 dB sous la voix, −14 LUFS
-- **Interdit :** rebonds, secousses, flashs, couleurs fluo, faux fonds détourés, bruitages cartoon
-- **Format :** 1080×1920, 60 i/s
+```
+Style : BeeRecos — réseau d'affaires digitalisé, moderne, net, humain.
+Couleurs : bleu vibrant #2851FF, blanc #FFFFFF, noir #000000 ; accents ponctuels violet #693BFC
+ou vert #3BCAC2 (un seul accent par vidéo). Fonds clairs blancs ou pleins écrans bleus ; noir pour le contraste.
+Typographie : Poppins — grands mots en Light/Regular, mots-clés en SemiBold/Bold. BeeRecos toujours écrit ainsi.
+Formes : uniquement celles de la charte (cercle, hexagone arrondi, carré, carré arrondi, formes
+organiques arrondies en traits fins blancs) ; masques d'image arrondis.
+Mouvements : expo et ease-in-out, révélations masquées, passage du flou au net ; le hook (0–3 s) est le plus fort.
+Logo : fichiers officiels uniquement (public/brand/), jamais animé par déformation, rotation ou découpage.
+Interdit : rebonds, flashs, couleurs fluo hors charte, effets « gourou », personne détourée sur faux fond,
+logo modifié, foule « membres » générée présentée comme réelle.
+Format : 1080×1920, 60 i/s, sous-titres Poppins blanc ou noir selon le fond, hors des 20 % du bas.
+```

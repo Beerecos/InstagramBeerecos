@@ -24,8 +24,8 @@ async function Greeting() {
   return (
     <header className="mb-8">
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">{user.organization?.name ?? "BeeRecos"}</p>
-      <h1 className="mt-1 font-display text-5xl tracking-tight text-ink-1 sm:text-6xl">
-        Bonjour <em className="text-honey not-italic">{user.firstName || "à toi"}</em>
+      <h1 className="mt-1 text-4xl font-light tracking-tight text-ink-1 sm:text-6xl">
+        Bonjour <span className="font-semibold text-brand">{user.firstName || "à toi"}</span>
       </h1>
     </header>
   );
@@ -69,7 +69,7 @@ async function Dashboard() {
           <FunnelChart title="Tunnel commercial Instagram, 30 derniers jours" stages={snap.funnel} />
         </Card>
         <Card className="lg:col-span-2">
-          <CardHeader title={<span className="inline-flex items-center gap-2"><Lightbulb aria-hidden size={16} className="text-honey" />Insight Claude</span>} />
+          <CardHeader title={<span className="inline-flex items-center gap-2"><Lightbulb aria-hidden size={16} className="text-accent" />Insight Claude</span>} />
           {snap.insight ? (
             <p className="text-ink-1">{snap.insight}</p>
           ) : (
@@ -96,11 +96,11 @@ async function Dashboard() {
 
 function TodayTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-surface-1 p-4 ring-1 ring-line">
-      <span aria-hidden className="flex size-9 items-center justify-center rounded-xl bg-honey-soft text-ink-1">{icon}</span>
+    <div className="flex flex-col gap-2 rounded-2xl bg-surface-1 p-4 ring-1 ring-line sm:flex-row sm:items-center sm:gap-3">
+      <span aria-hidden className="flex size-9 items-center justify-center rounded-xl bg-accent-soft text-brand">{icon}</span>
       <div className="min-w-0">
         <p className="text-xs text-ink-3">{label}</p>
-        <p className="truncate font-medium text-ink-1">{value}</p>
+        <p className="font-medium text-ink-1 sm:truncate">{value}</p>
       </div>
     </div>
   );

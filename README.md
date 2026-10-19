@@ -1,4 +1,4 @@
-# BeeSocial AI
+# BeeMarketing
 
 Le système commercial Instagram de **BeeRecos** :
 contenu → engagement → commentaire → DM → qualification → invitation club → visite → suivi → adhésion.
@@ -12,7 +12,7 @@ Prérequis : Node.js 24, npm.
 
 ```bash
 npm install
-cp .env.example .env.local      # remplir au moins Supabase (ou BEESOCIAL_DEMO_MODE=1 pour une démo vide)
+cp .env.example .env.local      # remplir au moins Supabase (ou BEEMARKETING_DEMO_MODE=1 pour une démo vide)
 npm run dev                      # http://localhost:3000
 ```
 

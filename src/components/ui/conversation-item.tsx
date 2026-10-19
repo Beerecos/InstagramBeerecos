@@ -5,7 +5,7 @@ import { StatusBadge } from "./status-badge";
 export function ConversationItem({ handle, preview, at, unread, temperature, active }: { handle: string; preview: string; at: string; unread?: boolean; temperature?: LeadTemperature; active?: boolean }) {
   return (
     <div className={cn("flex gap-3 rounded-xl p-3", active ? "bg-surface-2" : "hover:bg-surface-2")}>
-      <div aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full bg-honey-soft text-sm font-semibold text-ink-1">
+      <div aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-brand">
         {handle.replace("@", "").slice(0, 2).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
@@ -16,7 +16,7 @@ export function ConversationItem({ handle, preview, at, unread, temperature, act
         <p className={cn("truncate text-sm", unread ? "text-ink-1" : "text-ink-2")}>{preview}</p>
         {temperature ? <StatusBadge status={temperature} className="mt-1" /> : null}
       </div>
-      {unread ? <span className="mt-2 size-2 shrink-0 rounded-full bg-honey" aria-label="Non lu" /> : null}
+      {unread ? <span className="mt-2 size-2 shrink-0 rounded-full bg-accent" aria-label="Non lu" /> : null}
     </div>
   );
 }

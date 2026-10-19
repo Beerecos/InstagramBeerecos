@@ -17,7 +17,7 @@ export const clientEnvSchema = z.object({
 export const serverEnvSchema = clientEnvSchema.extend({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   SUPABASE_SECRET_KEY: optionalString,
-  BEESOCIAL_DEMO_MODE: z
+  BEEMARKETING_DEMO_MODE: z
     .enum(["0", "1"])
     .optional()
     .transform((v) => v === "1"),
@@ -68,10 +68,10 @@ export function parseServerEnv(source: Record<string, string | undefined>): Serv
     issues.push("NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY vont ensemble.");
   }
   // Le mode démo ne peut jamais court-circuiter une vraie authentification.
-  if (env.BEESOCIAL_DEMO_MODE && supabaseConfigured) {
-    issues.push("BEESOCIAL_DEMO_MODE=1 est interdit quand Supabase est configuré.");
+  if (env.BEEMARKETING_DEMO_MODE && supabaseConfigured) {
+    issues.push("BEEMARKETING_DEMO_MODE=1 est interdit quand Supabase est configuré.");
   }
-  if (env.NODE_ENV === "production" && !supabaseConfigured && !env.BEESOCIAL_DEMO_MODE) {
+  if (env.NODE_ENV === "production" && !supabaseConfigured && !env.BEEMARKETING_DEMO_MODE) {
     issues.push("Supabase doit être configuré en production (voir docs/DEPLOYMENT.md).");
   }
   if (env.SUPABASE_SECRET_KEY?.startsWith("sb_publishable_")) {

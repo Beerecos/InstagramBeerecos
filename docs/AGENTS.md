@@ -5,7 +5,7 @@ Documentation de référence : `node_modules/eve/docs/` (version installée).
 
 | Agent | Rôle | Skills principaux |
 |---|---|---|
-| BEE SOCIAL ORCHESTRATOR (`agent/`) | Comprend la demande, délègue, résume avant toute action critique | beerecos-brand, beerecos-compliance, beerecos-quality-control |
+| BEE MARKETING ORCHESTRATOR (`agent/`) | Comprend la demande, délègue, résume avant toute action critique | beerecos-brand, beerecos-compliance, beerecos-quality-control |
 | Content Director (`agent/subagents/content-director`) | Stratégie éditoriale, idées, scripts | beerecos-editorial-director, beerecos-reel-scriptwriter |
 | Video Director | Storyboard, génération, montage, rendu | beerecos-ai-video-director, beerecos-studio-editor, beerecos-hybrid-video |
 | Sales Concierge | Commentaires, DM, qualification, matching, invitations, relances | beerecos-instagram-sales, beerecos-lead-qualification, beerecos-club-matcher, beerecos-followup |

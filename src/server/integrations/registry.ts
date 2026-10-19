@@ -15,7 +15,7 @@ export type IntegrationCard = {
 };
 
 export const INTEGRATIONS: IntegrationCard[] = [
-  { id: "supabase", name: "Supabase", role: "Base de données, authentification, stockage", requiredEnv: ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SECRET_KEY"], permissions: ["Lecture/écriture des données BeeSocial (RLS)"], phase: 1 },
+  { id: "supabase", name: "Supabase", role: "Base de données, authentification, stockage", requiredEnv: ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SECRET_KEY"], permissions: ["Lecture/écriture des données BeeMarketing (RLS)"], phase: 1 },
   { id: "claude", name: "Claude", role: "Intelligence de l'orchestrateur et des agents", requiredEnv: ["ANTHROPIC_API_KEY"], permissions: ["Appels modèle"], phase: 2 },
   { id: "google_drive", name: "Google Drive", role: "Import des contenus et médias BeeRecos existants", requiredEnv: ["GOOGLE_DRIVE_CLIENT_ID", "GOOGLE_DRIVE_CLIENT_SECRET"], permissions: ["Lecture des fichiers choisis"], phase: 2 },
   { id: "veo", name: "Google Veo", role: "Génération de scènes vidéo IA", requiredEnv: ["GOOGLE_VEO_API_KEY"], permissions: ["Génération vidéo (payant)"], phase: 3 },

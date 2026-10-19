@@ -17,6 +17,6 @@ export default defineConfig({
     url: `http://localhost:${PORT}/api/health`,
     timeout: 300_000,
     reuseExistingServer: !process.env.CI,
-    env: { BEESOCIAL_DEMO_MODE: "1", NEXT_TELEMETRY_DISABLED: "1" },
+    env: { BEEMARKETING_DEMO_MODE: "1", NEXT_TELEMETRY_DISABLED: "1" },
   },
 });

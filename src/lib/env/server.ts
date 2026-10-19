@@ -13,5 +13,5 @@ export function isSupabaseConfigured(env: ServerEnv = serverEnv()): boolean {
 }
 
 export function isDemoMode(env: ServerEnv = serverEnv()): boolean {
-  return env.BEESOCIAL_DEMO_MODE && !isSupabaseConfigured(env);
+  return env.BEEMARKETING_DEMO_MODE && !isSupabaseConfigured(env);
 }

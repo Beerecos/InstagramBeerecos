@@ -1,4 +1,4 @@
--- BeeSocial AI — fondation : organisations, profils, rôles, adhésions, réglages, connexions fournisseurs, audit.
+-- BeeMarketing — fondation : organisations, profils, rôles, adhésions, réglages, connexions fournisseurs, audit.
 -- Toutes les tables exposées ont la RLS activée. Les fonctions SECURITY DEFINER fixent search_path = ''.
 
 -- ---------------------------------------------------------------------------

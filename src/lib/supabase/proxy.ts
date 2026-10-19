@@ -14,10 +14,10 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   if (!url || !key) {
     // Sans Supabase, seul le mode démo explicite donne accès à l'interface (données fictives, aucune donnée réelle).
-    if (process.env.BEESOCIAL_DEMO_MODE === "1" || isPublicPath(request.nextUrl.pathname)) {
+    if (process.env.BEEMARKETING_DEMO_MODE === "1" || isPublicPath(request.nextUrl.pathname)) {
       return NextResponse.next({ request });
     }
-    return new NextResponse("BeeSocial n'est pas configuré : voir docs/DEPLOYMENT.md.", { status: 503 });
+    return new NextResponse("BeeMarketing n'est pas configuré : voir docs/DEPLOYMENT.md.", { status: 503 });
   }
 
   let response = NextResponse.next({ request });

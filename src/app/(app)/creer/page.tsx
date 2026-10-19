@@ -35,8 +35,8 @@ export default function CreatePage() {
       <PageHeader eyebrow="Créer" title="Comment veux-tu créer ?" description="Choisis un point de départ. Claude déduit le reste : pilier, format, durée, CTA." />
       <div className="grid gap-4 md:grid-cols-3">
         {MODES.map(({ key, icon: Icon, title, text, example }) => (
-          <Link key={key} href={`/creer/${key}`} className="group flex flex-col rounded-[1.75rem] bg-surface-1 p-6 ring-1 ring-line transition hover:-translate-y-0.5 hover:shadow-lg hover:ring-ink-3">
-            <span aria-hidden className="flex size-12 items-center justify-center rounded-2xl bg-brand text-honey"><Icon size={24} /></span>
+          <Link key={key} href={`/creer/${key}`} className="group flex flex-col rounded-[1.75rem] bg-surface-1 p-6 ring-1 ring-line transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-brand/10 hover:ring-brand">
+            <span aria-hidden className="flex size-12 items-center justify-center rounded-2xl bg-brand text-white"><Icon size={24} /></span>
             <h2 className="mt-5 text-xl font-semibold tracking-tight text-ink-1">{title}</h2>
             <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-2">{text}</p>
             <p className="mt-4 text-sm italic text-ink-3">{example}</p>

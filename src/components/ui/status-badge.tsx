@@ -2,15 +2,15 @@ import { AlertTriangle, CheckCircle2, CircleDashed, Clock, Flame, Snowflake, Sun
 import type { ReactNode } from "react";
 import { cn } from "./cn";
 
-export type Tone = "neutral" | "progress" | "good" | "warning" | "critical" | "honey";
+export type Tone = "neutral" | "progress" | "good" | "warning" | "critical" | "brand";
 
 const TONES: Record<Tone, string> = {
   neutral: "bg-surface-2 text-ink-2",
-  progress: "bg-[#e8eef7] text-[#1c5cab] dark:bg-[#22303f] dark:text-[#9ec5f4]",
+  progress: "bg-accent-soft text-[#1f43e6] dark:text-[#9fb2ff]",
   good: "bg-[#e3f4e3] text-[#0a6e0a] dark:bg-[#183018] dark:text-[#7fd67f]",
   warning: "bg-[#fdf1d6] text-[#8a5a00] dark:bg-[#3a2e10] dark:text-[#f6c860]",
   critical: "bg-[#fbe4e4] text-[#a32626] dark:bg-[#3b1a1a] dark:text-[#f19a9a]",
-  honey: "bg-honey-soft text-[#7a5200] dark:text-[#f6c860]",
+  brand: "bg-accent-soft text-[#1f43e6] dark:text-[#9fb2ff]",
 };
 const ICONS: Record<Tone, ReactNode> = {
   neutral: <CircleDashed aria-hidden size={12} />,
@@ -18,7 +18,7 @@ const ICONS: Record<Tone, ReactNode> = {
   good: <CheckCircle2 aria-hidden size={12} />,
   warning: <AlertTriangle aria-hidden size={12} />,
   critical: <XCircle aria-hidden size={12} />,
-  honey: <Sun aria-hidden size={12} />,
+  brand: <Sun aria-hidden size={12} />,
 };
 
 /** Statuts connus de l'application → libellé français + ton. Le libellé accompagne toujours la couleur. */

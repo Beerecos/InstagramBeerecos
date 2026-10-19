@@ -1,4 +1,4 @@
-# BeeSocial AI — système commercial Instagram de BeeRecos
+# BeeMarketing — système commercial Instagram de BeeRecos
 
 Application Next.js 16 + Supabase + agent eve (voir `PLAN.md`, `docs/`). Toujours écrire **BeeRecos**
 (B et R majuscules). Node 24. Avant de coder : lire la doc embarquée (`node_modules/next/dist/docs/`,

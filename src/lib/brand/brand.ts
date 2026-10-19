@@ -1,5 +1,5 @@
 export const BRAND_NAME = "BeeRecos";
-export const PRODUCT_NAME = "BeeSocial";
+export const PRODUCT_NAME = "BeeMarketing";
 
 export type BrandIssue = { index: number; found: string; expected: typeof BRAND_NAME };
 

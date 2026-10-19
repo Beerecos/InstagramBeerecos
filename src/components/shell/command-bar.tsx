@@ -15,7 +15,7 @@ const EXAMPLES = [
 type Message = { id: number; role: "user" | "agent"; text: string };
 
 /**
- * Barre « Demander à BeeSocial », présente sur toutes les pages (raccourci ⌘K / Ctrl K).
+ * Barre « Demander à BeeMarketing », présente sur toutes les pages (raccourci ⌘K / Ctrl K).
  * Phase 1 : interface. L'orchestrateur eve y est branché en phase 2 (useEveAgent).
  */
 export function CommandBar() {
@@ -46,7 +46,7 @@ export function CommandBar() {
     setMessages((m) => [
       ...m,
       { id: Date.now(), role: "user", text: t },
-      { id: Date.now() + 1, role: "agent", text: "Bien reçu. Je ne peux pas encore agir : l'orchestrateur BeeSocial est branché à la prochaine étape (phase 2). Ta demande n'a déclenché aucune action." },
+      { id: Date.now() + 1, role: "agent", text: "Bien reçu. Je ne peux pas encore agir : l'orchestrateur BeeMarketing est branché à la prochaine étape (phase 2). Ta demande n'a déclenché aucune action." },
     ]);
     setValue("");
   }
@@ -56,25 +56,25 @@ export function CommandBar() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group fixed bottom-20 left-1/2 z-30 flex w-[min(42rem,calc(100%-1.5rem))] -translate-x-1/2 items-center gap-3 rounded-full bg-[#14130f] px-5 py-3 text-left text-sm text-[#c9c7bf] shadow-lg ring-1 ring-white/10 transition hover:text-white lg:bottom-6"
+        className="group fixed bottom-20 left-1/2 z-30 flex w-[min(42rem,calc(100%-1.5rem))] -translate-x-1/2 items-center gap-3 rounded-full bg-brand-black px-5 py-3 text-left text-sm text-white/75 shadow-xl shadow-brand/20 ring-1 ring-white/10 transition hover:text-white lg:bottom-6"
       >
-        <Sparkles aria-hidden size={18} className="text-honey" />
-        <span className="flex-1">Demander à BeeSocial…</span>
-        <kbd className="hidden rounded-md bg-white/10 px-1.5 py-0.5 text-[11px] text-[#a3a199] sm:inline">⌘K</kbd>
+        <span aria-hidden className="flex size-7 items-center justify-center rounded-full bg-brand"><Sparkles size={15} className="text-white" /></span>
+        <span className="flex-1">Demander à BeeMarketing…</span>
+        <kbd className="hidden rounded-md bg-white/10 px-1.5 py-0.5 text-[11px] text-white/60 sm:inline">⌘K</kbd>
       </button>
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center" onClick={() => setOpen(false)}>
-          <div role="dialog" aria-modal="true" aria-label="Demander à BeeSocial" className="flex max-h-[85dvh] w-full max-w-2xl flex-col rounded-3xl bg-surface-0 shadow-2xl ring-1 ring-line" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-label="Demander à BeeMarketing" className="flex max-h-[85dvh] w-full max-w-2xl flex-col rounded-3xl bg-surface-0 shadow-2xl ring-1 ring-line" onClick={(e) => e.stopPropagation()}>
             <header className="flex items-center justify-between px-5 pt-4">
-              <p className="flex items-center gap-2 text-sm font-semibold"><Sparkles aria-hidden size={16} className="text-honey" /> Demander à BeeSocial</p>
+              <p className="flex items-center gap-2 text-sm font-semibold"><Sparkles aria-hidden size={16} className="text-brand" /> Demander à BeeMarketing</p>
               <button type="button" onClick={() => setOpen(false)} aria-label="Fermer" className="rounded-full p-1.5 text-ink-3 hover:bg-surface-2"><X size={18} /></button>
             </header>
             <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4" aria-live="polite">
               {messages.length === 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {EXAMPLES.map((ex) => (
-                    <button key={ex} type="button" onClick={() => submit(ex)} className="rounded-full bg-surface-1 px-3 py-1.5 text-sm text-ink-2 ring-1 ring-line hover:text-ink-1">{ex}</button>
+                    <button key={ex} type="button" onClick={() => submit(ex)} className="rounded-full bg-surface-1 px-3 py-1.5 text-sm text-ink-2 ring-1 ring-line hover:text-brand hover:ring-brand">{ex}</button>
                   ))}
                 </div>
               ) : (
@@ -88,9 +88,9 @@ export function CommandBar() {
                 submit(value);
               }}
             >
-              <label htmlFor="beesocial-ask" className="sr-only">Votre demande</label>
+              <label htmlFor="beemarketing-ask" className="sr-only">Votre demande</label>
               <textarea
-                id="beesocial-ask"
+                id="beemarketing-ask"
                 ref={inputRef}
                 value={value}
                 onChange={(e) => setValue(e.target.value)}

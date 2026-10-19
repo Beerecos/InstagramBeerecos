@@ -1,56 +1,62 @@
 @import "tailwindcss";
 
 /*
- * Design tokens BeeSocial.
- * Couleurs de marque provisoires (charte BeeRecos à importer) : modifier ici uniquement.
- * Les couleurs de données (piliers, statuts, séquentiel) suivent la palette validée dataviz.
+ * Design tokens BeeMarketing — charte BeeRecos (Brand Guidelines, octobre 2026).
+ * Couleurs principales : vibrant blue #2851FF, white #FFFFFF, black #000000 (et ses déclinaisons 90/30/10 %).
+ * Couleurs secondaires : purple pop #693BFC, fresh green #3BCAC2.
+ * Typographie : Poppins (Thin, Regular, SemiBold, Bold).
+ * Couleurs de données (piliers) : nuances de la charte validées pour la lisibilité daltonien (outil dataviz).
  */
 :root {
   color-scheme: light;
-  --surface-0: #f6f4ef;
-  --surface-1: #fcfcfb;
-  --surface-2: #efece5;
-  --ink-1: #14130f;
-  --ink-2: #52514e;
-  --ink-3: #7a786f;
-  --line: #e2ded4;
-  --brand: #14130f;
-  --brand-ink: #fcfcfb;
-  --honey: #e9a514;
-  --honey-soft: #fbf0d4;
-  --focus: #2a78d6;
+  --surface-0: #f5f6fa;
+  --surface-1: #ffffff;
+  --surface-2: #eef0f6;
+  --ink-1: #1a1a1a;   /* black 90 % */
+  --ink-2: #4d4d4d;
+  --ink-3: #6e6e73;
+  --line: #e3e5ee;
 
-  --pillar-reseau: #2a78d6;
-  --pillar-formation: #eb6834;
-  --pillar-ia: #1baf7a;
+  --brand: #2851ff;      /* vibrant blue */
+  --brand-ink: #ffffff;
+  --brand-black: #000000;
+  --purple: #693bfc;     /* purple pop */
+  --green: #3bcac2;      /* fresh green */
+  --accent: #2851ff;
+  --accent-soft: #eaeeff; /* bleu ~10 % */
+  --focus: #693bfc;
+
+  --pillar-reseau: #2851ff;
+  --pillar-formation: #a88bfd;
+  --pillar-ia: #1a9c95;
 
   --status-good: #0ca30c;
   --status-warning: #fab219;
   --status-serious: #ec835a;
   --status-critical: #d03b3b;
 
-  --seq-1: #2a78d6;
-  --seq-track: #e8eef7;
+  --seq-1: #2851ff;
+  --seq-track: #eaeeff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
     color-scheme: dark;
-    --surface-0: #121211;
-    --surface-1: #1a1a19;
-    --surface-2: #232321;
-    --ink-1: #f0efec;
-    --ink-2: #c3c2b7;
-    --ink-3: #8f8d84;
-    --line: #2f2f2c;
-    --brand: #f0efec;
-    --brand-ink: #14130f;
-    --honey-soft: #3a2e10;
-    --pillar-reseau: #3987e5;
-    --pillar-formation: #d95926;
-    --pillar-ia: #199e70;
-    --seq-1: #3987e5;
-    --seq-track: #22303f;
+    --surface-0: #0b0b0d;
+    --surface-1: #151518;
+    --surface-2: #1f1f24;
+    --ink-1: #f5f5f7;
+    --ink-2: #c2c2c9;
+    --ink-3: #8d8d96;
+    --line: #2a2a31;
+    --accent: #6f8bff;
+    --accent-soft: #1a2152;
+    --focus: #9478f0;
+    --pillar-reseau: #2851ff;
+    --pillar-formation: #9478f0;
+    --pillar-ia: #1a9c95;
+    --seq-1: #4b6bff;
+    --seq-track: #1a2152;
   }
 }
 
@@ -64,8 +70,11 @@
   --color-line: var(--line);
   --color-brand: var(--brand);
   --color-brand-ink: var(--brand-ink);
-  --color-honey: var(--honey);
-  --color-honey-soft: var(--honey-soft);
+  --color-brand-black: var(--brand-black);
+  --color-purple: var(--purple);
+  --color-green: var(--green);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
   --color-pillar-reseau: var(--pillar-reseau);
   --color-pillar-formation: var(--pillar-formation);
   --color-pillar-ia: var(--pillar-ia);
@@ -73,8 +82,8 @@
   --color-status-warning: var(--status-warning);
   --color-status-serious: var(--status-serious);
   --color-status-critical: var(--status-critical);
-  --font-sans: var(--font-geist-sans);
-  --font-display: var(--font-display-serif);
+  --font-sans: var(--font-poppins);
+  --font-display: var(--font-poppins);
   --radius-card: 1.25rem;
 }
 

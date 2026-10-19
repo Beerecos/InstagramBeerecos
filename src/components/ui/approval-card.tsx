@@ -7,7 +7,7 @@ import { Button } from "./button";
 /** Affiche une demande d'approbation. La décision est validée côté serveur (approval_requests). */
 export function ApprovalCard({ action, summary, requestedBy, onApprove, onReject, disabled }: { action: string; summary: ReactNode; requestedBy: string; onApprove?: () => void; onReject?: () => void; disabled?: boolean }) {
   return (
-    <article className="rounded-2xl bg-honey-soft/60 p-4 ring-1 ring-honey/40">
+    <article className="rounded-2xl bg-accent-soft p-4 ring-1 ring-brand/30">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-ink-2">
         <ShieldCheck aria-hidden size={14} /> Validation requise · {action}
       </div>

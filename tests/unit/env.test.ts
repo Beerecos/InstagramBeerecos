@@ -5,15 +5,15 @@ const SUPA = { NEXT_PUBLIC_SUPABASE_URL: "https://x.supabase.co", NEXT_PUBLIC_SU
 
 describe("validation de l'environnement", () => {
   it("accepte un environnement de développement vide", () => {
-    expect(parseServerEnv({ NODE_ENV: "development" }).BEESOCIAL_DEMO_MODE).toBe(false);
+    expect(parseServerEnv({ NODE_ENV: "development" }).BEEMARKETING_DEMO_MODE).toBe(false);
   });
   it("exige Supabase en production, sauf démo explicite", () => {
     expect(() => parseServerEnv({ NODE_ENV: "production" })).toThrow(EnvError);
-    expect(parseServerEnv({ NODE_ENV: "production", BEESOCIAL_DEMO_MODE: "1" }).BEESOCIAL_DEMO_MODE).toBe(true);
+    expect(parseServerEnv({ NODE_ENV: "production", BEEMARKETING_DEMO_MODE: "1" }).BEEMARKETING_DEMO_MODE).toBe(true);
     expect(parseServerEnv({ NODE_ENV: "production", ...SUPA }).NEXT_PUBLIC_SUPABASE_URL).toBe(SUPA.NEXT_PUBLIC_SUPABASE_URL);
   });
   it("interdit le mode démo quand Supabase est configuré", () => {
-    expect(() => parseServerEnv({ ...SUPA, BEESOCIAL_DEMO_MODE: "1" })).toThrow(/interdit/);
+    expect(() => parseServerEnv({ ...SUPA, BEEMARKETING_DEMO_MODE: "1" })).toThrow(/interdit/);
   });
   it("refuse une configuration Supabase incomplète ou une clé mal placée", () => {
     expect(() => parseServerEnv({ NEXT_PUBLIC_SUPABASE_URL: SUPA.NEXT_PUBLIC_SUPABASE_URL })).toThrow(/vont ensemble/);

@@ -10,7 +10,7 @@ export function LoginForm({ disabled }: { disabled: boolean }) {
   return (
     <form action={action} className="space-y-3">
       <label htmlFor="email" className="text-sm font-medium text-ink-1">Adresse email</label>
-      <input id="email" name="email" type="email" required autoComplete="email" disabled={disabled} placeholder="prenom@beerecos.com" className="h-12 w-full rounded-2xl bg-surface-1 px-4 ring-1 ring-line outline-none focus:ring-ink-3" />
+      <input id="email" name="email" type="email" required autoComplete="email" disabled={disabled} placeholder="prenom@beerecos.com" className="h-12 w-full rounded-2xl bg-surface-1 px-4 ring-1 ring-line outline-none focus:ring-brand" />
       <Button type="submit" size="lg" className="w-full" disabled={pending || disabled} icon={<Mail size={18} />}>
         {pending ? "Envoi…" : "Recevoir mon lien de connexion"}
       </Button>

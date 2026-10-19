@@ -33,10 +33,10 @@ test("le tableau de bord n'invente aucun chiffre", async ({ page }) => {
   await expect(page.getByText("Pas encore assez de données")).toBeVisible();
 });
 
-test("« Demander à BeeSocial » s'ouvre partout et reste honnête sur ce qu'il fait", async ({ page }) => {
+test("« Demander à BeeMarketing » s'ouvre partout et reste honnête sur ce qu'il fait", async ({ page }) => {
   await page.goto("/leads");
-  await page.getByRole("button", { name: /Demander à BeeSocial/ }).click();
-  const dialog = page.getByRole("dialog", { name: "Demander à BeeSocial" });
+  await page.getByRole("button", { name: /Demander à BeeMarketing/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Demander à BeeMarketing" });
   await dialog.getByLabel("Votre demande").fill("Prépare ma semaine Instagram.");
   await dialog.getByRole("button", { name: "Envoyer" }).click();
   await expect(dialog).toContainText("aucune action");

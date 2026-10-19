@@ -14,7 +14,8 @@ description: Use before writing, reviewing or publishing anything for BeeRecos (
 4. **Écosystème d'abord** : un contenu IA ou formation doit rester identifiable comme BeeRecos
    (réseau d'affaires, clubs, membres). Jamais une page générique « IA ».
 5. **CTA** : `CLUB` (principal), `RÉSEAU`, `FORMATION`, `IA`, `INVITATION`. Libellés : `references/cta.md`.
-6. **Visuel** : ne jamais dessiner, recréer ni « moderniser » le logo. Utiliser uniquement les assets
-   importés dans Réglages → Marque. S'ils manquent : texte `BeeRecos` neutre et signaler l'absence.
+6. **Visuel** : charte BeeRecos (`references/charte-visuelle.md`) — bleu vibrant #2851FF, blanc, noir ;
+   violet #693BFC et vert #3BCAC2 en secondaires ; Poppins ; formes de la charte uniquement.
+   Ne jamais dessiner, recréer, déformer ni « moderniser » le logo : fichiers officiels dans `public/brand/`.
 7. **Faits** : aucun chiffre, témoignage, club, date ou règle d'adhésion inventé. Une donnée non
    sourcée est remplacée par une formulation qualitative ou retirée.

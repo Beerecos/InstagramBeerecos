@@ -2,15 +2,15 @@ import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger" | "honey";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "black";
 type Size = "sm" | "md" | "lg";
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-brand text-brand-ink hover:opacity-90",
+  primary: "bg-brand text-brand-ink hover:bg-[#1f43e6]",
   secondary: "bg-surface-1 text-ink-1 ring-1 ring-line hover:bg-surface-2",
   ghost: "text-ink-2 hover:bg-surface-2 hover:text-ink-1",
   danger: "bg-status-critical text-white hover:opacity-90",
-  honey: "bg-honey text-[#14130f] hover:brightness-105",
+  black: "bg-brand-black text-white hover:bg-[#1a1a1a] dark:bg-white dark:text-black",
 };
 const SIZES: Record<Size, string> = {
   sm: "h-8 px-3 text-sm gap-1.5",

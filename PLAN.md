@@ -1,4 +1,4 @@
-# BeeSocial AI — Plan d'architecture et d'exécution
+# BeeMarketing — Plan d'architecture et d'exécution
 
 Système commercial Instagram de BeeRecos :
 **contenu → engagement → commentaire → DM → qualification → invitation club → visite → suivi → adhésion.**
@@ -28,7 +28,7 @@ Gestionnaire de paquets : **npm** (déjà utilisé). Runtime : **Node 24** (exig
 | Couche | Choix | Version | Pourquoi |
 |---|---|---|---|
 | Web | Next.js App Router, React, TypeScript strict | 16.4.2 / 19.3 / 5.x | Standard Vercel ; `cacheComponents` + `proxy.ts` (ex-middleware) selon la doc embarquée `node_modules/next/dist/docs`. TypeScript 5 (celui que génère `create-next-app` 16.4). |
-| UI | Tailwind CSS v4 (tokens CSS), lucide-react, design system maison `src/components/ui` | 4.3 | Pas de kit SaaS générique ; composants propres à BeeSocial. |
+| UI | Tailwind CSS v4 (tokens CSS), lucide-react, design system maison `src/components/ui` | 4.3 | Pas de kit SaaS générique ; composants propres à BeeMarketing. |
 | Backend | Supabase : Postgres + RLS, Auth (lien magique), Storage, Realtime, pgvector (phase 3) | supabase-js 2.118, @supabase/ssr 0.12 | Backend principal demandé ; clés *publishable* côté client, *secret/service* côté serveur uniquement. |
 | Agents | **eve** (Vercel, preview) monté dans Next.js via `withEve` (`/eve/v1/*`) | 0.80.1 | Sessions durables, tools typés avec politiques d'approbation (`always()`), skills `SKILL.md`, subagents, schedules, evals, client React `useEveAgent`. Documentation lue dans le paquet installé. |
 | Traitements longs | **Vercel Workflow** (`workflow`) — runtime déjà utilisé par eve | 5.2.2 | Génération vidéo, rendu, transcription, publication programmée, attente webhook, relances, idempotence. |
@@ -37,7 +37,7 @@ Gestionnaire de paquets : **npm** (déjà utilisé). Runtime : **Node 24** (exig
 | Tests | Vitest (unitaires, intégration, adapters), PGlite (tests RLS sur Postgres réel en WASM), Playwright (E2E), evals eve | — | Aucun appel réel à Instagram ou API payante en test. |
 
 Choix structurants :
-- **Un seul dépôt, une seule app Next.js**, un agent eve racine `agent/` (BEE SOCIAL ORCHESTRATOR) avec 4 subagents déclarés (Content Director, Video Director, Sales Concierge, Growth Analyst). Pas d'agent quand une fonction déterministe suffit (matching, scoring, quality gate = code testé, appelé comme tool).
+- **Un seul dépôt, une seule app Next.js**, un agent eve racine `agent/` (BEE MARKETING ORCHESTRATOR) avec 4 subagents déclarés (Content Director, Video Director, Sales Concierge, Growth Analyst). Pas d'agent quand une fonction déterministe suffit (matching, scoring, quality gate = code testé, appelé comme tool).
 - **Validation humaine garantie côté backend** : table `approval_requests` + politiques d'approbation des tools eve (`always()` sur publication, DM sensible, invitation, budget, Autopilot). L'UI ne fait qu'afficher.
 - **Adapters partout** : le métier ne connaît que des interfaces (`src/providers/types.ts`).
 - **Capability matrix** par provider, découverte dynamique (Metricool MCP : on liste les tools réellement exposés avant de les appeler).
@@ -58,7 +58,7 @@ src/
   app/login, app/auth/…     # Supabase Auth (lien magique)
   app/api/webhooks/…        # Instagram / ManyChat / Metricool (signature + timestamp + anti-rejeu + idempotence)
   components/ui/            # design system
-  components/shell/         # navigation, barre « Demander à BeeSocial »
+  components/shell/         # navigation, barre « Demander à BeeMarketing »
   domain/                   # types et règles métier pures (statuts, rôles, scoring, matching…)
   providers/                # interfaces + adapters (Veo, Runway, Metricool, ManyChat, Meta, Anthropic…)
   server/                   # DAL, services, workflows (Vercel Workflow), audit, budgets
@@ -90,7 +90,7 @@ Détail et politiques RLS : `docs/DATABASE.md`.
 |---|---|---|
 | 0 | Audit, architecture, PLAN.md, structure des 14 Agent Skills | ✅ |
 | 1 | Next.js, design system, Supabase (schéma fondation + RLS + Auth), layout, navigation, réglages intégrations, validation env | ✅ (voir résumé) |
-| 2 | Moteur éditorial : stratégie (pondérations), idées, scripts, bibliothèque, calendrier drag & drop, agent eve + premiers tools, barre « Demander à BeeSocial » branchée | ⏭ suivante |
+| 2 | Moteur éditorial : stratégie (pondérations), idées, scripts, bibliothèque, calendrier drag & drop, agent eve + premiers tools, barre « Demander à BeeMarketing » branchée | ⏭ suivante |
 | 3 | Studio vidéo : upload, transcription, détection de clips, génération IA (Veo/Runway), hybride, rendu FFmpeg, recherche sémantique | |
 | 4 | Publication : Metricool MCP (découverte des capacités), planning, approvals, analytics | |
 | 5 | Ventes Instagram : commentaires → DM (ManyChat), leads, qualification, inbox, handoff | |
