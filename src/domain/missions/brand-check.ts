@@ -3,7 +3,7 @@ import type { BrandMemory, Deliverable } from "./types";
 
 const BRANDS = ["BeeRecos", "BeeMarketing", "BeeSchool", "BeeBot", "BeeLead"] as const;
 
-/** Contrôles déterministes du Brand Guardian : casse des marques et mots interdits de la mémoire de marque. */
+/** Contrôles déterministes du Gardien de la marque : casse des marques et mots interdits de la mémoire de marque. */
 export function brandIssues(deliverables: Deliverable[], memory: Pick<BrandMemory, "forbiddenWords">): string[] {
   const issues: string[] = [];
   for (const d of deliverables) {

@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Vidéo" };
 export default function VideoPage() {
   return (
     <>
-      <PageHeader eyebrow="Vidéo" title="Video Studio" description="Deux sources : votre vidéo tournée, ou une vidéo 100 % IA. L'équipe prépare tout ; aucun fichier n'est annoncé comme généré sans moteur vidéo connecté." />
+      <PageHeader eyebrow="Vidéo" title="Studio vidéo" description="Deux sources : votre vidéo tournée, ou une vidéo 100 % IA. L'équipe prépare tout ; aucun fichier n'est annoncé comme généré sans moteur vidéo connecté." />
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <span aria-hidden className="flex size-12 items-center justify-center rounded-2xl bg-brand text-white"><Bot size={24} /></span>
@@ -20,7 +20,7 @@ export default function VideoPage() {
         <Card>
           <span aria-hidden className="flex size-12 items-center justify-center rounded-2xl bg-brand-black text-white"><Upload size={24} /></span>
           <h2 className="mt-4 text-xl font-semibold">Importer ma vidéo</h2>
-          <p className="mt-1 text-sm text-ink-2">Upload → transcription → analyse → propositions de Reels → édition → validation → publication.</p>
+          <p className="mt-1 text-sm text-ink-2">Import → transcription → analyse → propositions de Reels → édition → validation → publication.</p>
           <p className="mt-2 text-xs text-ink-3">L&apos;import arrive avec la bibliothèque média (MVP 2). Vous pouvez déjà créer la mission : l&apos;équipe attendra la vidéo.</p>
         </Card>
       </div>

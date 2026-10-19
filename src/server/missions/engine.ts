@@ -37,7 +37,7 @@ export async function advanceMission(missionId: string, deps: EngineDeps): Promi
 
     let progressed = false;
     for (const task of readyTasks(tasks)) {
-      if (task.waitingReason?.startsWith(WATCHDOG_PAUSE_PREFIX)) continue; // pause posée par le Watchdog
+      if (task.waitingReason?.startsWith(WATCHDOG_PAUSE_PREFIX)) continue; // pause posée par le Chien de garde
       const missing = task.needs.filter((c) => !capabilities.has(c) || (c === "llm" && !deps.ai));
       if (missing.length > 0) {
         const reason = `Connexion requise : ${missing.map((c) => CAPABILITY_LABELS[c]).join(", ")}.`;

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-/** Tant que l'application est ouverte, déclenche périodiquement la tournée du Watchdog (le serveur limite la fréquence). */
+/** Tant que l'application est ouverte, déclenche périodiquement la tournée du Chien de garde (le serveur limite la fréquence). */
 export function WatchdogPulse({ intervalMs = 3 * 60_000 }: { intervalMs?: number }) {
   useEffect(() => {
     const pulse = () => {

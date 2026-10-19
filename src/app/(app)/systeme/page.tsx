@@ -11,10 +11,10 @@ export const metadata: Metadata = { title: "Système" };
 export default function SystemPage() {
   return (
     <>
-      <PageHeader eyebrow="Système" title="Runs & journal" description="Comprendre ce qui s'est passé — « pourquoi cette vidéo n'a pas été publiée ? » — sans lire les logs Vercel." />
+      <PageHeader eyebrow="Système" title="Exécutions et journal" description="Comprendre ce qui s'est passé — « pourquoi cette vidéo n'a pas été publiée ? » — sans lire les logs Vercel." />
       <ComingSoon phase={8} features={["Jobs, agent runs et appels d'outils", "Erreurs, retries, latence, fournisseur", "Coûts par job et par jour", "Raison lisible de chaque échec"]}>
         <Card>
-          <CardHeader title="Journal d'audit" description="Publications, suppressions, DM automatiques, leads, invitations, changements d'Autopilot." />
+          <CardHeader title="Journal d'audit" description="Publications, suppressions, DM automatiques, leads, invitations, changements du pilote automatique." />
           <Suspense fallback={<div className="h-32 animate-pulse rounded-xl bg-surface-2" />}>
             <AuditList />
           </Suspense>

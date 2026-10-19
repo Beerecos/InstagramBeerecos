@@ -5,19 +5,19 @@ const PAGES = [
   ["/missions", "Missions de l'équipe"],
   ["/approvals", "Boîte de validation"],
   ["/team", "Votre équipe marketing"],
-  ["/studio", "Content Studio"],
-  ["/video", "Video Studio"],
+  ["/studio", "Studio de contenu"],
+  ["/video", "Studio vidéo"],
   ["/calendar", "Calendrier marketing"],
   ["/campaigns", "Campagnes"],
-  ["/leads", "CRM Instagram"],
+  ["/leads", "Suivi des prospects Instagram"],
   ["/analytics", "Ce qui crée des visites"],
   ["/library", "Bibliothèque média"],
   ["/brand", "Mémoire de marque"],
   ["/settings", "Paramètres"],
   ["/settings/integrations", "Intégrations"],
-  ["/conversations", "Inbox Instagram"],
+  ["/conversations", "Messagerie Instagram"],
   ["/clubs", "Clubs BeeRecos"],
-  ["/systeme", "Runs & journal"],
+  ["/systeme", "Exécutions et journal"],
 ] as const;
 
 test("toutes les sections s'affichent sans erreur", async ({ page }) => {
@@ -58,10 +58,10 @@ test("Queen Bee crée une vraie mission ; sans Claude, l'équipe attend honnête
 test("valider une production depuis la boîte de validation", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "état partagé : un seul projet décide");
   await page.goto("/approvals");
-  const card = page.locator("article", { hasText: "Landing page, formulaire et relances" }).first();
+  const card = page.locator("article", { hasText: "Page d'atterrissage, formulaire et relances" }).first();
   await card.getByRole("button", { name: "Valider" }).click();
   await expect(page.getByRole("heading", { name: "Historique" })).toBeVisible();
-  await expect(page.locator("li", { hasText: "Landing page, formulaire et relances" }).getByText("Validé")).toBeVisible();
+  await expect(page.locator("li", { hasText: "Page d'atterrissage, formulaire et relances" }).getByText("Validé")).toBeVisible();
 });
 
 test("Queen Bee est accessible partout", async ({ page }) => {
@@ -91,7 +91,7 @@ test("chien de garde : santé, constats réels et inspection manuelle", async ({
   await expect(page.getByText("Santé globale")).toBeVisible();
 });
 
-test("cron du Watchdog : refus sans secret", async ({ request }) => {
+test("cron du Chien de garde : refus sans secret", async ({ request }) => {
   const res = await request.get("/api/cron/watchdog");
   expect(res.status()).toBe(503);
 });
@@ -104,7 +104,7 @@ test("la Ruche : bureau pixel piloté par l'état réel des agents", async ({ pa
   await expect(page.getByText("Ouverture de la Ruche…")).toBeHidden({ timeout: 15_000 });
   const list = page.getByRole("list", { name: "État des agents" });
   await expect(list.getByRole("listitem")).toHaveCount(12);
-  await list.getByRole("button", { name: /Copywriter/ }).click();
+  await list.getByRole("button", { name: /Rédacteur/ }).click();
   await expect(page.getByText(/Attend votre validation · « /)).toBeVisible();
   expect(errors).toEqual([]);
 });

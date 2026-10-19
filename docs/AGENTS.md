@@ -14,18 +14,18 @@ Demande → Queen Bee (planification) → Mission + graphe de tâches
 | Agent | Rôle | Skills appliqués |
 |---|---|---|
 | Queen Bee | Comprend la demande, choisit le modèle de mission, crée les tâches, soumet les validations | beerecos-brand, beerecos-compliance |
-| Strategist | Cible, angle, offre, messages, CTA, funnel, KPI → Marketing Strategy Brief | beerecos-editorial-director, beerecos-growth-analyst |
-| Researcher | Tendances, questions des prospects, hooks — sources réelles via recherche web, sinon « hypothèse » | beerecos-editorial-director |
-| Content Architect | Plan éditorial : piliers, formats, plateformes, dates, mode humain/IA/hybride | beerecos-editorial-director, beerecos-publishing |
-| Copywriter | Hooks, scripts, légendes, carrousels, posts LinkedIn, emails, landing, invitations | beerecos-reel-scriptwriter, beerecos-brand |
-| Video Director | Découpage de vidéo humaine, storyboard et prompts IA ; ne prétend jamais avoir généré une vidéo | beerecos-ai-video-director, beerecos-studio-editor, beerecos-hybrid-video |
-| Creative Director | Direction visuelle selon la charte | beerecos-brand |
-| Social Manager | Adaptation par plateforme et plan de publication (aucune programmation sans connexion + validation) | beerecos-publishing |
-| Lead Agent | CTA, landing, formulaire, qualification, relances ; aucun club ni date inventé | beerecos-instagram-sales, beerecos-lead-qualification, beerecos-club-matcher |
-| Analytics Agent | Analyse des données réelles uniquement (`analytics_data` requis) | beerecos-growth-analyst |
-| Brand Guardian | Relecture + **contrôles déterministes** (casse BeeRecos/BeeMarketing/BeeSchool, mots interdits) | beerecos-quality-control, beerecos-brand, beerecos-compliance |
+| Stratège | Cible, angle, offre, messages, CTA, funnel, KPI → Marketing Strategy Brief | beerecos-editorial-director, beerecos-growth-analyst |
+| Chercheur | Tendances, questions des prospects, hooks — sources réelles via recherche web, sinon « hypothèse » | beerecos-editorial-director |
+| Architecte de contenu | Plan éditorial : piliers, formats, plateformes, dates, mode humain/IA/hybride | beerecos-editorial-director, beerecos-publishing |
+| Rédacteur | Hooks, scripts, légendes, carrousels, posts LinkedIn, emails, landing, invitations | beerecos-reel-scriptwriter, beerecos-brand |
+| Réalisateur vidéo | Découpage de vidéo humaine, storyboard et prompts IA ; ne prétend jamais avoir généré une vidéo | beerecos-ai-video-director, beerecos-studio-editor, beerecos-hybrid-video |
+| Directeur artistique | Direction visuelle selon la charte | beerecos-brand |
+| Responsable réseaux | Adaptation par plateforme et plan de publication (aucune programmation sans connexion + validation) | beerecos-publishing |
+| Chargé de prospection | CTA, landing, formulaire, qualification, relances ; aucun club ni date inventé | beerecos-instagram-sales, beerecos-lead-qualification, beerecos-club-matcher |
+| Analyste | Analyse des données réelles uniquement (`analytics_data` requis) | beerecos-growth-analyst |
+| Gardien de la marque | Relecture + **contrôles déterministes** (casse BeeRecos/BeeMarketing/BeeSchool, mots interdits) | beerecos-quality-control, beerecos-brand, beerecos-compliance |
 
-## Watchdog — chien de garde
+## Chien de garde — chien de garde
 Agent **déterministe** (aucun appel IA, aucun coût) qui surveille toutes les missions et tous les agents.
 
 | Constat | Gravité | Réparation automatique |
@@ -40,13 +40,13 @@ Agent **déterministe** (aucun appel IA, aucun coût) qui surveille toutes les m
 | Plus de 3 essais par tâche en moyenne (boucle coûteuse) | critique | **pause** de la mission jusqu'à relance humaine |
 
 - Santé d'une mission : 100 − 30 par constat critique − 10 par alerte. Santé d'un agent : part de ses tâches sans erreur ni blocage.
-- Chaque intervention est journalisée dans le fil d'activité (acteur « Watchdog »). Toutes les modifications sont conditionnées
+- Chaque intervention est journalisée dans le fil d'activité (acteur « Chien de garde »). Toutes les modifications sont conditionnées
   au statut observé : deux tournées simultanées ne font jamais le travail deux fois.
 - Missions de démonstration : inspectées, jamais modifiées.
 - Déclenchement : impulsion de l'interface ouverte (au plus toutes les 3 min par organisation), bouton « Lancer une inspection »
   sur `/watchdog`, et tâche planifiée Vercel Cron `GET /api/cron/watchdog` (protégée par `CRON_SECRET`). `vercel.json` la planifie
   une fois par jour (limite du plan Hobby) ; sur le plan Pro, passer à `*/15 * * * *`.
-- « Relancer l'équipe » sur une mission lève les pauses posées par le Watchdog.
+- « Relancer l'équipe » sur une mission lève les pauses posées par le Chien de garde.
 - Code : règles `src/domain/missions/watchdog.ts`, exécutant `src/server/missions/watchdog-runner.ts`, tests `tests/unit/watchdog.test.ts`.
 
 ## La Ruche — bureau pixel (`/ruche`)
@@ -55,16 +55,16 @@ Vue ludique de l'équipe, construite sur le moteur MIT de [Pixel Agents](https:/
 
 | État réel (tâches) | Personnage |
 |---|---|
-| Tâche « En cours » | s'assoit à son poste ; tape (rédaction) ou lit (Researcher, Brand Guardian, Analytics, Watchdog) |
+| Tâche « En cours » | s'assoit à son poste ; tape (rédaction) ou lit (Chercheur, Gardien de la marque, Analytics, Chien de garde) |
 | Contenu « À valider » | bulle « … » |
-| En attente / erreur / alerte critique du Watchdog | bulle « ! » |
+| En attente / erreur / alerte critique du Chien de garde | bulle « ! » |
 | Disponible | se promène dans le bureau |
 
 L'animation ne fait que refléter les statuts enregistrés : aucun état n'est inventé. Données rafraîchies toutes les 5 s.
 Non repris de Pixel Agents : extension VS Code, serveur local, hooks dans `~/.claude/settings.json`, terminaux.
 
 Pistes : plan de bureau BeeRecos (couleurs de la charte, un poste par agent, salle de validation) avec l'éditeur
-de Pixel Agents ; personnages BeeRecos sur mesure ; clic sur un poste pour ouvrir la tâche ; Watchdog en animal
+de Pixel Agents ; personnages BeeRecos sur mesure ; clic sur un poste pour ouvrir la tâche ; Chien de garde en animal
 qui fait sa ronde ; bulles de livrables ; vue « réunion » quand Queen Bee planifie une mission.
 
 ## Garanties « pas de fausse IA »

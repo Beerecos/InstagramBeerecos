@@ -83,7 +83,7 @@ export async function resumeMission(missionId: string): Promise<void> {
   const store = await engineStore(orgId);
   const loaded = await store.getMission(missionId);
   if (!loaded || loaded.mission.organizationId !== orgId) throw new Error("Mission introuvable.");
-  // Relance humaine : lève les pauses posées par le Watchdog.
+  // Relance humaine : lève les pauses posées par le Chien de garde.
   for (const t of loaded.tasks.filter((x) => x.waitingReason?.startsWith(WATCHDOG_PAUSE_PREFIX))) {
     await store.updateTask(t.id, { status: "todo", waitingReason: null, attempts: 0 }, "waiting");
   }
@@ -149,7 +149,7 @@ export async function currentAutonomyMode(): Promise<AutonomyMode> {
 const lastWatchdogRun = (globalThis as unknown as { __bmWatchdog?: Map<string, number> }).__bmWatchdog ??= new Map();
 const WATCHDOG_MIN_INTERVAL_MS = 3 * 60_000;
 
-/** Tournée du Watchdog pour l'organisation de l'utilisateur (bouton, ou impulsion périodique de l'interface). */
+/** Tournée du Chien de garde pour l'organisation de l'utilisateur (bouton, ou impulsion périodique de l'interface). */
 export async function runWatchdogNow(opts: { force?: boolean } = {}) {
   const user = await requirePermission("content:edit");
   const orgId = requireOrg(user);

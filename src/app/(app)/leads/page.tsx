@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/shell/page-header";
 import { ComingSoon } from "@/components/shell/coming-soon";
 
-export const metadata: Metadata = { title: "Leads" };
+export const metadata: Metadata = { title: "Prospects" };
 
 const COLUMNS = ["Nouveau", "À qualifier", "Qualifié", "Invitation proposée", "Invitation confirmée", "A participé", "À relancer", "Chaud", "Adhésion", "Perdu"];
 
 export default function LeadsPage() {
   return (
     <>
-      <PageHeader eyebrow="Leads" title="CRM Instagram" description="Chaque prospect avec son Reel d’origine, son score et son parcours jusqu’à l’adhésion." />
+      <PageHeader eyebrow="Prospects" title="Suivi des prospects Instagram" description="Chaque prospect avec son Reel d’origine, son score et son parcours jusqu’à l’adhésion." />
       <ComingSoon phase={5} features={["Fiche lead : identité, entreprise, ville, source, conversation, timeline", "Score Froid / Tiède / Chaud configurable", "Responsable de club : uniquement ses leads", "Export et suppression RGPD"]}>
         <div className="flex gap-3 overflow-x-auto pb-2">
           {COLUMNS.map((c) => (

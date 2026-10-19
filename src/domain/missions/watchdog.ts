@@ -3,11 +3,11 @@ import { isSatisfied, readyTasks } from "./graph";
 import type { Approval, Capability, Mission, MissionTask, WorkerAgentKey } from "./types";
 
 /**
- * Watchdog : inspection déterministe d'une mission (aucun appel IA, aucune donnée inventée).
+ * Chien de garde : inspection déterministe d'une mission (aucun appel IA, aucune donnée inventée).
  * Il produit des constats et, quand c'est sûr, une action de réparation que le serveur applique.
  */
-/** Préfixe des raisons d'attente posées par le Watchdog : le moteur n'exécute pas ces tâches tant qu'un humain ne relance pas. */
-export const WATCHDOG_PAUSE_PREFIX = "Mis en pause par le Watchdog";
+/** Préfixe des raisons d'attente posées par le Chien de garde : le moteur n'exécute pas ces tâches tant qu'un humain ne relance pas. */
+export const WATCHDOG_PAUSE_PREFIX = "Mis en pause par le Chien de garde";
 
 export type WatchdogSeverity = "info" | "warning" | "critical";
 

@@ -7,12 +7,12 @@ export const metadata: Metadata = { title: "Paramètres" };
 
 const SECTIONS = [
   { href: "/settings/integrations", icon: Plug, title: "Intégrations", text: "Instagram, LinkedIn, Claude, Veo, Runway, Google Drive, Supabase.", ready: true },
-  { href: "/settings", icon: Gauge, title: "Autonomie & budgets", text: "Manuel, Validation ou Autopilot (désactivé par défaut), limites et budgets IA.", ready: false },
+  { href: "/settings", icon: Gauge, title: "Autonomie & budgets", text: "Manuel, Validation ou Pilote automatique (désactivé par défaut), limites et budgets IA.", ready: false },
   { href: "/brand", icon: Palette, title: "Marque", text: "Mémoire de marque, charte et logos officiels.", ready: true },
   { href: "/settings", icon: Users, title: "Équipe & rôles", text: "Administrateur, responsable contenu, responsable de club, commercial, lecteur.", ready: false },
-  { href: "/conversations", icon: Users, title: "Conversations", text: "Inbox des DM Instagram (phase ventes).", ready: true },
+  { href: "/conversations", icon: Users, title: "Conversations", text: "Messagerie des DM Instagram (phase ventes).", ready: true },
   { href: "/clubs", icon: Users, title: "Clubs", text: "Clubs et réunions BeeRecos.", ready: true },
-  { href: "/systeme", icon: Gauge, title: "Système / Runs", text: "Journal d'audit et exécutions.", ready: true },
+  { href: "/systeme", icon: Gauge, title: "Système / Journal", text: "Journal d'audit et exécutions.", ready: true },
   { href: "/settings", icon: ShieldCheck, title: "RGPD", text: "Durées de conservation, consentements, export et suppression.", ready: false },
 ] as const;
 

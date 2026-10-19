@@ -77,7 +77,7 @@ async function Workspace({ params }: { params: PageProps<"/missions/[id]">["para
 
       <div className="grid gap-6 lg:grid-cols-5">
         <section className="lg:col-span-3" aria-labelledby="workflow">
-          <h2 id="workflow" className="mb-3 text-sm font-semibold text-ink-2">Workflow</h2>
+          <h2 id="workflow" className="mb-3 text-sm font-semibold text-ink-2">Étapes de la mission</h2>
           <ol className="relative space-y-3 border-l border-line pl-6">
             {tasks.map((t) => (
               <li key={t.id} id={`task-${t.id}`} className="relative">

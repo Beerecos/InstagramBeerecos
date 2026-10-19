@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { serverEnv } from "@/lib/env/server";
 import { runWatchdogAllOrganizations } from "@/server/missions/service";
 
-/** Tournée planifiée du Watchdog (Vercel Cron, voir vercel.json). Protégée par CRON_SECRET. */
+/** Tournée planifiée du Chien de garde (Vercel Cron, voir vercel.json). Protégée par CRON_SECRET. */
 export async function GET(request: Request) {
   const secret = serverEnv().CRON_SECRET;
   if (!secret) return NextResponse.json({ error: "CRON_SECRET non configuré." }, { status: 503 });

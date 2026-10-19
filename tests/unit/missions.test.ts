@@ -83,11 +83,11 @@ describe("Moteur d'orchestration", () => {
     const { mission } = await newMission(store, "content_ideas");
     expect(await advanceMission(mission.id, { store, ai, capabilities: ALL })).toBe("done");
     expect(calls).toHaveLength(3);
-    expect(calls[0].system).toMatch(/Researcher/);
-    expect(calls[1].prompt).toMatch(/Production de Researcher/);
-    expect(calls[2].system).toMatch(/Brand Guardian/);
+    expect(calls[0].system).toMatch(/Chercheur/);
+    expect(calls[1].prompt).toMatch(/Production de Chercheur/);
+    expect(calls[2].system).toMatch(/Gardien de la marque/);
     const activity = await store.listActivity(ORG, { missionId: mission.id });
-    expect(activity.some((e) => /Content Architect a terminé/.test(e.message))).toBe(true);
+    expect(activity.some((e) => /Architecte de contenu a terminé/.test(e.message))).toBe(true);
   });
 
   it("s'arrête sur une validation humaine puis reprend après l'approbation", async () => {
@@ -124,9 +124,9 @@ describe("Moteur d'orchestration", () => {
     expect(calls).toHaveLength(3);
   });
 
-  it("le Brand Guardian ajoute ses contrôles automatiques", async () => {
+  it("le Gardien de la marque ajoute ses contrôles automatiques", async () => {
     const store = new MemoryMissionStore();
-    const { ai } = fakeAi((system) => ({ summary: "ok", decisions: [], limitations: [], deliverables: system.includes("Brand Guardian") ? [] : [{ kind: "post", title: "Post", content: "Rejoins Beerecos et la Beeschool, argent facile !" }] }));
+    const { ai } = fakeAi((system) => ({ summary: "ok", decisions: [], limitations: [], deliverables: system.includes("Gardien de la marque") ? [] : [{ kind: "post", title: "Post", content: "Rejoins Beerecos et la Beeschool, argent facile !" }] }));
     const { mission } = await newMission(store);
     await advanceMission(mission.id, { store, ai, capabilities: ALL });
     const review = (await store.getMission(mission.id))!.tasks.find((t) => t.agent === "brand_guardian")!;

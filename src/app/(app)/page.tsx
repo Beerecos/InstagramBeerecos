@@ -87,7 +87,7 @@ async function Today() {
         <Card className="lg:col-span-3">
           <CardHeader title="Performance" description="Des vues aux adhésions. Données affichées uniquement quand elles sont réelles." />
           <div className="mb-5 grid grid-cols-3 gap-3">
-            <MetricCard label="Leads" value={null} />
+            <MetricCard label="Prospects" value={null} />
             <MetricCard label="Visites" value={null} emphasis hint="KPI principal" />
             <MetricCard label="Adhésions" value={null} />
           </div>

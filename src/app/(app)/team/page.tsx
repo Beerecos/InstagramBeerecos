@@ -43,7 +43,7 @@ async function Team() {
       <Link href="/watchdog" className="mb-4 flex items-center gap-4 rounded-card bg-surface-1 p-5 ring-1 ring-line transition hover:ring-brand">
         <AgentAvatar agent="watchdog" size="lg" />
         <div>
-          <h2 className="font-semibold text-ink-1">Watchdog — chien de garde</h2>
+          <h2 className="font-semibold text-ink-1">Chien de garde</h2>
           <p className="text-sm text-ink-3">{AGENTS.watchdog.instructions}</p>
         </div>
       </Link>

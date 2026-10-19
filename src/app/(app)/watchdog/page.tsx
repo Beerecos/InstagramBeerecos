@@ -20,8 +20,8 @@ export default function WatchdogPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Chien de garde"
-        title="Watchdog"
+        eyebrow="Surveillance"
+        title="Chien de garde"
         description="Il surveille chaque agent sur chaque mission : tâches bloquées, erreurs, validations oubliées, livrables vides, boucles coûteuses. Il répare ce qui est sûr et vous signale le reste. Aucune IA : des règles vérifiables."
       />
       <Suspense fallback={<div className="h-96 animate-pulse rounded-card bg-surface-2" />}>
@@ -92,7 +92,7 @@ async function Report() {
           </ul>
         </Card>
         <Card className="h-fit lg:col-span-2">
-          <CardHeader title="Interventions du Watchdog" />
+          <CardHeader title="Interventions du chien de garde" />
           <ActivityFeed events={activity} emptyLabel="Aucune intervention pour l'instant." />
         </Card>
       </div>

@@ -91,7 +91,7 @@ export function HiveOffice({ agents }: { agents: HiveAgent[] }) {
                 const bubble = getCachedSprite(BUBBLE_PERMISSION_SPRITE, v.zoom);
                 ctx.drawImage(bubble, Math.round(bx - bubble.width / 2), Math.round(by - bubble.height));
               } else if (a.state === "blocked") {
-                // Bulle « ! » : connexion manquante, erreur ou alerte du Watchdog.
+                // Bulle « ! » : connexion manquante, erreur ou alerte du Chien de garde.
                 const r = 5 * v.zoom;
                 ctx.fillStyle = "#FFFFFF";
                 ctx.fillRect(Math.round(bx - r), Math.round(by - 2 * r), Math.round(2 * r), Math.round(2 * r));

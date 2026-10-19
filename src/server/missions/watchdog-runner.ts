@@ -15,7 +15,7 @@ export async function inspect(store: MissionStore, orgId: string, missionId: str
 }
 
 /**
- * Tournée du Watchdog sur toutes les missions actives d'une organisation : applique les réparations sûres
+ * Tournée du Chien de garde sur toutes les missions actives d'une organisation : applique les réparations sûres
  * (tâche abandonnée, essai restant, travail prêt non exécuté, boucle d'essais), journalise chaque intervention,
  * puis relance le moteur. Les missions de démonstration sont inspectées mais jamais modifiées.
  * Idempotent : chaque modification est conditionnée au statut observé.
@@ -46,7 +46,7 @@ export async function runWatchdog(deps: { store: MissionStore; orgId: string; ai
 
     for (const finding of inspection.findings) {
       const a = finding.action;
-      if (a.type === "reset_stuck" && (await store.updateTask(a.taskId, { status: "todo", error: "Interrompu : relancé par le Watchdog." }, "in_progress"))) {
+      if (a.type === "reset_stuck" && (await store.updateTask(a.taskId, { status: "todo", error: "Interrompu : relancé par le Chien de garde." }, "in_progress"))) {
         result.actions++;
         relaunch = true;
         await log(mission.id, a.taskId, `${finding.message} Je remets la tâche en file.`);

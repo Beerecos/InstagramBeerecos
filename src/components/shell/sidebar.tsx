@@ -40,7 +40,7 @@ export function SidebarView({ pathname, footer }: { pathname: string; footer?: R
         })}
       </nav>
       <Link href="/systeme" className={cn("mb-3 flex items-center gap-3 rounded-xl px-3 py-2 text-xs", isActive(pathname, "/systeme") ? "text-brand" : "text-ink-3 hover:text-ink-1")}>
-        <Activity aria-hidden size={14} /> Système / Runs
+        <Activity aria-hidden size={14} /> Système / Journal
       </Link>
       {footer}
     </aside>

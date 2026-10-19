@@ -16,7 +16,7 @@ export const AGENT_KEYS = [
   "watchdog",
 ] as const;
 export type AgentKey = (typeof AGENT_KEYS)[number];
-/** Agents qui exécutent des tâches (Queen Bee orchestre, le Watchdog supervise). */
+/** Agents qui exécutent des tâches (Queen Bee orchestre, le Chien de garde supervise). */
 export type WorkerAgentKey = Exclude<AgentKey, "queen_bee" | "watchdog">;
 export const WORKER_AGENT_KEYS = AGENT_KEYS.filter((k): k is WorkerAgentKey => k !== "queen_bee" && k !== "watchdog");
 

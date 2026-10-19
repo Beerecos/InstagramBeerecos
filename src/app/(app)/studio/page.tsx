@@ -19,12 +19,12 @@ const SECTIONS: { key: string; label: string; kinds: StudioItem["kind"][] }[] = 
   { key: "carrousels", label: "Carrousels", kinds: ["carousel"] },
   { key: "captions", label: "Captions & posts", kinds: ["caption", "post", "story", "linkedin_post", "email", "landing_copy"] },
 ];
-const PLATFORMS = { instagram: "Instagram", linkedin: "LinkedIn", email: "Email", landing: "Landing page" } as const;
+const PLATFORMS = { instagram: "Instagram", linkedin: "LinkedIn", email: "Email", landing: "Page d'atterrissage" } as const;
 
 export default function StudioPage({ searchParams }: PageProps<"/studio">) {
   return (
     <>
-      <PageHeader eyebrow="Studio" title="Content Studio" description="Tout ce que l'équipe a produit, avec le statut réel de chaque élément." />
+      <PageHeader eyebrow="Studio" title="Studio de contenu" description="Tout ce que l'équipe a produit, avec le statut réel de chaque élément." />
       <Suspense fallback={<div className="h-96 animate-pulse rounded-card bg-surface-2" />}>
         <Studio searchParams={searchParams} />
       </Suspense>

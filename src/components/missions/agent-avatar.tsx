@@ -5,16 +5,16 @@ import { cn } from "@/components/ui/cn";
 const INITIALS: Record<AgentKey, string> = {
   queen_bee: "QB",
   strategist: "St",
-  researcher: "Re",
-  content_architect: "CA",
-  copywriter: "Co",
-  video_director: "Vi",
-  creative_director: "Cr",
-  social_manager: "SM",
-  lead_agent: "Le",
+  researcher: "Ch",
+  content_architect: "Ar",
+  copywriter: "Ré",
+  video_director: "Rv",
+  creative_director: "DA",
+  social_manager: "Rr",
+  lead_agent: "Pr",
   analytics_agent: "An",
-  brand_guardian: "BG",
-  watchdog: "WD",
+  brand_guardian: "Ga",
+  watchdog: "CG",
 };
 
 /** Monogramme sobre (pas d'avatar cartoon). Queen Bee porte la couleur de marque, les agents un ton neutre. */

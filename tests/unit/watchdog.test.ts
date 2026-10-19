@@ -42,7 +42,7 @@ const view = async (store: MemoryMissionStore, id: string, approvals: Approval[]
 };
 const codes = (r: ReturnType<typeof inspectMission>) => r.findings.map((f) => f.code);
 
-describe("Watchdog — règles d'inspection", () => {
+describe("Chien de garde — règles d'inspection", () => {
   it("tâche « En cours » abandonnée → remise en file", async () => {
     const { store, mission, tasks } = await setup();
     await store.updateTask(tasks[0].id, { status: "in_progress", startedAt: ago(30), attempts: 1 });
@@ -116,7 +116,7 @@ describe("Watchdog — règles d'inspection", () => {
   });
 });
 
-describe("Watchdog — interventions", () => {
+describe("Chien de garde — interventions", () => {
   it("répare une tâche abandonnée, journalise et relance l'équipe jusqu'au bout", async () => {
     const { store, mission, tasks } = await setup();
     await store.updateTask(tasks[0].id, { status: "in_progress", startedAt: ago(30), attempts: 1 });

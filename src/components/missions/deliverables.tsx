@@ -1,7 +1,7 @@
 import { PillarTag } from "@/components/ui/pillar-tag";
 import type { AgentOutput } from "@/domain/missions/types";
 
-const PLATFORM: Record<string, string> = { instagram: "Instagram", linkedin: "LinkedIn", facebook: "Facebook", tiktok: "TikTok", youtube: "YouTube", email: "Email", landing: "Landing page" };
+const PLATFORM: Record<string, string> = { instagram: "Instagram", linkedin: "LinkedIn", facebook: "Facebook", tiktok: "TikTok", youtube: "YouTube", email: "Email", landing: "Page d'atterrissage" };
 
 /** Affiche la production d'un agent : résumé, décisions, livrables, limites. Jamais de raisonnement interne. */
 export function AgentOutputView({ output }: { output: AgentOutput }) {

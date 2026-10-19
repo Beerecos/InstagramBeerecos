@@ -27,7 +27,7 @@ export function BrandForm({ memory, editable }: { memory: BrandMemory; editable:
       <Field label="Cibles" name="targets" value={memory.targets.join("\n")} rows={4} hint="Une par ligne" disabled={d} />
       <Field label="Offres" name="offers" value={memory.offers.join("\n")} rows={4} hint="Une par ligne" disabled={d} />
       <Field label="Mots autorisés" name="allowedWords" value={memory.allowedWords.join("\n")} rows={4} hint="Un par ligne" disabled={d} />
-      <Field label="Mots interdits" name="forbiddenWords" value={memory.forbiddenWords.join("\n")} rows={4} hint="Un par ligne — contrôlés automatiquement par le Brand Guardian" disabled={d} />
+      <Field label="Mots interdits" name="forbiddenWords" value={memory.forbiddenWords.join("\n")} rows={4} hint="Un par ligne — contrôlés automatiquement par le Gardien de la marque" disabled={d} />
       <Field label="CTA" name="ctas" value={memory.ctas.join("\n")} rows={3} hint="Un par ligne" disabled={d} />
       <Field label="Références" name="references" value={memory.references.join("\n")} rows={3} hint="Une par ligne" disabled={d} />
       <fieldset className="lg:col-span-2">

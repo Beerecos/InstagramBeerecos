@@ -32,7 +32,7 @@ async function List() {
       <table className="w-full min-w-[44rem] text-left text-sm">
         <thead className="text-xs uppercase tracking-wide text-ink-3">
           <tr className="border-b border-line">
-            <th className="p-4 font-medium">Campagne</th><th className="p-4 font-medium">Objectif</th><th className="p-4 font-medium">Progression</th><th className="p-4 font-medium">Leads</th><th className="p-4 font-medium">Statut</th><th className="p-4 font-medium">Date</th><th className="p-4 font-medium">Agents</th>
+            <th className="p-4 font-medium">Campagne</th><th className="p-4 font-medium">Objectif</th><th className="p-4 font-medium">Progression</th><th className="p-4 font-medium">Prospects</th><th className="p-4 font-medium">Statut</th><th className="p-4 font-medium">Date</th><th className="p-4 font-medium">Agents</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">

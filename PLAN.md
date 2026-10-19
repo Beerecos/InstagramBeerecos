@@ -12,7 +12,7 @@ Philosophie : IA puissante + contrôle humain + contenu authentique + acquisitio
 
 | Élément existant | Décision |
 |---|---|
-| `.claude/skills/hyperframes*`, `video-use`, `embedded-captions`, `media-use`… (skills officiels, Apache-2.0 / MIT) | **Conservés.** Moteur de motion design et de montage pour le Video Director. |
+| `.claude/skills/hyperframes*`, `video-use`, `embedded-captions`, `media-use`… (skills officiels, Apache-2.0 / MIT) | **Conservés.** Moteur de motion design et de montage pour le Réalisateur vidéo. |
 | `.claude/skills/motion-design-reel`, `reel-ia-autopilot` (méthode OPUS, scripts QA FFmpeg) | **Conservés.** Réutilisés par `beerecos-studio-editor`, `beerecos-hybrid-video` et le quality gate. |
 | `automation/lib/*.mjs` (client Graph API Instagram, Supabase REST, logique CTA, webhook signé) + 11 tests | **Conservés.** Deviendront l'adapter `MetaInstagramProvider` / `MetaMessagingProvider` (phases 4–5). Le webhook est servi par `src/app/api/webhooks/instagram/route.ts`. |
 | `automation/bin/ig.mjs`, `voice.mjs` (CLI) | **Conservés** comme outils d'opérateur. |
@@ -37,7 +37,7 @@ Gestionnaire de paquets : **npm** (déjà utilisé). Runtime : **Node 24** (exig
 | Tests | Vitest (unitaires, intégration, adapters), PGlite (tests RLS sur Postgres réel en WASM), Playwright (E2E), evals eve | — | Aucun appel réel à Instagram ou API payante en test. |
 
 Choix structurants :
-- **Un seul dépôt, une seule app Next.js**, un agent eve racine `agent/` (BEE MARKETING ORCHESTRATOR) avec 4 subagents déclarés (Content Director, Video Director, Sales Concierge, Growth Analyst). Pas d'agent quand une fonction déterministe suffit (matching, scoring, quality gate = code testé, appelé comme tool).
+- **Un seul dépôt, une seule app Next.js**, un agent eve racine `agent/` (BEE MARKETING ORCHESTRATOR) avec 4 subagents déclarés (Content Director, Réalisateur vidéo, Sales Concierge, Growth Analyst). Pas d'agent quand une fonction déterministe suffit (matching, scoring, quality gate = code testé, appelé comme tool).
 - **Validation humaine garantie côté backend** : table `approval_requests` + politiques d'approbation des tools eve (`always()` sur publication, DM sensible, invitation, budget, Autopilot). L'UI ne fait qu'afficher.
 - **Adapters partout** : le métier ne connaît que des interfaces (`src/providers/types.ts`).
 - **Capability matrix** par provider, découverte dynamique quand le fournisseur le permet.
@@ -94,7 +94,7 @@ en graphe de tâches, fil d'activité réel, boîte de validation, mémoire de m
 | MVP | Contenu | Statut |
 |---|---|---|
 | 1 | Accueil, Queen Bee, Missions, Équipe IA, workflow de tâches, fil d'activité, mémoire de marque, Content Studio, calendrier (propositions), validations | ✅ (agents actifs dès la clé Claude) |
-| 1+ | **Watchdog** (chien de garde) : surveillance, réparations sûres, pause anti-boucle, page `/watchdog`, cron | ✅ |
+| 1+ | **Chien de garde** (chien de garde) : surveillance, réparations sûres, pause anti-boucle, page `/watchdog`, cron | ✅ |
 | 1+ | **La Ruche** : bureau pixel art (moteur Pixel Agents, MIT) animé par l'état réel des agents | ✅ |
 | 2 | Video Studio (import, transcription, moteurs vidéo), bibliothèque média, intégration Instagram/LinkedIn, analytics, génération de leads | à faire |
 | 3 | Autopilot, publication multi-plateforme, optimisation de campagnes, analytics avancés, automatisation CRM | à faire |

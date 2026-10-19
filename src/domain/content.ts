@@ -51,7 +51,7 @@ export type AutonomyMode = (typeof AUTONOMY_MODES)[number];
 export const AUTONOMY_LABELS: Record<AutonomyMode, string> = {
   manual: "Manuel",
   validation: "Validation",
-  autopilot: "Autopilot",
+  autopilot: "Pilote automatique",
 };
 
 export type PillarWeights = Record<Pillar, number>;

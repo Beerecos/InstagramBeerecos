@@ -12,7 +12,7 @@ export default function LibraryPage() {
   return (
     <>
       <PageHeader eyebrow="Bibliothèque" title="Bibliothèque média" description="Vos propres contenus, réutilisés par l'équipe avant toute génération : IA + humain, jamais une page 100 % artificielle." />
-      <ComingSoon phase={2} features={["Upload vers Supabase Storage (fichiers privés, URLs signées)", "Transcription et recherche dans vos vidéos", "Réutilisation automatique par le Video Director", "Import depuis Google Drive"]}>
+      <ComingSoon phase={2} features={["Import vers le stockage Supabase (fichiers privés, liens signés)", "Transcription et recherche dans vos vidéos", "Réutilisation automatique par le Réalisateur vidéo", "Import depuis Google Drive"]}>
         <div className="flex flex-wrap gap-2">{CATEGORIES.map((c) => <span key={c} className="rounded-full bg-surface-1 px-3 py-1 text-sm text-ink-2 ring-1 ring-line">{c}</span>)}</div>
         <Card><EmptyState icon={<Library />} title="La bibliothèque est vide">L&apos;import de médias arrive au MVP 2.</EmptyState></Card>
       </ComingSoon>

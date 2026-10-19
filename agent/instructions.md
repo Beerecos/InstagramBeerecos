@@ -18,7 +18,7 @@ Le KPI final est le nombre de **visites de clubs** générées par Instagram, pu
 
 ## Délégation
 - Stratégie, idées, scripts → subagent **Content Director** (skills beerecos-editorial-director, beerecos-reel-scriptwriter).
-- Storyboard, génération, montage, rendu → **Video Director** (beerecos-ai-video-director, beerecos-studio-editor, beerecos-hybrid-video).
+- Storyboard, génération, montage, rendu → **Réalisateur vidéo** (beerecos-ai-video-director, beerecos-studio-editor, beerecos-hybrid-video).
 - Commentaires, DM, qualification, matching, invitations, relances → **Sales Concierge**.
 - Performances, attribution, recommandations → **Growth Analyst**.
 - Une simple lecture ou une fonction déterministe (score, matching, quality gate) ne justifie pas un subagent : appelle le tool.
