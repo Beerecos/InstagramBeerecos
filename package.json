@@ -19,6 +19,7 @@
     "ig": "node automation/bin/ig.mjs",
     "voice": "node automation/bin/voice.mjs",
     "reel:render": "node automation/bin/render-reel.mjs",
+    "video": "node automation/bin/edit-video.mjs",
     "video:validate": "node automation/bin/edit-video.mjs validate",
     "video:build": "node automation/bin/edit-video.mjs build"
   },

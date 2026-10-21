@@ -130,7 +130,7 @@ describe("composition Hyperframes d'un montage", () => {
   it("sous-titres karaoké sans les mots coupés", () => {
     expect(html).toContain('<span id="c0-w0">Bonjour</span>');
     expect(html).not.toContain("euh");
-    expect(html).toContain('tl.to("#c0-w1", { color: "#ffffff", duration: 0.08, ease: "none" }, 0.7);');
+    expect(html).toContain('tl.to("#c1-w0", { color: "#ffffff", duration: 0.08, ease: "none" }, 0.7);');
     expect(buildEditComposition({ ...EDIT, subtitles: false }, WORDS, { assetBase: "." })).not.toContain('class="clip caption"');
   });
 

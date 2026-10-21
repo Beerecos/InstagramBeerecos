@@ -134,29 +134,33 @@ export function toOutputMs(segments: Segment[], sourceMs: number): number {
   return totalMs(segments);
 }
 
+/** Mot recalé sur le montage, avec le numéro du morceau qui le contient (pour changer de page à chaque raccord). */
+export type PlacedWord = CaptionWord & { segment?: number };
+
 /** Recale le transcript sur le montage : un mot est gardé si son milieu tombe dans un morceau. */
-export function remapCaptions(words: CaptionWord[], segments: Segment[]): CaptionWord[] {
-  const out: CaptionWord[] = [];
+export function remapCaptions(words: CaptionWord[], segments: Segment[]): PlacedWord[] {
+  const out: PlacedWord[] = [];
   for (const w of words) {
     const mid = (w.startMs + w.endMs) / 2;
-    const s = segments.find((x) => mid >= x.fromMs && mid < x.toMs);
-    if (!s) continue;
+    const segment = segments.findIndex((x) => mid >= x.fromMs && mid < x.toMs);
+    if (segment < 0) continue;
+    const s = segments[segment];
     const clamp = (t: number) => s.atMs + Math.min(Math.max(t, s.fromMs), s.toMs) - s.fromMs;
-    out.push({ text: w.text, startMs: clamp(w.startMs), endMs: clamp(w.endMs) });
+    out.push({ text: w.text, startMs: clamp(w.startMs), endMs: clamp(w.endMs), segment });
   }
   return out;
 }
 
-export type CaptionPage = { startMs: number; endMs: number; words: CaptionWord[] };
+export type CaptionPage = { startMs: number; endMs: number; words: PlacedWord[] };
 
 /**
  * Pages de sous-titres karaoké (temps du montage) : 4 mots et 26 caractères au plus en vertical,
- * nouvelle page après un silence de plus de 650 ms. Une page reste affichée jusqu'à la suivante si l'écart est court.
+ * nouvelle page après une fin de phrase, à chaque raccord et après un silence de plus de 650 ms. Une page reste affichée jusqu'à la suivante si l'écart est court.
  */
-export function captionPages(words: CaptionWord[], opts: { maxWords?: number; maxChars?: number; gapMs?: number } = {}): CaptionPage[] {
+export function captionPages(words: PlacedWord[], opts: { maxWords?: number; maxChars?: number; gapMs?: number } = {}): CaptionPage[] {
   const { maxWords = 4, maxChars = 26, gapMs = 650 } = opts;
   const pages: CaptionPage[] = [];
-  let cur: CaptionWord[] = [];
+  let cur: PlacedWord[] = [];
   const flush = () => {
     if (cur.length) pages.push({ startMs: cur[0].startMs, endMs: cur[cur.length - 1].endMs, words: cur });
     cur = [];
@@ -167,7 +171,8 @@ export function captionPages(words: CaptionWord[], opts: { maxWords?: number; ma
     const word = { ...w, text };
     const prev = cur[cur.length - 1];
     const chars = cur.reduce((n, x) => n + x.text.length + 1, 0) + text.length;
-    if (cur.length && (cur.length >= maxWords || chars > maxChars || word.startMs - prev.endMs > gapMs)) flush();
+    const breakAfterPrev = prev && (/[.?!…]$/.test(prev.text) || prev.segment !== word.segment);
+    if (cur.length && (breakAfterPrev || cur.length >= maxWords || chars > maxChars || word.startMs - prev.endMs > gapMs)) flush();
     cur.push(word);
   }
   flush();

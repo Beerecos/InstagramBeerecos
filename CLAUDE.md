@@ -32,7 +32,7 @@ irréversible : jamais sans OK explicite, sauf `autopilote: oui` dans `content/a
   (`npm run reel:render -- <reel.html>` : rendu MP4 Hyperframes d'un Reel téléchargé depuis le Studio vidéo).
 - `src/domain/video/reel.ts` — modèle de Reel motion design BeeRecos (données IA → composition Hyperframes).
 - `src/domain/video/edit.ts` — montage d'une vidéo tournée via `<projet>.edit.json` (temps en ms de la prise),
-  `npm run video:validate` / `video:build` ; référence : `docs/EDIT-JSON.md`.
+  `npm run video -- new|transcribe|autocut|validate|preview|render` ; référence : `docs/EDIT-JSON.md`.
 - `api/instagram-webhook.mjs` — webhook Vercel qui envoie les DM sur mot-clé.
 - `supabase/migrations/` — tables des campagnes CTA + bucket des vidéos.
 - Configuration Instagram / Meta / Supabase / Vercel : `docs/SETUP-INSTAGRAM.md`.

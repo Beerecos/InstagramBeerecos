@@ -32,3 +32,10 @@ renders/
 *-zones.jpg
 .DS_Store
 *.pem
+
+# Montage edit.json : prises, sauvegardes et fichiers régénérés à chaque build/aperçu
+projets/**/*.mp4
+projets/**/*.mov
+projets/**/*.wav
+*.bak-cuts
+projets/**/snapshots/

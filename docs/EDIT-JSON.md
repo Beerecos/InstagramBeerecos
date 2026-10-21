@@ -48,9 +48,31 @@ Une animation inconnue ou mal réglée n'arrête jamais la vidéo : un bandeau r
 Ajouter une animation = une entrée dans `KIT_ANIMATIONS` (`src/domain/video/animations.ts`) : fiche (label,
 description, durée conseillée), schéma zod des réglages, fonction de rendu (HTML échappé + tweens GSAP).
 
-## Commandes
+## Pipeline (tout tourne sur le poste)
 ```bash
-npm run video:validate -- projets/mon-reel/prise.edit.json   # schéma + cohérence + fichiers présents
-npm run video:build -- projets/mon-reel/prise.edit.json      # écrit index.html (composition Hyperframes)
-cd projets/mon-reel && npx hyperframes@0.8.126 preview       # aperçu ; render pour le MP4
+npm run video -- new projets/mon-reel/prise.mp4            # crée prise.edit.json (toute la prise)
+npm run video -- transcribe projets/mon-reel/prise.edit.json   # transcript mot à mot (whisper.cpp local, français)
+npm run video -- autocut projets/mon-reel/prise.edit.json      # MONTRE le plan de coupe numéroté, n'écrit rien
+npm run video -- autocut projets/mon-reel/prise.edit.json --apply --drop=2,5-6   # applique (sauvegarde .bak-cuts)
+npm run video -- validate projets/mon-reel/prise.edit.json
+npm run video -- preview projets/mon-reel/prise.edit.json 3200,9800   # PNG aux instants (ms de la prise)
+npm run video -- render projets/mon-reel/prise.edit.json             # MP4 dans export/, puis contrôle qualité
+```
+
+- **Transcription** : `hyperframes transcribe` (modèle multilingue `small`, `--language fr` forcé ; `--model=medium`
+  pour un son difficile), puis **recalage sur l'énergie audio** : îlots de parole (fenêtres de 20 ms, seuil =
+  bruit du 15e centile + 6 dB) ; les mots placés dans un silence sont ramenés dans la parole réellement entendue.
+- **Coupe** : phrases numérotées (ponctuation ou pause > 700 ms). Suggestions : *reprise* (phrase très proche de
+  l'une des deux suivantes, Jaccard ≥ 0,55 : on garde la dernière version) et *faux départ* (≤ 3 mots qui
+  commencent la phrase suivante). Les hésitations (« euh », « ben »…) sont toujours retirées ; un silence de plus
+  de 350 ms entre deux mots est coupé, avec 70 ms de marge avant et 110 ms après. `--drop=` vide : ne retire
+  aucune phrase. Montrer le plan, obtenir l'accord, puis appliquer.
+- **Sous-titres** : nouvelle page à chaque raccord et à chaque fin de phrase.
+- **Aperçu** : toujours ouvrir la planche `snapshots/contact-sheet.jpg` avant de dire que c'est bon.
+- **Rendu** : `hyperframes check` puis rendu `delivery`, puis `qa-reel.sh` (format, audio, volume, zones Instagram).
+
+## Autres commandes
+```bash
+npm run video:build -- projets/mon-reel/prise.edit.json      # écrit seulement index.html (composition Hyperframes)
+cd projets/mon-reel && npx hyperframes@0.8.126 preview       # aperçu interactif dans le navigateur
 ```
