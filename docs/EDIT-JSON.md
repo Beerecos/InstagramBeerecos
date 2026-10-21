@@ -71,6 +71,19 @@ npm run video -- render projets/mon-reel/prise.edit.json             # MP4 dans 
 - **Aperçu** : toujours ouvrir la planche `snapshots/contact-sheet.jpg` avant de dire que c'est bon.
 - **Rendu** : `hyperframes check` puis rendu `delivery`, puis `qa-reel.sh` (format, audio, volume, zones Instagram).
 
+## Règles (pour Claude, dans toutes les commandes de montage)
+Commandes : `/nouvelle-video` → `/transcrire` → `/couper` → `/titre`, `/mot-cle` → `/exporter` (`.claude/skills/`).
+1. Ne jamais toucher `video`, `captions`, `ranges` sans demande explicite (seul `/couper` écrit `ranges`).
+2. Jamais deux animations visibles en même temps (≥ 1 s d'écart, une idée = une animation).
+3. Valider après chaque modification (`npm run video -- validate`) ; aperçu PNG **ouvert et décrit** avant de dire
+   « c'est fait » ; pas de rendu « pour voir ».
+4. Temps ancrés sur un mot prononcé du transcript, et toujours redire la phrase retenue.
+5. **Montrer avant d'écrire** ce qui est destructif ou subjectif (coupes, style, publication).
+6. **Rien d'inventé** : pas de chiffre, nom ou promesse absent du transcript ou du brief ; marque : **BeeRecos**.
+7. Écrire dans les données (edit.json), pas dans le code, sauf pour créer une animation.
+8. Une question à la fois, toujours avec une valeur par défaut.
+9. Jamais de secret dans un fichier ou dans le chat ; publication jamais sans OK explicite.
+
 ## Autres commandes
 ```bash
 npm run video:build -- projets/mon-reel/prise.edit.json      # écrit seulement index.html (composition Hyperframes)

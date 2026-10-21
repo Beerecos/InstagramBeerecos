@@ -16,6 +16,10 @@ Pour toute demande de montage, de Reel, de storyboard, de sous-titres ou de moti
 charge le skill **`motion-design-reel`**. Il orchestre les autres skills et impose les
 trois portes de validation (coupes → storyboard → planche contact) avant tout rendu.
 
+Pour **monter une prise filmée** pas à pas avec `edit.json` (créer, transcrire, couper, titre, CTA, exporter) :
+skills `/nouvelle-video` → `/transcrire` → `/couper` → `/titre` / `/mot-cle` → `/exporter` ; règles dans
+`docs/EDIT-JSON.md` § Règles.
+
 Pour une vidéo **100 % IA** (sans tournage), sa **publication** ou un **call to action
 « commente MOT → DM »** : charge le skill **`reel-ia-autopilot`**. Publier est public et
 irréversible : jamais sans OK explicite, sauf `autopilote: oui` dans `content/autopilote.md`.
