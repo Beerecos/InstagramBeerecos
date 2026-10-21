@@ -40,7 +40,7 @@ export type ReelSpec = z.infer<typeof ReelSpecSchema>;
 
 export const reelDuration = (spec: ReelSpec) => Math.round(spec.scenes.reduce((n, x) => n + x.duration, 0) * 100) / 100;
 
-const ACCENT = { violet: "#693BFC", vert: "#3BCAC2" } as const;
+export const ACCENT = { violet: "#693BFC", vert: "#3BCAC2" } as const;
 
 const ESC: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 /** Tout texte venant du modèle ou de l'utilisateur est échappé : aucune balise ni script ne peut entrer dans la composition. */

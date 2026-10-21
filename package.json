@@ -18,7 +18,9 @@
     "check": "npm run lint && npm run typecheck && npm test",
     "ig": "node automation/bin/ig.mjs",
     "voice": "node automation/bin/voice.mjs",
-    "reel:render": "node automation/bin/render-reel.mjs"
+    "reel:render": "node automation/bin/render-reel.mjs",
+    "video:validate": "node automation/bin/edit-video.mjs validate",
+    "video:build": "node automation/bin/edit-video.mjs build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
