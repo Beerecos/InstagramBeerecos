@@ -13,6 +13,8 @@ export type EditCompositionOptions = {
   assetBase: string;
   /** Où trouver la prise et les sons (dossier du fichier edit.json en rendu local). */
   mediaBase?: string;
+  /** Adresse d'un média (prise, son) quand il n'est pas dans un dossier : ex. URL signée du stockage. Prioritaire sur mediaBase. */
+  mediaUrl?: (file: string) => string;
   preview?: boolean;
   registry?: Record<string, AnimationDef>;
 };
@@ -62,7 +64,9 @@ export function buildEditComposition(input: unknown, words: CaptionWord[], opts:
   if (!parsed.ok) throw new Error(`edit.json invalide :\n${parsed.errors.join("\n")}`);
   const edit = parsed.edit;
   const base = opts.assetBase.replace(/\/$/, "");
-  const media = (opts.mediaBase ?? ".").replace(/\/$/, "");
+  const folder = (opts.mediaBase ?? ".").replace(/\/$/, "");
+  // Les noms de fichiers sont validés par le schéma (^[\w.-]+$) ; une URL fournie est échappée.
+  const media = (file: string) => (opts.mediaUrl ? escapeHtml(opts.mediaUrl(file)) : `${folder}/${file}`);
   const accent = ACCENT[edit.accent];
   const segments = layout(edit.ranges);
   const F = (sourceMs: number) => toOutputMs(segments, sourceMs);
@@ -71,10 +75,9 @@ export function buildEditComposition(input: unknown, words: CaptionWord[], opts:
   const tweens: string[] = [];
   const css = new Set<string>([ERROR_CSS]);
 
-  // Les noms de fichiers sont validés par le schéma (^[\w.-]+$) : rien d'autre ne peut entrer dans src.
   segments.forEach((seg, i) => {
     clips.push(
-      `      <video id="take-${i}" class="take" src="${media}/${edit.video}" data-start="${s(seg.atMs)}" data-duration="${s(seg.toMs - seg.fromMs)}" data-media-start="${s(seg.fromMs)}" data-has-audio="true" data-volume="${edit.voiceGain}" data-track-index="0"></video>`,
+      `      <video id="take-${i}" class="take" src="${media(edit.video)}" data-start="${s(seg.atMs)}" data-duration="${s(seg.toMs - seg.fromMs)}" data-media-start="${s(seg.fromMs)}" data-has-audio="true" data-volume="${edit.voiceGain}" data-track-index="0"></video>`,
     );
   });
 
@@ -98,7 +101,7 @@ export function buildEditComposition(input: unknown, words: CaptionWord[], opts:
 
   edit.sounds.forEach((snd, i) => {
     const dur = snd.durationMs !== undefined ? ` data-duration="${s(snd.durationMs)}"` : "";
-    clips.push(`      <audio id="sfx-${i}" src="${media}/${snd.file}" data-start="${s(F(snd.atMs))}"${dur} data-volume="${snd.volume}" data-track-index="3"></audio>`);
+    clips.push(`      <audio id="sfx-${i}" src="${media(snd.file)}" data-start="${s(F(snd.atMs))}"${dur} data-volume="${snd.volume}" data-track-index="3"></audio>`);
   });
 
   return documentShell({ title: edit.video, base, preview: opts.preview, css: [...css].join(""), clips, tweens, durationS: s(totalMs(segments)) });

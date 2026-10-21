@@ -62,6 +62,23 @@ Une animation inconnue ou mal réglée n'arrête jamais la vidéo : un bandeau r
 - `npm run video -- animation-check [nom]` contrôle tout cela ; `npm run video -- animation-preview <nom>` montre
   l'animation seule (entrée, milieu, sortie) ; le test `tests/unit/skills.test.ts` contrôle tout le catalogue.
 
+## Page Montage en ligne (`/montage`)
+Le même format, depuis le site, sans terminal. Code : `src/server/montages/`, `src/components/montage/`,
+table `montages` (`supabase/migrations/20261021000000_montages.sql`, RLS : lecture membres, écriture admin /
+responsable contenu).
+
+1. **Envoi** : le navigateur lit la durée et mesure les îlots de parole (Web Audio), puis envoie la prise
+   **directement** au bucket privé `montages` par URL d'envoi signée (500 Mo, 10 min max).
+2. **Transcription** : ElevenLabs Scribe (`scribe_v1`, français, mot à mot) télécharge la prise par URL signée
+   d'une heure ; le transcript est recalé sur les îlots mesurés à l'envoi.
+3. **Coupe** : le plan numéroté de `autocut`, suggestions cochées ; « Appliquer » écrit `ranges`, l'ancien montage
+   est gardé (« Annuler la dernière coupe »).
+4. **Aperçu** : lecteur Hyperframes en direct (`/api/montages/<id>/composition`, prise lue par URL signée).
+5. **À venir** : lot 2 (Claude et animations depuis la page), lot 3 (rendu MP4 HeyGen, publication).
+
+Mise en service : appliquer la migration Supabase, puis dans Vercel `ELEVENLABS_API_KEY` (transcription) ;
+`SUPABASE_SECRET_KEY` est déjà requise (URL signées). En mode démo, la page s'affiche mais l'envoi est désactivé.
+
 ## Pipeline (tout tourne sur le poste)
 ```bash
 npm run video -- new projets/mon-reel/prise.mp4            # crée prise.edit.json (toute la prise)

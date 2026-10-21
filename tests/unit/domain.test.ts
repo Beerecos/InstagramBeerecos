@@ -31,7 +31,7 @@ describe("pondérations", () => {
 
 describe("navigation", () => {
   it("suit la navigation de l'équipe marketing IA", () => {
-    expect(NAV_ITEMS.map((i) => i.label)).toEqual(["Accueil", "Missions", "Validations", "Équipe IA", "La Ruche", "Chien de garde", "Studio", "Vidéo", "Calendrier", "Campagnes", "Prospects", "Statistiques", "Bibliothèque", "Marque", "Paramètres"]);
+    expect(NAV_ITEMS.map((i) => i.label)).toEqual(["Accueil", "Missions", "Validations", "Équipe IA", "La Ruche", "Chien de garde", "Studio", "Vidéo", "Montage", "Calendrier", "Campagnes", "Prospects", "Statistiques", "Bibliothèque", "Marque", "Paramètres"]);
   });
   it("détecte la page active", () => {
     expect(isActive("/", "/")).toBe(true);

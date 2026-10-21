@@ -7,6 +7,7 @@ const PAGES = [
   ["/team", "Votre équipe marketing"],
   ["/studio", "Studio de contenu"],
   ["/video", "Studio vidéo"],
+  ["/montage", "Montage en ligne"],
   ["/calendar", "Calendrier marketing"],
   ["/campaigns", "Campagnes"],
   ["/leads", "Suivi des prospects Instagram"],

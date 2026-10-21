@@ -10,6 +10,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/watchdog", label: "Chien de garde", icon: "shield" },
   { href: "/studio", label: "Studio", icon: "layers" },
   { href: "/video", label: "Vidéo", icon: "clapperboard" },
+  { href: "/montage", label: "Montage", icon: "scissors" },
   { href: "/calendar", label: "Calendrier", icon: "calendar" },
   { href: "/campaigns", label: "Campagnes", icon: "megaphone" },
   { href: "/leads", label: "Prospects", icon: "users" },
