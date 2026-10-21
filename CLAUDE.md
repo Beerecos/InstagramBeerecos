@@ -17,7 +17,8 @@ charge le skill **`motion-design-reel`**. Il orchestre les autres skills et impo
 trois portes de validation (coupes → storyboard → planche contact) avant tout rendu.
 
 Pour **monter une prise filmée** pas à pas avec `edit.json` (créer, transcrire, couper, titre, CTA, exporter) :
-skills `/nouvelle-video` → `/transcrire` → `/couper` → `/titre` / `/mot-cle` → `/exporter` ; règles dans
+skills `/nouvelle-video` → `/transcrire` → `/couper` → `/titre` / `/mot-cle` / `/animation` → `/exporter`
+(`/nouvelle-animation` pour en créer une) ; règles dans
 `docs/EDIT-JSON.md` § Règles.
 
 Pour une vidéo **100 % IA** (sans tournage), sa **publication** ou un **call to action

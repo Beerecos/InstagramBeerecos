@@ -1,13 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CustomAnimationSchema, parseEdit } from "@/domain/video/edit";
-import { KIT_ANIMATIONS, renderAnimation } from "@/domain/video/animations";
+import { checkAnimation, renderAnimation } from "@/domain/video/animations";
+import { ANIMATIONS } from "@/domain/video/registry";
 
 /**
  * Les commandes de montage (`.claude/skills/<nom>/SKILL.md`) sont elles-mêmes testées : en-tête valide, sections du
  * gabarit, et chaque exemple JSON (```json edit = edit.json complet, ```json custom = une entrée de custom[]) valide.
  */
-const SKILLS = ["nouvelle-video", "transcrire", "couper", "titre", "mot-cle", "exporter"];
+const SKILLS = ["nouvelle-video", "transcrire", "couper", "titre", "mot-cle", "animation", "nouvelle-animation", "exporter"];
 const SECTIONS = ["## À demander à l'utilisateur", "## Réglages", "## Ce que tu écris dans le JSON", "## Déroulé standard (dans cet ordre)", "## Garde-fous"];
 const read = (name: string) => readFileSync(new URL(`../../.claude/skills/${name}/SKILL.md`, import.meta.url), "utf8");
 
@@ -36,12 +37,13 @@ describe.each(SKILLS)("skill /%s", (name) => {
       } else {
         const c = CustomAnimationSchema.parse(data);
         expect(c.toMs).toBeGreaterThan(c.fromMs);
-        expect(renderAnimation(c.name, c.props, { id: "a0", start: 0, duration: 2, accent: "#693BFC" }).error).toBeUndefined();
+        expect(renderAnimation(c.name, c.props, { id: "a0", start: 0, duration: 2, accent: "#693BFC" }, ANIMATIONS).error).toBeUndefined();
       }
     }
   });
 });
 
-it("chaque animation du kit a sa commande", () => {
-  for (const name of Object.keys(KIT_ANIMATIONS)) expect(SKILLS).toContain(name);
+it("catalogue : chaque animation (kit et mes-animations) est conforme et documentée par une commande", () => {
+  for (const [name, def] of Object.entries(ANIMATIONS)) expect([name, checkAnimation(name, def)]).toEqual([name, []]);
+  expect(read("animation")).toContain("npm run video -- animations");
 });

@@ -38,15 +38,29 @@ aucune animation : chaque instant est ancré sur un mot prononcé du transcript.
 Toute clé inconnue est une erreur. Les messages sont en français :
 `• ranges[1] → chevauche ou précède le morceau précédent…`.
 
-## Animations du kit (`custom[].name`)
+## Animations (`custom[].name`)
+Catalogue à jour : `npm run video -- animations` (descriptions, durées conseillées, exemples).
+
 | Nom | Réglages (`props`) | Usage |
 |---|---|---|
 | `titre` | `texte` (≤ 80), `detail?` (≤ 120) | accroche, changement d'idée |
 | `mot-cle` | `mot` (majuscules, sans espace) | CTA « commente MOT → DM » |
+| `chiffre` | `valeur`, `decimales?`, `avant?`, `apres?`, `legende` | preuve chiffrée **dite** dans la vidéo |
+| `liste` | `titre?`, `items` (2 à 4) | étapes, bénéfices énoncés |
+| `barre` | `texte`, `remplacement?` | contraste « pas X, mais Y » |
+| `logo-fin` | `texte?` | plein écran bleu + logo officiel, dernières secondes |
 
 Une animation inconnue ou mal réglée n'arrête jamais la vidéo : un bandeau rouge la remplace à l'aperçu.
-Ajouter une animation = une entrée dans `KIT_ANIMATIONS` (`src/domain/video/animations.ts`) : fiche (label,
-description, durée conseillée), schéma zod des réglages, fonction de rendu (HTML échappé + tweens GSAP).
+
+### Créer une animation (`/nouvelle-animation`)
+- **Kit** : `src/domain/video/animations.ts` (animations officielles BeeRecos). **Maison** :
+  `src/domain/video/mes-animations/<nom>.ts`, enregistrée dans `mes-animations/registre.ts` ; à nom égal, la maison gagne.
+- Boîte à outils `src/domain/video/fx.ts` : zones de sécurité (`SAFE`, `SAFE_BLOCK`), `blurIn`, `fadeIn`, `slideIn`,
+  `fadeOut`, `strikeThrough`, `countUp` (compteur déterministe), `formatNumber`, `escapeHtml`.
+- Une définition = `label`, `description`, `lengthMs`, `props` (zod strict), `example`, `css` (règles préfixées
+  `.anim-<nom>`), `render(ctx, props) → { html, tweens }` (ids préfixés par `ctx.id`, tweens sur ses seuls éléments).
+- `npm run video -- animation-check [nom]` contrôle tout cela ; `npm run video -- animation-preview <nom>` montre
+  l'animation seule (entrée, milieu, sortie) ; le test `tests/unit/skills.test.ts` contrôle tout le catalogue.
 
 ## Pipeline (tout tourne sur le poste)
 ```bash
@@ -72,7 +86,8 @@ npm run video -- render projets/mon-reel/prise.edit.json             # MP4 dans 
 - **Rendu** : `hyperframes check` puis rendu `delivery`, puis `qa-reel.sh` (format, audio, volume, zones Instagram).
 
 ## Règles (pour Claude, dans toutes les commandes de montage)
-Commandes : `/nouvelle-video` → `/transcrire` → `/couper` → `/titre`, `/mot-cle` → `/exporter` (`.claude/skills/`).
+Commandes : `/nouvelle-video` → `/transcrire` → `/couper` → `/titre`, `/mot-cle`, `/animation` → `/exporter`
+(`.claude/skills/`) ; `/nouvelle-animation` pour créer une animation.
 1. Ne jamais toucher `video`, `captions`, `ranges` sans demande explicite (seul `/couper` écrit `ranges`).
 2. Jamais deux animations visibles en même temps (≥ 1 s d'écart, une idée = une animation).
 3. Valider après chaque modification (`npm run video -- validate`) ; aperçu PNG **ouvert et décrit** avant de dire

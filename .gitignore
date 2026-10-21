@@ -39,3 +39,4 @@ projets/**/*.mov
 projets/**/*.wav
 *.bak-cuts
 projets/**/snapshots/
+projets/_animations/

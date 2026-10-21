@@ -9,15 +9,20 @@
 //   build <p.edit.json>                     écrit la composition Hyperframes index.html à côté du fichier
 //   preview <p.edit.json> <ms>[,<ms>…]      images PNG aux instants donnés (ms de la prise)
 //   render <p.edit.json> [sortie.mp4]       rendu MP4 1080×1920, puis contrôle qualité
+//   animations [--json]                     catalogue des animations (kit + mes-animations) avec exemples
+//   animation-check [nom]                   contrôle une animation (ou toutes) avant usage
+//   animation-preview <nom> [--props='{…}'] images de l'animation seule (sinon avec ses réglages d'exemple)
 // Node 24 exécute directement le TypeScript du domaine (src/domain/video) : une seule définition du format.
 // Tout tourne sur le poste : transcription whisper.cpp locale (via Hyperframes), aucun envoi à un service tiers.
 import { execFileSync } from "node:child_process";
-import { copyFileSync, cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CaptionsSchema, layout, parseEdit, toOutputMs } from "../../src/domain/video/edit.ts";
-import { buildEditComposition } from "../../src/domain/video/edit-composition.ts";
+import { buildAnimationPreview, buildEditComposition } from "../../src/domain/video/edit-composition.ts";
+import { checkAnimation } from "../../src/domain/video/animations.ts";
+import { ANIMATIONS, animationSource } from "../../src/domain/video/registry.ts";
 import { applyAutoCut, energyFrames, normalizeTranscript, parseDropList, planAutoCut, refineWithEnergy, speechIslands } from "../../src/domain/video/pipeline.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -123,11 +128,17 @@ export function cmdAutocut(file, { apply = false, drop } = {}) {
   return `✅ Coupe appliquée (sauvegarde : ${file}.bak-cuts).\n${summary}\nVérifie les raccords : npm run video -- preview ${file} ${ranges.slice(1, 4).map((r) => r.fromMs).join(",") || ranges[0].fromMs}`;
 }
 
-/** Écrit index.html + ressources locales (polices Poppins, GSAP) à côté de l'edit.json. */
+/** Ressources locales de la composition (polices Poppins, GSAP, logo officiel BeeRecos). */
+function copyAssets(dir) {
+  cpSync(join(root, "public/hyperframes/fonts"), join(dir, "fonts"), { recursive: true });
+  cpSync(join(root, "public/hyperframes/brand"), join(dir, "brand"), { recursive: true });
+  cpSync(join(root, "public/hyperframes/gsap-3.14.2.min.js"), join(dir, "gsap-3.14.2.min.js"));
+}
+
+/** Écrit index.html + ressources locales à côté de l'edit.json. */
 export function cmdBuild(file) {
   const { edit, words, dir } = mustLoad(file);
-  cpSync(join(root, "public/hyperframes/fonts"), join(dir, "fonts"), { recursive: true });
-  cpSync(join(root, "public/hyperframes/gsap-3.14.2.min.js"), join(dir, "gsap-3.14.2.min.js"));
+  copyAssets(dir);
   const out = join(dir, "index.html");
   writeFileSync(out, buildEditComposition(edit, words, { assetBase: ".", mediaBase: "." }));
   return { out, dir, edit };
@@ -160,6 +171,44 @@ export function cmdRender(file, output) {
   return `✅ Vidéo rendue : ${out}`;
 }
 
+export function cmdAnimations({ json = false } = {}) {
+  const list = Object.entries(ANIMATIONS).map(([name, d]) => ({ name, source: animationSource(name), label: d.label, description: d.description, lengthMs: d.lengthMs, example: d.example }));
+  if (json) return JSON.stringify(list, null, 2);
+  return list
+    .map((a) => `• ${a.name} (${a.source}, ~${(a.lengthMs / 1000).toFixed(1)} s) — ${a.label}\n  ${a.description}\n  { "name": "${a.name}", "fromMs": …, "toMs": …, "props": ${JSON.stringify(a.example)} }`)
+    .join("\n");
+}
+
+export function cmdAnimationCheck(name) {
+  const names = name ? [name] : Object.keys(ANIMATIONS);
+  if (name && !Object.hasOwn(ANIMATIONS, name)) fail(`Animation « ${name} » introuvable (enregistre-la dans src/domain/video/mes-animations/registre.ts)`);
+  const report = names.map((n) => [n, checkAnimation(n, ANIMATIONS[n])]);
+  const bad = report.filter(([, e]) => e.length);
+  if (bad.length) fail(bad.map(([n, e]) => `${n} :\n${e.map((x) => `  • ${x}`).join("\n")}`).join("\n"));
+  return `✅ ${names.length} animation(s) conforme(s) : ${names.join(", ")}`;
+}
+
+export function cmdAnimationPreview(name, { props } = {}) {
+  if (!Object.hasOwn(ANIMATIONS, name)) fail(`Animation « ${name} » introuvable`);
+  const def = ANIMATIONS[name];
+  let values = def.example;
+  if (typeof props === "string") {
+    try {
+      values = JSON.parse(props);
+    } catch {
+      fail(`--props doit être du JSON, ex. --props='${JSON.stringify(def.example)}'`);
+    }
+  }
+  const dir = join(root, "projets", "_animations", name);
+  mkdirSync(dir, { recursive: true });
+  copyAssets(dir);
+  writeFileSync(join(dir, "index.html"), buildAnimationPreview(name, values, { assetBase: "." }));
+  const d = def.lengthMs / 1000;
+  const at = [0.5 + Math.min(0.7, d * 0.3), 0.5 + d * 0.6, 0.5 + Math.max(0, d - 0.45)].map((x) => x.toFixed(2));
+  hyperframes(["snapshot", "--at", at.join(","), "--no-end", "--describe", "false", "--output", join(dir, "snapshots")], dir);
+  return `✅ Aperçu de « ${name} » : ${join(dir, "snapshots", "contact-sheet.jpg")} (entrée, milieu, sortie). Ouvre-le et décris-le.`;
+}
+
 function main(argv) {
   const [cmd, ...rest] = argv;
   const flags = Object.fromEntries(rest.filter((a) => a.startsWith("--")).map((a) => a.slice(2).split(/=(.*)/s)).map(([k, v]) => [k, v ?? true]));
@@ -175,8 +224,12 @@ function main(argv) {
     build: () => `✅ Composition écrite : ${cmdBuild(arg1).out}`,
     preview: () => cmdPreview(arg1, arg2),
     render: () => cmdRender(arg1, arg2),
+    animations: () => cmdAnimations({ json: Boolean(flags.json) }),
+    "animation-check": () => cmdAnimationCheck(arg1),
+    "animation-preview": () => cmdAnimationPreview(arg1, { props: flags.props }),
   };
-  if (!Object.hasOwn(commands, cmd) || !arg1) {
+  const needsFile = !["animations", "animation-check"].includes(cmd);
+  if (!Object.hasOwn(commands, cmd) || (needsFile && !arg1)) {
     console.error(`Usage : npm run video -- <${Object.keys(commands).join("|")}> <fichier> …  (détails en tête de automation/bin/edit-video.mjs)`);
     return 1;
   }
