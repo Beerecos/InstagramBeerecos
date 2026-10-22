@@ -13,6 +13,7 @@
 //   animation-check [nom]                   contrôle une animation (ou toutes) avant usage
 //   animation-preview <nom> [--props='{…}'] images de l'animation seule (sinon avec ses réglages d'exemple)
 //   split <session.mov> [--expected=72] [--gap=1.5] [--noise=-35]  plan de découpe d'un long tournage (rien n'est coupé)
+//   split <session.mov> --annonces [--expected=72] [--model=small]  plan d'après les annonces « V12 + titre » (transcription)
 //   split <session.mov> --apply [--web]     coupe selon <session>.decoupe.json relu (une prise par Reel)
 // Node 24 exécute directement le TypeScript du domaine (src/domain/video) : une seule définition du format.
 // Tout tourne sur le poste : transcription whisper.cpp locale (via Hyperframes), aucun envoi à un service tiers.
@@ -25,7 +26,7 @@ import { CaptionsSchema, layout, parseEdit, toOutputMs } from "../../src/domain/
 import { buildAnimationPreview, buildEditComposition } from "../../src/domain/video/edit-composition.ts";
 import { checkAnimation } from "../../src/domain/video/animations.ts";
 import { ANIMATIONS, animationSource } from "../../src/domain/video/registry.ts";
-import { checkPlan, clock, ffmpegArgs, parseSilences, planSplit, segmentName } from "../lib/decoupe.mjs";
+import { checkPlan, clock, ffmpegArgs, findSlates, parseSilences, planFromSlates, planSplit, segmentName } from "../lib/decoupe.mjs";
 import { applyAutoCut, energyFrames, normalizeTranscript, parseDropList, planAutoCut, refineWithEnergy, speechIslands } from "../../src/domain/video/pipeline.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -218,7 +219,24 @@ export function cmdAnimationPreview(name, { props } = {}) {
  * Sans --web : copie sans réencodage (rapide, qualité d'origine, début calé sur l'image clé précédente).
  * Avec --web : H.264 1080 px, coupe exacte, fichiers légers pour la page Montage (500 Mo au plus par prise).
  */
-export function cmdSplit(source, { expected, gap = "1.5", noise = "-35", apply = false, web = false } = {}) {
+/** Transcript mot à mot d'une session entière (audio seul), gardé à côté du fichier : la transcription ne se refait pas. */
+function sessionTranscript(source, model) {
+  const cache = join(dirname(resolve(source)), `${basename(source).replace(/\.[^.]+$/, "")}.transcript.json`);
+  if (existsSync(cache)) return readJson(cache);
+  const work = mkdtempSync(join(tmpdir(), "session-"));
+  try {
+    const audio = join(work, "voix.wav");
+    execFileSync("ffmpeg", ["-v", "error", "-i", source, "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "16000", audio], { stdio: "inherit" });
+    hyperframes(["transcribe", audio, "--dir", work, "--model", model, "--language", "fr", "--json"], work, ["ignore", "ignore", "inherit"]);
+    const words = normalizeTranscript(readJson(join(work, "transcript.json")));
+    writeJson(cache, words);
+    return words;
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
+}
+
+export function cmdSplit(source, { expected, gap = "1.5", noise = "-35", apply = false, web = false, annonces = false, model = "small", words: given } = {}) {
   if (!existsSync(source)) fail(`Fichier introuvable : ${source}`);
   const planFile = join(dirname(resolve(source)), `${basename(source).replace(/\.[^.]+$/, "")}.decoupe.json`);
   const durationMs = probeDurationMs(source);
@@ -226,12 +244,22 @@ export function cmdSplit(source, { expected, gap = "1.5", noise = "-35", apply =
     if (existsSync(planFile)) fail(`${planFile} existe déjà (peut-être relu à la main) : je ne l'écrase pas. Supprime-le pour recalculer, ou lance --apply.`);
     const n = expected === undefined ? undefined : Number(expected);
     if (expected === true || (n !== undefined && !(Number.isInteger(n) && n >= 1))) fail("--expected attend un nombre de Reels, ex. --expected=72");
-    // Seule la piste audio est lue (pas d'image décodée) : quelques minutes pour des heures de tournage.
-    const r = spawnSync("ffmpeg", ["-hide_banner", "-nostats", "-i", source, "-map", "0:a:0", "-vn", "-sn", "-dn", "-af", `silencedetect=noise=${Number(noise)}dB:d=${Number(gap)}`, "-f", "null", "-"], { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
-    if (r.status !== 0) fail(`ffmpeg n'a pas pu lire l'audio de ${source} :\n${(r.stderr ?? "").split("\n").slice(-5).join("\n")}`);
-    const { segments, warnings } = planSplit(parseSilences(r.stderr, durationMs), durationMs, { expected: n });
+    let result;
+    if (annonces) {
+      // Annonces « V12 + titre » : la transcription (longue, une seule fois) numérote, nomme et retire l'annonce.
+      const words = given ?? sessionTranscript(source, model);
+      const slates = findSlates(words);
+      if (!slates.length) fail("Aucune annonce « V1, V2… » trouvée dans la transcription : relance sans --annonces (découpe sur les pauses).");
+      result = planFromSlates(slates, words, durationMs, { expected: n });
+    } else {
+      // Seule la piste audio est lue (pas d'image décodée) : quelques minutes pour des heures de tournage.
+      const r = spawnSync("ffmpeg", ["-hide_banner", "-nostats", "-i", source, "-map", "0:a:0", "-vn", "-sn", "-dn", "-af", `silencedetect=noise=${Number(noise)}dB:d=${Number(gap)}`, "-f", "null", "-"], { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+      if (r.status !== 0) fail(`ffmpeg n'a pas pu lire l'audio de ${source} :\n${(r.stderr ?? "").split("\n").slice(-5).join("\n")}`);
+      result = planSplit(parseSilences(r.stderr, durationMs), durationMs, { expected: n });
+    }
+    const { segments, warnings } = result;
     writeJson(planFile, { source: basename(source), durationMs, segments });
-    const rows = segments.map((s) => `  ${String(s.n).padStart(3)}  ${clock(s.fromMs)} → ${clock(s.toMs)}  (${Math.round((s.toMs - s.fromMs) / 1000)} s)`);
+    const rows = segments.map((s) => `  ${String(s.n).padStart(3)}  ${clock(s.fromMs)} → ${clock(s.toMs)}  (${Math.round((s.toMs - s.fromMs) / 1000)} s)${s.titre ? `  ${s.titre}` : ""}`);
     return [`Plan de découpe : ${segments.length} Reel(s) dans ${clock(durationMs)} de tournage.`, ...rows, ...warnings.map((w) => `⚠ ${w}`),
       `\nRelis ${planFile} (ajoute un titre, fusionne ou supprime un morceau), puis : npm run video -- split ${source} --apply${web ? " --web" : ""}`].join("\n");
   }
@@ -241,10 +269,10 @@ export function cmdSplit(source, { expected, gap = "1.5", noise = "-35", apply =
   if (errors.length) fail(`${planFile} n'est pas valide :\n${errors.join("\n")}`);
   const outDir = join(dirname(resolve(source)), `${basename(source).replace(/\.[^.]+$/, "")}-reels`);
   mkdirSync(outDir, { recursive: true });
-  const width = Math.max(2, String(plan.segments.length).length);
+  const width = Math.max(2, String(Math.max(plan.segments.length, ...plan.segments.map((s) => s.n ?? 0))).length);
   const done = [];
   plan.segments.forEach((s, i) => {
-    const seg = { ...s, n: i + 1 };
+    const seg = { ...s, n: s.n ?? i + 1 };
     const out = join(outDir, segmentName(seg, width));
     if (existsSync(out)) return done.push(`  = ${basename(out)} (déjà coupé)`);
     execFileSync("ffmpeg", ffmpegArgs(source, seg, out, { web: Boolean(web) }), { stdio: "inherit" });
@@ -271,7 +299,7 @@ function main(argv) {
     animations: () => cmdAnimations({ json: Boolean(flags.json) }),
     "animation-check": () => cmdAnimationCheck(arg1),
     "animation-preview": () => cmdAnimationPreview(arg1, { props: flags.props }),
-    split: () => cmdSplit(arg1, { expected: flags.expected, gap: flags.gap, noise: flags.noise, apply: Boolean(flags.apply), web: Boolean(flags.web) }),
+    split: () => cmdSplit(arg1, { expected: flags.expected, gap: flags.gap, noise: flags.noise, apply: Boolean(flags.apply), web: Boolean(flags.web), annonces: Boolean(flags.annonces), model: typeof flags.model === "string" ? flags.model : undefined }),
   };
   const needsFile = !["animations", "animation-check"].includes(cmd);
   if (!Object.hasOwn(commands, cmd) || (needsFile && !arg1)) {

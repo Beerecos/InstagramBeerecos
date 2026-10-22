@@ -126,13 +126,18 @@ cd projets/mon-reel && npx hyperframes@0.8.126 preview       # aperçu interacti
 Un seul fichier qui enchaîne plusieurs Reels (ex. 80 Go, 72 Reels) ne passe ni par la page Montage (500 Mo par prise,
 10 min au total) ni par un éditeur en ligne. On le découpe **sur le poste**, en deux temps :
 ```bash
-npm run video -- split rush/session.mov --expected=72      # 1. lit SEULEMENT l'audio, propose les coupes (rien n'est coupé)
-#    → rush/session.decoupe.json : relire, donner un titre, fusionner ou supprimer un morceau
-npm run video -- split rush/session.mov --apply --web      # 2. un fichier par Reel dans rush/session-reels/
+npm run video -- split rush/session.mov --annonces --expected=72   # 1. propose les coupes (rien n'est coupé)
+#    → rush/session.decoupe.json : relire, corriger un titre, fusionner ou supprimer un morceau
+npm run video -- split rush/session.mov --apply --web               # 2. un fichier par Reel dans rush/session-reels/
 ```
-- Coupes posées dans les **pauses de la voix** (`--gap=1.5` s de silence au moins, seuil `--noise=-35` dB) ;
+- **`--annonces` (recommandé)** : chaque Reel commence par l'annonce « V12, *titre* », puis le titre est redit.
+  La session est transcrite une fois (whisper local, audio seul, gardée dans `session.transcript.json` : une relance
+  ne retranscrit pas). Chaque Reel va du **titre redit** au dernier mot avant l'annonce suivante : l'annonce est
+  retirée, le fichier est nommé `reel-12-titre.mp4`. Une annonce répétée (prise refaite) garde la dernière ; un numéro
+  introuvable ou un titre non redit est signalé. Le numéro peut être dit « V12 » ou « V douze ».
+- Sans `--annonces`, coupes posées dans les **pauses de la voix** (`--gap=1.5` s de silence au moins, seuil `--noise=-35` dB) ;
   avec `--expected`, les N − 1 pauses les plus longues, jamais un morceau de moins de 8 s ; marge de 0,4 s à chaque coupe.
-- Conseil de tournage : marquer un **silence de 3 s** (ou un clap) entre deux Reels rend la découpe quasi sûre.
+- Conseil de tournage : une pause de 1 à 2 s avant chaque annonce « V… » la rend plus sûre à repérer.
 - Sans `--web` : copie sans réencodage (rapide, qualité d'origine, début calé sur l'image clé précédente).
   Avec `--web` : H.264 1080 px, coupe exacte, fichiers légers à envoyer dans la page Montage.
 - Une relance de `--apply` saute les Reels déjà coupés ; le plan relu n'est jamais écrasé.

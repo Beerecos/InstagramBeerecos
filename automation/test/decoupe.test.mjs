@@ -67,3 +67,48 @@ test('split : plan écrit sans rien couper, puis --apply coupe un fichier par Re
   assert.deepEqual(readdirSync(join(dir, 'session-reels')).sort(), ['reel-01-reseau.mp4', 'reel-02.mp4', 'reel-03.mp4']);
   assert.ok(existsSync(join(dir, 'session-reels', 'reel-02.mp4')));
 });
+
+// Transcript factice : [texte, débutMs] à 300 ms par mot, pauses explicites par l'écart des débuts.
+const spoken = (list) => list.map(([text, at]) => ({ text: ` ${text}`, startMs: at, endMs: at + 300 }));
+
+test('nombres en chiffres ou en lettres', async () => {
+  const { readNumber, tokenize } = await import('../lib/decoupe.mjs');
+  const n = (t) => readNumber(tokenize(spoken(t.split(' ').map((w, i) => [w, i * 400]))), 0)?.value;
+  assert.equal(n('72'), 72);
+  assert.equal(n('soixante-douze'), 72);
+  assert.equal(n('soixante et onze'), 71);
+  assert.equal(n('quatre-vingt-dix-sept'), 97);
+  assert.equal(n('vingt et un'), 21);
+  assert.equal(n('deux trois'), 2);
+  assert.equal(n('réseau'), undefined);
+});
+
+test('annonces « V12 + titre » : Reel du titre redit au dernier mot avant l\'annonce suivante', async () => {
+  const { findSlates, planFromSlates } = await import('../lib/decoupe.mjs');
+  const words = spoken([
+    ['V1,', 0], ['le', 300], ['réseau', 600], ['qui', 900], ['recommande.', 1200],
+    ['Le', 3000], ['réseau', 3300], ['qui', 3600], ['recommande,', 3900], ['c\'est', 4200], ['BeeRecos.', 4500],
+    ['Vé', 9000], ['deux,', 9300], ['formation.', 9600],
+    ['Formation', 11000], ['continue.', 11300],
+    // Prise refaite : V2 annoncé une seconde fois, la dernière est gardée.
+    ['V2', 15000], ['formation.', 15300], ['Formation', 17000], ['encore.', 17300], ['Fin.', 17600],
+    // « V » glissé dans une phrase, sans pause ni suite logique : ignoré.
+    ['Et', 21000], ['V', 21300], ['8', 21400],
+  ]);
+  const slates = findSlates(words);
+  assert.deepEqual(slates.map((s) => [s.n, s.titre, s.startMs, s.redit]), [[1, 'le réseau qui recommande', 3000, true], [2, 'formation', 11000, true], [2, 'formation', 17000, true]]);
+  const { segments, warnings } = planFromSlates(slates, words, 25000, { expected: 3 });
+  assert.deepEqual(segments.map(({ n, fromMs, toMs, titre }) => [n, fromMs, toMs, titre]), [[1, 2600, 5200, 'le réseau qui recommande'], [2, 16600, 22100, 'formation']]);
+  assert.match(warnings[0], /V2 annoncé plusieurs fois/);
+  assert.match(warnings.join('\n'), /Annonce introuvable pour : V3/);
+});
+
+test('split --annonces : nommage par numéro annoncé et titre', { skip: !hasFfmpeg && 'ffmpeg absent' }, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'split-'));
+  const source = join(dir, 'studio.mp4');
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=black:s=108x192:d=12:r=10', '-f', 'lavfi', '-i', 'sine=d=12', '-c:v', 'libx264', '-g', '10', '-c:a', 'aac', '-shortest', source]);
+  const words = spoken([['V7', 0], ['Mon', 300], ['réseau.', 600], ['Mon', 2000], ['réseau', 2300], ['grandit.', 2600]]);
+  assert.match(cmdSplit(source, { annonces: true, words }), /7 {2}0:00:01\.6 → 0:00:03\.3 .* Mon réseau/);
+  cmdSplit(source, { apply: true });
+  assert.deepEqual(readdirSync(join(dir, 'studio-reels')), ['reel-07-mon-reseau.mp4']);
+});
