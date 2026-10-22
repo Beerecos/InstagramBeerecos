@@ -123,7 +123,8 @@ const TITLE_PAUSE_MS = 600;
 
 /**
  * Annonces trouvées dans le transcript : { n, atMs, titre, startMs, redit }. `startMs` est le début du titre REDIT
- * (le Reel commence là) ; si le titre n'est pas redit dans les 30 s, le Reel commence au premier mot après l'annonce.
+ * (le Reel commence là) ; si le titre n'est pas redit dans les 30 s, le Reel commence au premier mot après le numéro
+ * et `titre` n'est qu'une proposition (les premiers mots dits).
  */
 export function findSlates(words) {
   const tokens = tokenize(words);
@@ -149,7 +150,9 @@ export function findSlates(words) {
     const titre = titleWords.map((w) => w.text.trim()).join(" ").replace(/[\s.,;:!?…]+$/, "");
     // Titre redit : les premiers jetons du titre se retrouvent juste après (le Reel commence là).
     const key = tokenize(titleWords).slice(0, 3).map((k) => k.t);
-    let start = end, redit = false;
+    // Sans titre redit (annonce seule « V3 », ou titre dit une fois), le Reel commence juste après le numéro :
+    // on ne retire que l'annonce, jamais une phrase.
+    let start = firstWord, redit = false;
     if (key.length) {
       const rest = tokenize(words.slice(end)).map((k) => ({ ...k, wi: k.wi + end }));
       for (let k = 0; k + key.length <= rest.length; k++) {
@@ -183,7 +186,7 @@ export function planFromSlates(slates, words, durationMs, { expected, padMs = PA
     const spoken = words.filter((w) => w.startMs >= s.startMs && w.endMs <= limit);
     const endMs = spoken.length ? spoken.at(-1).endMs : s.startMs;
     segments.push({ n: s.n, fromMs: Math.max(0, s.startMs - padMs), toMs: Math.min(limit, endMs + padMs, durationMs), titre: s.titre });
-    if (!s.redit) warnings.push(`V${s.n} : titre « ${s.titre || "?"} » pas redit, le Reel commence juste après l'annonce (${clock(s.startMs)}).`);
+    if (!s.redit) warnings.push(`V${s.n} : pas de titre redit, le Reel commence juste après « V${s.n} » (${clock(s.startMs)}) ; titre proposé « ${s.titre || "?"} » à vérifier.`);
   });
   const top = Math.max(expected ?? 0, ...segments.map((s) => s.n));
   const missing = Array.from({ length: top }, (_, k) => k + 1).filter((n) => !lastOf.has(n));

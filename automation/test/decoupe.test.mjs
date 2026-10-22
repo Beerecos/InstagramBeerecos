@@ -112,3 +112,13 @@ test('split --annonces : nommage par numéro annoncé et titre', { skip: !hasFfm
   cmdSplit(source, { apply: true });
   assert.deepEqual(readdirSync(join(dir, 'studio-reels')), ['reel-07-mon-reseau.mp4']);
 });
+
+test('annonce seule « V3 » sans titre redit : seule l\'annonce est retirée, aucune phrase', async () => {
+  const { findSlates, planFromSlates } = await import('../lib/decoupe.mjs');
+  const words = spoken([['V3.', 0], ['Aujourd\'hui', 1500], ['je', 1800], ['parle', 2100], ['du', 2400], ['réseau.', 2700], ['V4', 6000], ['Suite.', 7500]]);
+  const slates = findSlates(words);
+  assert.deepEqual(slates.map((s) => [s.n, s.startMs, s.redit]), [[3, 1500, false], [4, 7500, false]]);
+  const { segments, warnings } = planFromSlates(slates, words, 9000);
+  assert.deepEqual(segments.map(({ fromMs, toMs }) => [fromMs, toMs]), [[1100, 3400], [7100, 8200]]);
+  assert.match(warnings[0], /V3 : pas de titre redit.*titre proposé « Aujourd'hui je parle du réseau » à vérifier/);
+});

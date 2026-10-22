@@ -134,7 +134,7 @@ npm run video -- split rush/session.mov --apply --web               # 2. un fich
   La session est transcrite une fois (whisper local, audio seul, gardée dans `session.transcript.json` : une relance
   ne retranscrit pas). Chaque Reel va du **titre redit** au dernier mot avant l'annonce suivante : l'annonce est
   retirée, le fichier est nommé `reel-12-titre.mp4`. Une annonce répétée (prise refaite) garde la dernière ; un numéro
-  introuvable ou un titre non redit est signalé. Le numéro peut être dit « V12 » ou « V douze ».
+  introuvable ou un titre non redit est signalé ; une annonce seule (« V3 » sans titre) ne retire que « V3 », jamais une phrase. Le numéro peut être dit « V12 » ou « V douze ».
 - Sans `--annonces`, coupes posées dans les **pauses de la voix** (`--gap=1.5` s de silence au moins, seuil `--noise=-35` dB) ;
   avec `--expected`, les N − 1 pauses les plus longues, jamais un morceau de moins de 8 s ; marge de 0,4 s à chaque coupe.
 - Conseil de tournage : une pause de 1 à 2 s avant chaque annonce « V… » la rend plus sûre à repérer.
