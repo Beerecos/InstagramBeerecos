@@ -12,9 +12,11 @@
 //   animations [--json]                     catalogue des animations (kit + mes-animations) avec exemples
 //   animation-check [nom]                   contrôle une animation (ou toutes) avant usage
 //   animation-preview <nom> [--props='{…}'] images de l'animation seule (sinon avec ses réglages d'exemple)
+//   split <session.mov> [--expected=72] [--gap=1.5] [--noise=-35]  plan de découpe d'un long tournage (rien n'est coupé)
+//   split <session.mov> --apply [--web]     coupe selon <session>.decoupe.json relu (une prise par Reel)
 // Node 24 exécute directement le TypeScript du domaine (src/domain/video) : une seule définition du format.
 // Tout tourne sur le poste : transcription whisper.cpp locale (via Hyperframes), aucun envoi à un service tiers.
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
@@ -23,6 +25,7 @@ import { CaptionsSchema, layout, parseEdit, toOutputMs } from "../../src/domain/
 import { buildAnimationPreview, buildEditComposition } from "../../src/domain/video/edit-composition.ts";
 import { checkAnimation } from "../../src/domain/video/animations.ts";
 import { ANIMATIONS, animationSource } from "../../src/domain/video/registry.ts";
+import { checkPlan, clock, ffmpegArgs, parseSilences, planSplit, segmentName } from "../lib/decoupe.mjs";
 import { applyAutoCut, energyFrames, normalizeTranscript, parseDropList, planAutoCut, refineWithEnergy, speechIslands } from "../../src/domain/video/pipeline.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -209,6 +212,47 @@ export function cmdAnimationPreview(name, { props } = {}) {
   return `✅ Aperçu de « ${name} » : ${join(dir, "snapshots", "contact-sheet.jpg")} (entrée, milieu, sortie). Ouvre-le et décris-le.`;
 }
 
+/**
+ * Découpe d'une session de tournage (ex. 80 Go, 72 Reels) : 1) plan à partir des pauses de la voix, écrit dans
+ * <session>.decoupe.json à relire (titres, fusions, suppressions) ; 2) --apply coupe chaque Reel dans <session>-reels/.
+ * Sans --web : copie sans réencodage (rapide, qualité d'origine, début calé sur l'image clé précédente).
+ * Avec --web : H.264 1080 px, coupe exacte, fichiers légers pour la page Montage (500 Mo au plus par prise).
+ */
+export function cmdSplit(source, { expected, gap = "1.5", noise = "-35", apply = false, web = false } = {}) {
+  if (!existsSync(source)) fail(`Fichier introuvable : ${source}`);
+  const planFile = join(dirname(resolve(source)), `${basename(source).replace(/\.[^.]+$/, "")}.decoupe.json`);
+  const durationMs = probeDurationMs(source);
+  if (!apply) {
+    if (existsSync(planFile)) fail(`${planFile} existe déjà (peut-être relu à la main) : je ne l'écrase pas. Supprime-le pour recalculer, ou lance --apply.`);
+    const n = expected === undefined ? undefined : Number(expected);
+    if (expected === true || (n !== undefined && !(Number.isInteger(n) && n >= 1))) fail("--expected attend un nombre de Reels, ex. --expected=72");
+    // Seule la piste audio est lue (pas d'image décodée) : quelques minutes pour des heures de tournage.
+    const r = spawnSync("ffmpeg", ["-hide_banner", "-nostats", "-i", source, "-map", "0:a:0", "-vn", "-sn", "-dn", "-af", `silencedetect=noise=${Number(noise)}dB:d=${Number(gap)}`, "-f", "null", "-"], { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+    if (r.status !== 0) fail(`ffmpeg n'a pas pu lire l'audio de ${source} :\n${(r.stderr ?? "").split("\n").slice(-5).join("\n")}`);
+    const { segments, warnings } = planSplit(parseSilences(r.stderr, durationMs), durationMs, { expected: n });
+    writeJson(planFile, { source: basename(source), durationMs, segments });
+    const rows = segments.map((s) => `  ${String(s.n).padStart(3)}  ${clock(s.fromMs)} → ${clock(s.toMs)}  (${Math.round((s.toMs - s.fromMs) / 1000)} s)`);
+    return [`Plan de découpe : ${segments.length} Reel(s) dans ${clock(durationMs)} de tournage.`, ...rows, ...warnings.map((w) => `⚠ ${w}`),
+      `\nRelis ${planFile} (ajoute un titre, fusionne ou supprime un morceau), puis : npm run video -- split ${source} --apply${web ? " --web" : ""}`].join("\n");
+  }
+  if (!existsSync(planFile)) fail(`Pas de plan : lance d'abord npm run video -- split ${source}`);
+  const plan = readJson(planFile);
+  const errors = checkPlan(plan, durationMs);
+  if (errors.length) fail(`${planFile} n'est pas valide :\n${errors.join("\n")}`);
+  const outDir = join(dirname(resolve(source)), `${basename(source).replace(/\.[^.]+$/, "")}-reels`);
+  mkdirSync(outDir, { recursive: true });
+  const width = Math.max(2, String(plan.segments.length).length);
+  const done = [];
+  plan.segments.forEach((s, i) => {
+    const seg = { ...s, n: i + 1 };
+    const out = join(outDir, segmentName(seg, width));
+    if (existsSync(out)) return done.push(`  = ${basename(out)} (déjà coupé)`);
+    execFileSync("ffmpeg", ffmpegArgs(source, seg, out, { web: Boolean(web) }), { stdio: "inherit" });
+    done.push(`  ✓ ${basename(out)}`);
+  });
+  return [`✅ ${plan.segments.length} Reel(s) dans ${outDir}`, ...done, "Ensuite, pour chaque Reel : page Montage (envoi de la prise) ou npm run video -- new <reel.mp4>."].join("\n");
+}
+
 function main(argv) {
   const [cmd, ...rest] = argv;
   const flags = Object.fromEntries(rest.filter((a) => a.startsWith("--")).map((a) => a.slice(2).split(/=(.*)/s)).map(([k, v]) => [k, v ?? true]));
@@ -227,6 +271,7 @@ function main(argv) {
     animations: () => cmdAnimations({ json: Boolean(flags.json) }),
     "animation-check": () => cmdAnimationCheck(arg1),
     "animation-preview": () => cmdAnimationPreview(arg1, { props: flags.props }),
+    split: () => cmdSplit(arg1, { expected: flags.expected, gap: flags.gap, noise: flags.noise, apply: Boolean(flags.apply), web: Boolean(flags.web) }),
   };
   const needsFile = !["animations", "animation-check"].includes(cmd);
   if (!Object.hasOwn(commands, cmd) || (needsFile && !arg1)) {
