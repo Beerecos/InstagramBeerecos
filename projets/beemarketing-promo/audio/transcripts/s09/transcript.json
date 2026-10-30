@@ -1,0 +1,32 @@
+[
+  {
+    "text": "Créer",
+    "start": 0.08,
+    "end": 0.35,
+    "id": "w0"
+  },
+  {
+    "text": "Prospecté,",
+    "start": 0.35,
+    "end": 1.01,
+    "id": "w1"
+  },
+  {
+    "text": "développer",
+    "start": 1.18,
+    "end": 1.72,
+    "id": "w2"
+  },
+  {
+    "text": "votre",
+    "start": 1.72,
+    "end": 2.02,
+    "id": "w3"
+  },
+  {
+    "text": "réseau.",
+    "start": 2.02,
+    "end": 2.41,
+    "id": "w4"
+  }
+]

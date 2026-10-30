@@ -1,0 +1,38 @@
+[
+  {
+    "text": "bimarketing",
+    "start": 0.04,
+    "end": 0.77,
+    "id": "w0"
+  },
+  {
+    "text": "de",
+    "start": 0.77,
+    "end": 0.91,
+    "id": "w1"
+  },
+  {
+    "text": "la",
+    "start": 0.91,
+    "end": 1.03,
+    "id": "w2"
+  },
+  {
+    "text": "visibilité",
+    "start": 1.26,
+    "end": 1.75,
+    "id": "w3"
+  },
+  {
+    "text": "aux",
+    "start": 1.75,
+    "end": 1.96,
+    "id": "w4"
+  },
+  {
+    "text": "opportunités.",
+    "start": 1.96,
+    "end": 3.02,
+    "id": "w5"
+  }
+]

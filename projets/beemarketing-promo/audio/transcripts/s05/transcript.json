@@ -1,0 +1,62 @@
+[
+  {
+    "text": "Gardez",
+    "start": 0.06,
+    "end": 0.42,
+    "id": "w0"
+  },
+  {
+    "text": "une",
+    "start": 0.42,
+    "end": 0.62,
+    "id": "w1"
+  },
+  {
+    "text": "vision",
+    "start": 0.63,
+    "end": 1.05,
+    "id": "w2"
+  },
+  {
+    "text": "claire",
+    "start": 1.05,
+    "end": 1.31,
+    "id": "w3"
+  },
+  {
+    "text": "qui",
+    "start": 1.59,
+    "end": 1.63,
+    "id": "w4"
+  },
+  {
+    "text": "contactait,",
+    "start": 1.63,
+    "end": 2.24,
+    "id": "w5"
+  },
+  {
+    "text": "qui",
+    "start": 2.24,
+    "end": 2.28,
+    "id": "w6"
+  },
+  {
+    "text": "invitait,",
+    "start": 2.4,
+    "end": 2.91,
+    "id": "w7"
+  },
+  {
+    "text": "qui",
+    "start": 3.02,
+    "end": 3.11,
+    "id": "w8"
+  },
+  {
+    "text": "relançait.",
+    "start": 3.11,
+    "end": 3.65,
+    "id": "w9"
+  }
+]

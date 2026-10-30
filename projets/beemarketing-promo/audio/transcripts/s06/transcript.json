@@ -1,0 +1,68 @@
+[
+  {
+    "text": "Votre",
+    "start": 0.04,
+    "end": 0.2,
+    "id": "w0"
+  },
+  {
+    "text": "invité",
+    "start": 0.3,
+    "end": 0.66,
+    "id": "w1"
+  },
+  {
+    "text": "choisit",
+    "start": 0.66,
+    "end": 1.08,
+    "id": "w2"
+  },
+  {
+    "text": "son",
+    "start": 1.08,
+    "end": 1.26,
+    "id": "w3"
+  },
+  {
+    "text": "club",
+    "start": 1.26,
+    "end": 1.5,
+    "id": "w4"
+  },
+  {
+    "text": "et",
+    "start": 1.5,
+    "end": 1.62,
+    "id": "w5"
+  },
+  {
+    "text": "sa",
+    "start": 1.62,
+    "end": 1.73,
+    "id": "w6"
+  },
+  {
+    "text": "date,",
+    "start": 1.81,
+    "end": 2.34,
+    "id": "w7"
+  },
+  {
+    "text": "l'invitant",
+    "start": 2.51,
+    "end": 3.14,
+    "id": "w8"
+  },
+  {
+    "text": "reste",
+    "start": 3.14,
+    "end": 3.49,
+    "id": "w9"
+  },
+  {
+    "text": "identifié.",
+    "start": 3.49,
+    "end": 4.16,
+    "id": "w10"
+  }
+]

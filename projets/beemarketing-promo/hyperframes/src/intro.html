@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width={{W}}, height={{H}}" />
+    <title>BeeMarketing · Accroche</title>
+    <script src="gsap-3.14.2.min.js"></script>
+    <style>
+      @font-face { font-family: "Poppins"; font-weight: 400; src: url("fonts/poppins-latin-400-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Poppins"; font-weight: 500; src: url("fonts/poppins-latin-500-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Poppins"; font-weight: 600; src: url("fonts/poppins-latin-600-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Poppins"; font-weight: 700; src: url("fonts/poppins-latin-700-normal.woff2") format("woff2"); }
+      :root { {{VARS}} }
+      html, body { margin: 0; background: #ffffff; }
+      body { font-family: "Poppins", sans-serif; color: var(--black); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #ffffff; }
+      .clip { position: absolute; inset: 0; }
+
+      /* Accroche : trois phrases, la dernière en bleu. */
+      #words { position: absolute; left: var(--title-x); top: var(--title-y); width: var(--title-w); }
+      .word { display: block; font-size: var(--title-size); line-height: 1.12; font-weight: 600; letter-spacing: -0.02em; }
+      .word.accent { color: var(--blue); }
+
+      /* Scène logique 900×900, mise à l'échelle par format (identique aux scènes Remotion). */
+      #stage { position: absolute; left: var(--stage-x); top: var(--stage-y); width: 900px; height: 900px;
+               transform-origin: 0 0; transform: scale(var(--stage-scale)); }
+      .card { position: absolute; background: #fff; border: 1.5px solid var(--line); border-radius: 28px;
+              box-shadow: 0 18px 50px rgba(11, 21, 51, 0.08); box-sizing: border-box; }
+      .label { font-size: 22px; font-weight: 500; color: var(--grey); }
+      .strong { font-size: 30px; font-weight: 600; color: var(--black); }
+      #c-content { left: 70px; top: 40px; width: 300px; height: 420px; padding: 22px; }
+      #c-content .thumb { width: 100%; height: 290px; border-radius: 18px; background: var(--blue);
+                          display: flex; align-items: flex-end; padding: 22px; box-sizing: border-box; }
+      #c-content .thumb span { color: #fff; font-size: 30px; font-weight: 600; line-height: 1.15; }
+      #c-content .meta { margin-top: 18px; }
+      #c-campaign { left: 470px; top: 150px; width: 380px; height: 230px; padding: 30px; }
+      .bar { height: 14px; border-radius: 7px; background: var(--surface); margin-top: 18px; overflow: hidden; }
+      .bar i { display: block; height: 100%; width: 62%; background: var(--blue); border-radius: 7px; }
+      #c-contact { left: 230px; top: 590px; width: 440px; height: 190px; padding: 30px; display: flex; gap: 24px; align-items: center; }
+      .avatar { width: 110px; height: 110px; flex: none; border-radius: 55px; background: var(--blue-soft);
+                color: var(--blue); font-size: 40px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+      #links { position: absolute; inset: 0; width: 900px; height: 900px; overflow: visible; }
+      #dot { position: absolute; left: 0; top: 0; width: var(--dot); height: var(--dot); border-radius: 50%; background: var(--blue); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="intro" data-start="0" data-width="{{W}}" data-height="{{H}}" data-duration="{{DUR}}">
+      <section id="scene" class="clip" data-start="0" data-duration="{{DUR}}">
+        <div id="words">
+          <span class="word" id="w1">Vous publiez.</span>
+          <span class="word" id="w2">Vous prospectez.</span>
+          <span class="word accent" id="w3">Et après ?</span>
+        </div>
+        <div id="stage">
+          <svg id="links" viewBox="0 0 900 900">
+            <path id="link" d="M 220 460 C 240 560, 520 420, 640 380 M 640 380 C 700 470, 520 540, 450 590"
+                  fill="none" stroke="#2851FF" stroke-width="5" stroke-linecap="round" stroke-dasharray="900" stroke-dashoffset="900" />
+          </svg>
+          <div class="card" id="c-content">
+            <div class="thumb"><span>Pourquoi visiter un club ?</span></div>
+            <div class="meta"><div class="label">Contenu</div><div class="strong">Réel</div></div>
+          </div>
+          <div class="card" id="c-campaign">
+            <div class="label">Campagne</div>
+            <div class="strong">Dirigeants du Pays basque</div>
+            <div class="bar"><i></i></div>
+          </div>
+          <div class="card" id="c-contact">
+            <div class="avatar">CL</div>
+            <div><div class="label">Contact</div><div class="strong">Camille Laurent</div></div>
+          </div>
+          <div id="dot"></div>
+        </div>
+      </section>
+    </div>
+    <script>
+      // Temps calés sur la voix réellement générée (config/promo.json → captions).
+      const T = {{TIMES}};
+      const D = {{DOT}};
+      const tl = gsap.timeline({ paused: true });
+      const pop = { y: 0, opacity: 1, scale: 1, duration: 0.45, ease: "power3.out" };
+      tl.fromTo("#w1", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: "power3.out" }, 0);
+      tl.fromTo("#c-content", { y: 40, opacity: 0, scale: 0.94 }, pop, 0);
+      tl.fromTo("#w2", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, T[1]);
+      tl.fromTo("#c-campaign", { y: 40, opacity: 0, scale: 0.94 }, pop, T[1]);
+      tl.fromTo("#w3", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, T[2]);
+      tl.fromTo("#c-contact", { y: 40, opacity: 0, scale: 0.94 }, pop, T[2]);
+      // Le repère bleu naît sur le contenu et commence à relier les trois éléments.
+      tl.fromTo("#dot", { x: 220 - D / 2, y: 460 - D / 2, scale: 0 }, { scale: 1, duration: 0.3, ease: "back.out(2)" }, 2.05);
+      tl.to("#link", { strokeDashoffset: 0, duration: 0.95, ease: "power2.inOut" }, 2.2);
+      tl.to("#dot", { keyframes: [{ x: 640 - D / 2, y: 380 - D / 2, duration: 0.5 }, { x: 450 - D / 2, y: 590 - D / 2, duration: 0.45 }], ease: "power2.inOut" }, 2.2);
+      // Suspension sur « Et après ? », puis tout s'efface sauf le repère qui rejoint le centre.
+      tl.to(["#c-content", "#c-campaign", "#c-contact", "#link"], { opacity: 0, scale: 0.97, duration: 0.4, ease: "power2.in", stagger: 0.04 }, 3.3);
+      tl.to("#words", { opacity: 0, y: -20, duration: 0.35, ease: "power2.in" }, 3.4);
+      tl.to("#dot", { x: 450 - D / 2, y: 450 - D / 2, duration: 0.45, ease: "power3.inOut" }, 3.45);
+      window.__timelines["intro"] = tl;
+    </script>
+  </body>
+</html>

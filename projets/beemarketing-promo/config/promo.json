@@ -1,0 +1,563 @@
+{
+  "_doc": "Configuration centrale du film BeeMarketing. Textes, couleurs, timings (en images à 30 i/s), formats, URL et données de démonstration. Modifier ici puis relancer les commandes du README.",
+  "video": {
+    "fps": 30,
+    "durationInFrames": 1800
+  },
+  "formats": {
+    "vertical": {
+      "id": "9x16",
+      "width": 1080,
+      "height": 1920,
+      "safe": {
+        "left": 90,
+        "right": 90,
+        "top": 180,
+        "bottom": 280
+      },
+      "stage": {
+        "x": 90,
+        "y": 600,
+        "scale": 1
+      },
+      "title": {
+        "x": 90,
+        "y": 290,
+        "width": 900,
+        "height": 260,
+        "fontSize": 88,
+        "align": "left"
+      },
+      "captions": {
+        "y": 1520,
+        "height": 120,
+        "fontSize": 46,
+        "width": 900
+      },
+      "output": "BeeMarketing_Promo_60s_9x16.mp4"
+    },
+    "horizontal": {
+      "id": "16x9",
+      "width": 1920,
+      "height": 1080,
+      "safe": {
+        "left": 96,
+        "right": 96,
+        "top": 72,
+        "bottom": 96
+      },
+      "stage": {
+        "x": 1080,
+        "y": 120,
+        "scale": 0.8
+      },
+      "title": {
+        "x": 96,
+        "y": 330,
+        "width": 880,
+        "height": 300,
+        "fontSize": 84,
+        "align": "left"
+      },
+      "captions": {
+        "y": 900,
+        "height": 84,
+        "fontSize": 38,
+        "width": 1500
+      },
+      "output": "BeeMarketing_Promo_60s_16x9.mp4"
+    }
+  },
+  "stageSize": 900,
+  "colors": {
+    "blue": "#2851FF",
+    "blueSoft": "#EAEFFF",
+    "black": "#0A0A0A",
+    "ink": "#0B1533",
+    "grey": "#6B7280",
+    "line": "#E5E8EF",
+    "surface": "#F5F7FB",
+    "white": "#FFFFFF",
+    "green": "#3BCAC2",
+    "purple": "#693BFC"
+  },
+  "fonts": {
+    "sans": "Poppins",
+    "handwriting": "Caveat"
+  },
+  "labels": {
+    "concept": "Présentation du concept · données fictives",
+    "cta": "Découvrir BeeMarketing",
+    "hashtag": "#MonReseauCestTonReseau",
+    "tagline": "De la visibilité aux opportunités."
+  },
+  "urls": {
+    "adhesion": "https://adh-beerecos.com/join",
+    "adhesionDisplay": "adh-beerecos.com/join",
+    "cta": null
+  },
+  "demo": {
+    "contact": {
+      "name": "Camille Laurent",
+      "role": "Dirigeante · Agence de communication",
+      "origin": "Parrainage adhérent",
+      "inviter": "Marc Dubois",
+      "status": "Qualifiée",
+      "nextAction": "Inviter à une réunion"
+    },
+    "contactAbsent": {
+      "name": "Thomas Petit",
+      "origin": "Instagram",
+      "inviter": "—"
+    },
+    "contactOther": {
+      "name": "Sophie Bernard",
+      "origin": "Email",
+      "nextAction": "Relancer"
+    },
+    "contactOther2": {
+      "name": "Julien Moreau",
+      "origin": "LinkedIn",
+      "nextAction": "Qualifier"
+    },
+    "club": "Club démo · Bayonne",
+    "meeting": "Réunion du jeudi · 8 h 00",
+    "nextMeeting": "Réunion suivante · jeudi 8 h 00",
+    "content": {
+      "titleBefore": "Rejoindre un club d'affaires",
+      "titleAfter": "Pourquoi visiter un club ?"
+    },
+    "campaign": {
+      "name": "Dirigeants du Pays basque",
+      "source": "Email",
+      "provider": "via MList"
+    }
+  },
+  "sources": [
+    "Email",
+    "Instagram",
+    "LinkedIn",
+    "Parrainage adhérent"
+  ],
+  "scenes": [
+    {
+      "id": "s01",
+      "name": "Accroche",
+      "engine": "hyperframes",
+      "start": 0,
+      "duration": 120,
+      "titles": [
+        "Vous publiez.",
+        "Vous prospectez.",
+        "Et après ?"
+      ]
+    },
+    {
+      "id": "s02",
+      "name": "Révélation",
+      "engine": "remotion",
+      "start": 120,
+      "duration": 150,
+      "titles": [
+        "Connectez vos actions."
+      ]
+    },
+    {
+      "id": "s03",
+      "name": "Studio",
+      "engine": "remotion",
+      "start": 270,
+      "duration": 240,
+      "titles": [
+        "Créez. Ajustez. Validez."
+      ]
+    },
+    {
+      "id": "s04",
+      "name": "Campagnes",
+      "engine": "remotion",
+      "start": 510,
+      "duration": 210,
+      "titles": [
+        "Activez vos campagnes."
+      ]
+    },
+    {
+      "id": "s05",
+      "name": "Suivi",
+      "engine": "remotion",
+      "start": 720,
+      "duration": 180,
+      "titles": [
+        "La bonne prochaine action."
+      ]
+    },
+    {
+      "id": "s06",
+      "name": "Invitation",
+      "engine": "remotion",
+      "start": 900,
+      "duration": 180,
+      "titles": [
+        "Une invitation. Une rencontre."
+      ]
+    },
+    {
+      "id": "s07",
+      "name": "Préparation",
+      "engine": "remotion",
+      "start": 1080,
+      "duration": 180,
+      "titles": [
+        "Confirmation",
+        "Calendrier",
+        "Rappel J−2"
+      ]
+    },
+    {
+      "id": "s08",
+      "name": "Présence",
+      "engine": "remotion",
+      "start": 1260,
+      "duration": 270,
+      "titles": [
+        "Présent → lien d'adhésion",
+        "Absent → nouvelle invitation"
+      ]
+    },
+    {
+      "id": "s09",
+      "name": "Bénéfice",
+      "engine": "remotion",
+      "start": 1530,
+      "duration": 120,
+      "titles": [
+        "Développez votre réseau."
+      ]
+    },
+    {
+      "id": "s10",
+      "name": "Signature",
+      "engine": "hyperframes",
+      "start": 1650,
+      "duration": 150,
+      "titles": []
+    }
+  ],
+  "audio": {
+    "bpm": 116,
+    "music": {
+      "file": "audio/musique.wav",
+      "volume": 0.32,
+      "duckedVolume": 0.13
+    },
+    "voiceVolume": 1.0,
+    "sfxVolume": 0.35,
+    "voice": [
+      {
+        "scene": "s01",
+        "file": "audio/voix/s01.wav",
+        "at": 0.15,
+        "text": "Vous publiez. Vous prospectez. Et après ?"
+      },
+      {
+        "scene": "s02",
+        "file": "audio/voix/s02.wav",
+        "at": 4.3,
+        "text": "Avec BeeMarketing, reliez vos contenus, vos campagnes et vos contacts."
+      },
+      {
+        "scene": "s03",
+        "file": "audio/voix/s03.wav",
+        "at": 9.3,
+        "text": "Réels filmés, vidéos IA, carrousels : préparez vos contenus, ajustez-les, puis validez-les."
+      },
+      {
+        "scene": "s04",
+        "file": "audio/voix/s04.wav",
+        "at": 17.3,
+        "text": "Email, Instagram, LinkedIn, parrainage : chaque contact garde son origine."
+      },
+      {
+        "scene": "s05",
+        "file": "audio/voix/s05.wav",
+        "at": 24.3,
+        "text": "Gardez une vision claire : qui contacter, qui inviter, qui relancer."
+      },
+      {
+        "scene": "s06",
+        "file": "audio/voix/s06.wav",
+        "at": 30.3,
+        "text": "Votre invité choisit son club et sa date. L'invitant reste identifié."
+      },
+      {
+        "scene": "s07",
+        "file": "audio/voix/s07.wav",
+        "at": 36.3,
+        "text": "Confirmation, agenda, rappel à J−2 : chaque étape prépare la rencontre."
+      },
+      {
+        "scene": "s08",
+        "file": "audio/voix/s08.wav",
+        "at": 42.3,
+        "text": "L'animateur valide la présence. Présent : lien d'adhésion. Absent : nouvelle invitation. Vous gardez la relation."
+      },
+      {
+        "scene": "s09",
+        "file": "audio/voix/s09.wav",
+        "at": 51.3,
+        "text": "Créez. Prospectez. Développez votre réseau."
+      },
+      {
+        "scene": "s10",
+        "file": "audio/voix/s10.wav",
+        "at": 55.3,
+        "text": "BeeMarketing. De la visibilité aux opportunités."
+      }
+    ],
+    "sfx": [
+      {
+        "file": "audio/sfx/transition.wav",
+        "at": 3.35
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 8.53
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 11.93
+      },
+      {
+        "file": "audio/sfx/validation.wav",
+        "at": 13.73
+      },
+      {
+        "file": "audio/sfx/transition.wav",
+        "at": 15.3
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 20.33
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 22.0
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 29.5
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 31.0
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 31.53
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 32.1
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 34.47
+      },
+      {
+        "file": "audio/sfx/validation.wav",
+        "at": 35.67
+      },
+      {
+        "file": "audio/sfx/validation.wav",
+        "at": 36.27
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 37.67
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 38.4
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 42.67
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 44.07
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 45.67
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 46.67
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 47.53
+      },
+      {
+        "file": "audio/sfx/transition.wav",
+        "at": 54.4
+      }
+    ]
+  },
+  "captions": [
+    {
+      "start": 0.18,
+      "end": 0.86,
+      "text": "Vous publiez.",
+      "onScreen": false
+    },
+    {
+      "start": 0.88,
+      "end": 1.66,
+      "text": "Vous prospectez.",
+      "onScreen": false
+    },
+    {
+      "start": 1.69,
+      "end": 2.6,
+      "text": "Et après ?",
+      "onScreen": false
+    },
+    {
+      "start": 4.33,
+      "end": 5.3,
+      "text": "Avec *BeeMarketing*,"
+    },
+    {
+      "start": 5.32,
+      "end": 6.5,
+      "text": "reliez vos *contenus*,"
+    },
+    {
+      "start": 6.55,
+      "end": 8.3,
+      "text": "vos *campagnes* et vos *contacts*."
+    },
+    {
+      "start": 9.34,
+      "end": 11.95,
+      "text": "Réels filmés, vidéos IA, *carrousels* :"
+    },
+    {
+      "start": 11.99,
+      "end": 13.05,
+      "text": "préparez vos *contenus*,"
+    },
+    {
+      "start": 13.09,
+      "end": 14.8,
+      "text": "ajustez-les, puis *validez-les*."
+    },
+    {
+      "start": 17.34,
+      "end": 20.25,
+      "text": "Email, Instagram, LinkedIn, *parrainage* :"
+    },
+    {
+      "start": 20.3,
+      "end": 22.6,
+      "text": "chaque contact garde son *origine*."
+    },
+    {
+      "start": 24.36,
+      "end": 25.85,
+      "text": "Gardez une vision *claire* :"
+    },
+    {
+      "start": 25.89,
+      "end": 27.3,
+      "text": "qui contacter, qui *inviter*,"
+    },
+    {
+      "start": 27.32,
+      "end": 28.6,
+      "text": "qui *relancer*."
+    },
+    {
+      "start": 30.34,
+      "end": 32.7,
+      "text": "Votre invité choisit son *club* et sa *date*."
+    },
+    {
+      "start": 32.81,
+      "end": 34.9,
+      "text": "L'invitant reste *identifié*."
+    },
+    {
+      "start": 36.36,
+      "end": 37.66,
+      "text": "*Confirmation*, agenda,"
+    },
+    {
+      "start": 37.68,
+      "end": 39.05,
+      "text": "rappel à *J−2* :"
+    },
+    {
+      "start": 39.08,
+      "end": 41.2,
+      "text": "chaque étape prépare la *rencontre*."
+    },
+    {
+      "start": 42.37,
+      "end": 44.45,
+      "text": "L'animateur valide la *présence*."
+    },
+    {
+      "start": 44.51,
+      "end": 45.9,
+      "text": "Présent : *lien d'adhésion*."
+    },
+    {
+      "start": 45.93,
+      "end": 47.6,
+      "text": "Absent : *nouvelle invitation*."
+    },
+    {
+      "start": 47.64,
+      "end": 49.6,
+      "text": "Vous gardez la *relation*."
+    },
+    {
+      "start": 51.38,
+      "end": 52.45,
+      "text": "Créez. *Prospectez*."
+    },
+    {
+      "start": 52.48,
+      "end": 54.2,
+      "text": "Développez votre *réseau*."
+    },
+    {
+      "start": 55.34,
+      "end": 56.05,
+      "text": "BeeMarketing.",
+      "onScreen": false
+    },
+    {
+      "start": 56.07,
+      "end": 58.6,
+      "text": "De la visibilité aux opportunités.",
+      "onScreen": false
+    }
+  ],
+  "marker": {
+    "_doc": "Repère bleu : coordonnées dans la scène logique 900×900, converties par format. introEnd = point de sortie de l'accroche HyperFrames ; outroStart = point d'entrée de la signature.",
+    "size": 26,
+    "introEnd": [
+      450,
+      450
+    ],
+    "outroStart": [
+      450,
+      450
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "text": "Vous",
+    "start": 0.03,
+    "end": 0.2,
+    "id": "w0"
+  },
+  {
+    "text": "publiez,",
+    "start": 0.28,
+    "end": 0.73,
+    "id": "w1"
+  },
+  {
+    "text": "vous",
+    "start": 0.73,
+    "end": 0.96,
+    "id": "w2"
+  },
+  {
+    "text": "prospectez",
+    "start": 0.96,
+    "end": 1.54,
+    "id": "w3"
+  },
+  {
+    "text": "et",
+    "start": 1.54,
+    "end": 1.65,
+    "id": "w4"
+  },
+  {
+    "text": "après.",
+    "start": 1.65,
+    "end": 2,
+    "id": "w5"
+  }
+]

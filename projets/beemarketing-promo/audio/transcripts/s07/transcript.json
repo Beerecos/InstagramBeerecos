@@ -1,0 +1,68 @@
+[
+  {
+    "text": "Confirmation,",
+    "start": 0.06,
+    "end": 0.81,
+    "id": "w0"
+  },
+  {
+    "text": "agenda,",
+    "start": 1,
+    "end": 1.38,
+    "id": "w1"
+  },
+  {
+    "text": "rappel,",
+    "start": 1.38,
+    "end": 1.87,
+    "id": "w2"
+  },
+  {
+    "text": "agi",
+    "start": 1.87,
+    "end": 2.04,
+    "id": "w3"
+  },
+  {
+    "text": "moins",
+    "start": 2.04,
+    "end": 2.37,
+    "id": "w4"
+  },
+  {
+    "text": "deux,",
+    "start": 2.37,
+    "end": 2.72,
+    "id": "w5"
+  },
+  {
+    "text": "chaque",
+    "start": 2.78,
+    "end": 3.06,
+    "id": "w6"
+  },
+  {
+    "text": "étape",
+    "start": 3.06,
+    "end": 3.29,
+    "id": "w7"
+  },
+  {
+    "text": "prépare",
+    "start": 3.42,
+    "end": 3.73,
+    "id": "w8"
+  },
+  {
+    "text": "la",
+    "start": 3.73,
+    "end": 3.84,
+    "id": "w9"
+  },
+  {
+    "text": "rencontre.",
+    "start": 3.84,
+    "end": 4.48,
+    "id": "w10"
+  }
+]

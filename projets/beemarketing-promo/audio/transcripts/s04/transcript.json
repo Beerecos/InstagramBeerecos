@@ -1,0 +1,56 @@
+[
+  {
+    "text": "Email,",
+    "start": 0.04,
+    "end": 0.45,
+    "id": "w0"
+  },
+  {
+    "text": "Instagram,",
+    "start": 0.52,
+    "end": 1.23,
+    "id": "w1"
+  },
+  {
+    "text": "LinkedIn,",
+    "start": 1.36,
+    "end": 2.05,
+    "id": "w2"
+  },
+  {
+    "text": "Parrainage.",
+    "start": 2.05,
+    "end": 3,
+    "id": "w3"
+  },
+  {
+    "text": "Chaque",
+    "start": 3,
+    "end": 3.31,
+    "id": "w4"
+  },
+  {
+    "text": "contact",
+    "start": 3.39,
+    "end": 3.7,
+    "id": "w5"
+  },
+  {
+    "text": "garde",
+    "start": 3.72,
+    "end": 3.98,
+    "id": "w6"
+  },
+  {
+    "text": "son",
+    "start": 3.98,
+    "end": 4.15,
+    "id": "w7"
+  },
+  {
+    "text": "origine.",
+    "start": 4.15,
+    "end": 4.72,
+    "id": "w8"
+  }
+]
