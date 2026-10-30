@@ -1,0 +1,38 @@
+{
+  "name": "beerecos-promo",
+  "version": "1.0.0",
+  "description": "Film promotionnel BeeRecos (60 s, 9:16 et 16:9) — HyperFrames + Remotion",
+  "scripts": {
+    "voice": "bash scripts/voice.sh",
+    "music": "python3 -I scripts/music.py",
+    "hf:check": "node scripts/build-hyperframes.mjs --check",
+    "hf:render": "node scripts/build-hyperframes.mjs --render",
+    "studio": "remotion studio remotion/index.ts",
+    "typecheck": "tsc -p .",
+    "render:9x16": "remotion render remotion/index.ts BeeRecos-9x16 exports/raw_9x16.mp4 --codec=h264 --pixel-format=yuv420p --audio-codec=aac --crf=16 && bash scripts/finalize.sh exports/raw_9x16.mp4 exports/BeeRecos_Promo_60s_9x16.mp4",
+    "render:16x9": "remotion render remotion/index.ts BeeRecos-16x9 exports/raw_16x9.mp4 --codec=h264 --pixel-format=yuv420p --audio-codec=aac --crf=16 && bash scripts/finalize.sh exports/raw_16x9.mp4 exports/BeeRecos_Promo_60s_16x9.mp4",
+    "srt": "node scripts/srt.mjs",
+    "build": "npm run music && npm run hf:render && npm run typecheck && npm run render:9x16 && npm run render:16x9 && npm run srt"
+  },
+  "type": "module",
+  "dependencies": {
+    "@remotion/cli": "4.0.539",
+    "@remotion/fonts": "4.0.539",
+    "@remotion/media": "4.0.539",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.539"
+  },
+  "devDependencies": {
+    "@fontsource/caveat": "5.2.6",
+    "@fontsource/poppins": "5.2.6",
+    "@types/react": "19.2.2",
+    "hyperframes": "0.8.221",
+    "typescript": "5.9.3"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "esbuild@0.28.2": true
+  },
+  "private": true
+}

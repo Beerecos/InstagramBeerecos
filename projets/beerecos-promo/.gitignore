@@ -1,0 +1,8 @@
+node_modules/
+hyperframes/build/
+.hyperframes/
+exports/raw_*.mp4
+audio/transcripts/*/.hyperframes/
+# Musique régénérée à l'identique par `npm run music` (graine fixe).
+public/audio/musique.wav
+audio/voix/*.wav

@@ -1,0 +1,86 @@
+[
+  {
+    "text": "Au",
+    "start": 0.04,
+    "end": 0.1,
+    "id": "w0"
+  },
+  {
+    "text": "programme",
+    "start": 0.1,
+    "end": 0.57,
+    "id": "w1"
+  },
+  {
+    "text": "«",
+    "start": 0.57,
+    "end": 0.62,
+    "id": "w2"
+  },
+  {
+    "text": "Accueil,",
+    "start": 0.62,
+    "end": 1.07,
+    "id": "w3"
+  },
+  {
+    "text": "pitch",
+    "start": 1.07,
+    "end": 1.27,
+    "id": "w4"
+  },
+  {
+    "text": "d'une",
+    "start": 1.38,
+    "end": 1.58,
+    "id": "w5"
+  },
+  {
+    "text": "minute,",
+    "start": 1.58,
+    "end": 2.04,
+    "id": "w6"
+  },
+  {
+    "text": "formation,",
+    "start": 2.04,
+    "end": 2.76,
+    "id": "w7"
+  },
+  {
+    "text": "étude",
+    "start": 2.76,
+    "end": 3.07,
+    "id": "w8"
+  },
+  {
+    "text": "de",
+    "start": 3.07,
+    "end": 3.19,
+    "id": "w9"
+  },
+  {
+    "text": "cas",
+    "start": 3.19,
+    "end": 3.31,
+    "id": "w10"
+  },
+  {
+    "text": "et",
+    "start": 3.43,
+    "end": 3.5,
+    "id": "w11"
+  },
+  {
+    "text": "recommandation",
+    "start": 3.5,
+    "end": 4.39,
+    "id": "w12"
+  },
+  {
+    "text": "».",
+    "start": 4.39,
+    "end": 4.59,
+    "id": "w13"
+  }
+]

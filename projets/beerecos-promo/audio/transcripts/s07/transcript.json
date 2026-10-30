@@ -1,0 +1,68 @@
+[
+  {
+    "text": "Les",
+    "start": 0.04,
+    "end": 0.18,
+    "id": "w0"
+  },
+  {
+    "text": "formations",
+    "start": 0.27,
+    "end": 0.82,
+    "id": "w1"
+  },
+  {
+    "text": "sont",
+    "start": 0.83,
+    "end": 1.09,
+    "id": "w2"
+  },
+  {
+    "text": "intégrées",
+    "start": 1.15,
+    "end": 1.68,
+    "id": "w3"
+  },
+  {
+    "text": "aux",
+    "start": 1.68,
+    "end": 1.87,
+    "id": "w4"
+  },
+  {
+    "text": "réunions",
+    "start": 1.87,
+    "end": 2.28,
+    "id": "w5"
+  },
+  {
+    "text": "par",
+    "start": 2.57,
+    "end": 2.7,
+    "id": "w6"
+  },
+  {
+    "text": "un",
+    "start": 2.7,
+    "end": 2.83,
+    "id": "w7"
+  },
+  {
+    "text": "organisme",
+    "start": 2.83,
+    "end": 3.42,
+    "id": "w8"
+  },
+  {
+    "text": "certifié",
+    "start": 3.42,
+    "end": 3.83,
+    "id": "w9"
+  },
+  {
+    "text": "calliopie.",
+    "start": 3.83,
+    "end": 4.39,
+    "id": "w10"
+  }
+]

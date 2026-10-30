@@ -1,0 +1,104 @@
+[
+  {
+    "text": "et",
+    "start": 0.04,
+    "end": 0.15,
+    "id": "w0"
+  },
+  {
+    "text": "les",
+    "start": 0.15,
+    "end": 0.38,
+    "id": "w1"
+  },
+  {
+    "text": "outils",
+    "start": 0.38,
+    "end": 0.84,
+    "id": "w2"
+  },
+  {
+    "text": "digitaux",
+    "start": 0.84,
+    "end": 1.45,
+    "id": "w3"
+  },
+  {
+    "text": "comme",
+    "start": 1.45,
+    "end": 1.74,
+    "id": "w4"
+  },
+  {
+    "text": "Bicard",
+    "start": 1.84,
+    "end": 2.25,
+    "id": "w5"
+  },
+  {
+    "text": "ou",
+    "start": 2.29,
+    "end": 2.38,
+    "id": "w6"
+  },
+  {
+    "text": "Bipelot",
+    "start": 2.46,
+    "end": 2.93,
+    "id": "w7"
+  },
+  {
+    "text": "vous",
+    "start": 3.17,
+    "end": 3.24,
+    "id": "w8"
+  },
+  {
+    "text": "aident",
+    "start": 3.24,
+    "end": 3.6,
+    "id": "w9"
+  },
+  {
+    "text": "à",
+    "start": 3.6,
+    "end": 3.68,
+    "id": "w10"
+  },
+  {
+    "text": "gérer",
+    "start": 3.68,
+    "end": 4.03,
+    "id": "w11"
+  },
+  {
+    "text": "vos",
+    "start": 4.04,
+    "end": 4.14,
+    "id": "w12"
+  },
+  {
+    "text": "contacts",
+    "start": 4.21,
+    "end": 4.71,
+    "id": "w13"
+  },
+  {
+    "text": "et",
+    "start": 4.71,
+    "end": 4.84,
+    "id": "w14"
+  },
+  {
+    "text": "votre",
+    "start": 4.84,
+    "end": 5.14,
+    "id": "w15"
+  },
+  {
+    "text": "visibilité.",
+    "start": 5.14,
+    "end": 5.8,
+    "id": "w16"
+  }
+]

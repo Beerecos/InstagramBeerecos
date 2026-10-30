@@ -1,0 +1,44 @@
+[
+  {
+    "text": "Apporteurs",
+    "start": 0.04,
+    "end": 0.44,
+    "id": "w0"
+  },
+  {
+    "text": "d'affaires,",
+    "start": 0.44,
+    "end": 1,
+    "id": "w1"
+  },
+  {
+    "text": "ambassadeurs,",
+    "start": 1,
+    "end": 1.88,
+    "id": "w2"
+  },
+  {
+    "text": "animateurs,",
+    "start": 1.88,
+    "end": 2.66,
+    "id": "w3"
+  },
+  {
+    "text": "chaque",
+    "start": 2.66,
+    "end": 2.97,
+    "id": "w4"
+  },
+  {
+    "text": "action",
+    "start": 2.97,
+    "end": 3.28,
+    "id": "w5"
+  },
+  {
+    "text": "compte.",
+    "start": 3.28,
+    "end": 3.6,
+    "id": "w6"
+  }
+]

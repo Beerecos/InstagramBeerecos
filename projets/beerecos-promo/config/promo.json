@@ -1,0 +1,641 @@
+{
+  "_doc": "Configuration centrale du film BeeRecos. Textes (sourcés de beerecos.com), couleurs, timings (images à 30 i/s), formats, URL. Modifier ici puis relancer les commandes du README.",
+  "video": {
+    "fps": 30,
+    "durationInFrames": 1800
+  },
+  "formats": {
+    "vertical": {
+      "id": "9x16",
+      "width": 1080,
+      "height": 1920,
+      "safe": {
+        "left": 90,
+        "right": 90,
+        "top": 180,
+        "bottom": 280
+      },
+      "stage": {
+        "x": 90,
+        "y": 600,
+        "scale": 1
+      },
+      "title": {
+        "x": 90,
+        "y": 290,
+        "width": 900,
+        "height": 260,
+        "fontSize": 88,
+        "align": "left"
+      },
+      "captions": {
+        "y": 1520,
+        "height": 120,
+        "fontSize": 46,
+        "width": 900
+      },
+      "output": "BeeRecos_Promo_60s_9x16.mp4"
+    },
+    "horizontal": {
+      "id": "16x9",
+      "width": 1920,
+      "height": 1080,
+      "safe": {
+        "left": 96,
+        "right": 96,
+        "top": 72,
+        "bottom": 96
+      },
+      "stage": {
+        "x": 1080,
+        "y": 120,
+        "scale": 0.8
+      },
+      "title": {
+        "x": 96,
+        "y": 330,
+        "width": 880,
+        "height": 300,
+        "fontSize": 84,
+        "align": "left"
+      },
+      "captions": {
+        "y": 900,
+        "height": 84,
+        "fontSize": 38,
+        "width": 1500
+      },
+      "output": "BeeRecos_Promo_60s_16x9.mp4"
+    }
+  },
+  "stageSize": 900,
+  "colors": {
+    "blue": "#2851FF",
+    "blueSoft": "#EAEFFF",
+    "black": "#0A0A0A",
+    "ink": "#0B1533",
+    "grey": "#6B7280",
+    "line": "#E5E8EF",
+    "surface": "#F5F7FB",
+    "white": "#FFFFFF",
+    "green": "#3BCAC2",
+    "purple": "#693BFC"
+  },
+  "fonts": {
+    "sans": "Poppins",
+    "handwriting": "Caveat"
+  },
+  "labels": {
+    "concept": "",
+    "cta": "Visiter un club",
+    "ctaUrl": "beerecos.com",
+    "hashtag": "#MonReseauCestTonReseau",
+    "tagline": "Le réseau d'affaires qui recommande votre business."
+  },
+  "urls": {
+    "site": "https://beerecos.com",
+    "clubs": "https://beerecos.com/clubs",
+    "cta": "beerecos.com"
+  },
+  "scenes": [
+    {
+      "id": "s01",
+      "name": "Accroche",
+      "engine": "hyperframes",
+      "start": 0,
+      "duration": 120,
+      "titles": [
+        "Vous prospectez seul ?",
+        "Faites-vous recommander."
+      ]
+    },
+    {
+      "id": "s02",
+      "name": "Révélation",
+      "engine": "remotion",
+      "start": 120,
+      "duration": 150,
+      "titles": [
+        "Réseau. Formation. Digitalisation."
+      ]
+    },
+    {
+      "id": "s03",
+      "name": "Le club",
+      "engine": "remotion",
+      "start": 270,
+      "duration": 240,
+      "titles": [
+        "Votre club, deux fois par mois."
+      ]
+    },
+    {
+      "id": "s04",
+      "name": "Le programme",
+      "engine": "remotion",
+      "start": 510,
+      "duration": 240,
+      "titles": [
+        "2 heures, 5 temps forts."
+      ]
+    },
+    {
+      "id": "s05",
+      "name": "Recommandation",
+      "engine": "remotion",
+      "start": 750,
+      "duration": 180,
+      "titles": [
+        "Recommandez. Soyez recommandé."
+      ]
+    },
+    {
+      "id": "s06",
+      "name": "Monétiser",
+      "engine": "remotion",
+      "start": 930,
+      "duration": 180,
+      "titles": [
+        "Monétisez votre réseau."
+      ]
+    },
+    {
+      "id": "s07",
+      "name": "Formation",
+      "engine": "remotion",
+      "start": 1110,
+      "duration": 180,
+      "titles": [
+        "Formez-vous à chaque réunion."
+      ]
+    },
+    {
+      "id": "s08",
+      "name": "Digitalisation",
+      "engine": "remotion",
+      "start": 1290,
+      "duration": 210,
+      "titles": [
+        "Digitalisez votre activité."
+      ]
+    },
+    {
+      "id": "s09",
+      "name": "Les clubs",
+      "engine": "remotion",
+      "start": 1500,
+      "duration": 150,
+      "titles": [
+        "Plus de 40 clubs en France."
+      ]
+    },
+    {
+      "id": "s10",
+      "name": "Signature",
+      "engine": "hyperframes",
+      "start": 1650,
+      "duration": 150,
+      "titles": []
+    }
+  ],
+  "audio": {
+    "bpm": 116,
+    "music": {
+      "file": "audio/musique.wav",
+      "volume": 0.32,
+      "duckedVolume": 0.13
+    },
+    "voiceVolume": 1.0,
+    "sfxVolume": 0.35,
+    "voice": [
+      {
+        "scene": "s01",
+        "file": "audio/voix/s01.wav",
+        "at": 0.15,
+        "text": "Vous prospectez seul ? Faites-vous recommander."
+      },
+      {
+        "scene": "s02",
+        "file": "audio/voix/s02.wav",
+        "at": 4.3,
+        "text": "BeeRecos : des clubs d'affaires qui allient réseau, formation et digitalisation."
+      },
+      {
+        "scene": "s03",
+        "file": "audio/voix/s03.wav",
+        "at": 9.3,
+        "text": "Deux fois par mois, de dix heures à midi, trente à cinquante membres se retrouvent dans leur club."
+      },
+      {
+        "scene": "s04",
+        "file": "audio/voix/s04.wav",
+        "at": 17.3,
+        "text": "Au programme : accueil, pitchs d'une minute, formation, étude de cas, et recommandations."
+      },
+      {
+        "scene": "s05",
+        "file": "audio/voix/s05.wav",
+        "at": 25.3,
+        "text": "Chaque membre devient l'apporteur d'affaires des autres."
+      },
+      {
+        "scene": "s06",
+        "file": "audio/voix/s06.wav",
+        "at": 31.3,
+        "text": "Apporteur d'affaires, ambassadeur, animateur : chaque action compte."
+      },
+      {
+        "scene": "s07",
+        "file": "audio/voix/s07.wav",
+        "at": 37.3,
+        "text": "Les formations sont intégrées aux réunions, par un organisme certifié Qualiopi."
+      },
+      {
+        "scene": "s08",
+        "file": "audio/voix/s08.wav",
+        "at": 43.3,
+        "text": "Et les outils digitaux, comme BeeCard ou BeePilot, vous aident à gérer vos contacts et votre visibilité."
+      },
+      {
+        "scene": "s09",
+        "file": "audio/voix/s09.wav",
+        "at": 50.3,
+        "text": "Plus de quarante clubs en France. Venez en visiter un."
+      },
+      {
+        "scene": "s10",
+        "file": "audio/voix/s10.wav",
+        "at": 55.3,
+        "text": "BeeRecos, le réseau d'affaires qui recommande votre business."
+      }
+    ],
+    "sfx": [
+      {
+        "file": "audio/sfx/transition.wav",
+        "at": 3.35
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 6.3
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 7.03
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 7.53
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 9.33
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 10.6
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 11.8
+      },
+      {
+        "file": "audio/sfx/validation.wav",
+        "at": 12.9
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 17.93
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 18.37
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 19.33
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 20.07
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 20.8
+      },
+      {
+        "file": "audio/sfx/validation.wav",
+        "at": 28.07
+      },
+      {
+        "file": "audio/sfx/validation.wav",
+        "at": 29.93
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 31.33
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 32.3
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 33.17
+      },
+      {
+        "file": "audio/sfx/validation.wav",
+        "at": 33.97
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 38.0
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 38.6
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 39.2
+      },
+      {
+        "file": "audio/sfx/validation.wav",
+        "at": 41.13
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 45.13
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 45.77
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 46.97
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 47.67
+      },
+      {
+        "file": "audio/sfx/notif.wav",
+        "at": 48.43
+      },
+      {
+        "file": "audio/sfx/clic.wav",
+        "at": 53.6
+      },
+      {
+        "file": "audio/sfx/transition.wav",
+        "at": 54.0
+      }
+    ]
+  },
+  "captions": [
+    {
+      "start": 0.19,
+      "end": 1.5,
+      "text": "Vous prospectez *seul* ?",
+      "onScreen": false
+    },
+    {
+      "start": 1.58,
+      "end": 2.7,
+      "text": "Faites-vous *recommander*.",
+      "onScreen": false
+    },
+    {
+      "start": 4.34,
+      "end": 5.7,
+      "text": "*BeeRecos* : des clubs d'affaires"
+    },
+    {
+      "start": 5.72,
+      "end": 7.4,
+      "text": "qui allient *réseau*, *formation*"
+    },
+    {
+      "start": 7.41,
+      "end": 8.7,
+      "text": "et *digitalisation*."
+    },
+    {
+      "start": 9.33,
+      "end": 10.45,
+      "text": "Deux fois par *mois*,"
+    },
+    {
+      "start": 10.5,
+      "end": 11.75,
+      "text": "de 10 h à *midi*,"
+    },
+    {
+      "start": 11.8,
+      "end": 12.8,
+      "text": "30 à 50 *membres*"
+    },
+    {
+      "start": 12.81,
+      "end": 14.5,
+      "text": "se retrouvent dans leur *club*."
+    },
+    {
+      "start": 17.34,
+      "end": 18.3,
+      "text": "Au programme : *accueil*,"
+    },
+    {
+      "start": 18.37,
+      "end": 20.0,
+      "text": "*pitchs* d'une minute, *formation*,"
+    },
+    {
+      "start": 20.06,
+      "end": 22.1,
+      "text": "étude de cas, et *recommandations*."
+    },
+    {
+      "start": 25.35,
+      "end": 26.2,
+      "text": "Chaque membre devient"
+    },
+    {
+      "start": 26.26,
+      "end": 28.1,
+      "text": "l'*apporteur* *d'affaires* des autres."
+    },
+    {
+      "start": 31.34,
+      "end": 33.9,
+      "text": "Apporteur d'affaires, *ambassadeur*, *animateur* :"
+    },
+    {
+      "start": 33.96,
+      "end": 35.0,
+      "text": "chaque action *compte*."
+    },
+    {
+      "start": 37.34,
+      "end": 39.8,
+      "text": "Les formations sont *intégrées* aux réunions,"
+    },
+    {
+      "start": 39.87,
+      "end": 41.9,
+      "text": "par un organisme certifié *Qualiopi*."
+    },
+    {
+      "start": 43.34,
+      "end": 44.7,
+      "text": "Et les outils digitaux,"
+    },
+    {
+      "start": 44.75,
+      "end": 46.4,
+      "text": "comme *BeeCard* ou *BeePilot*,"
+    },
+    {
+      "start": 46.47,
+      "end": 47.95,
+      "text": "vous aident à gérer vos *contacts*"
+    },
+    {
+      "start": 48.01,
+      "end": 49.3,
+      "text": "et votre *visibilité*."
+    },
+    {
+      "start": 50.37,
+      "end": 52.35,
+      "text": "Plus de 40 *clubs* en France."
+    },
+    {
+      "start": 52.41,
+      "end": 53.6,
+      "text": "Venez en *visiter* un."
+    },
+    {
+      "start": 55.34,
+      "end": 56.25,
+      "text": "BeeRecos,",
+      "onScreen": false
+    },
+    {
+      "start": 56.3,
+      "end": 58.95,
+      "text": "le réseau d'affaires qui recommande votre business.",
+      "onScreen": false
+    }
+  ],
+  "marker": {
+    "_doc": "Repère bleu : coordonnées dans la scène logique 900×900, converties par format. introEnd = point de sortie de l'accroche HyperFrames ; outroStart = point d'entrée de la signature.",
+    "size": 26,
+    "introEnd": [
+      450,
+      450
+    ],
+    "outroStart": [
+      450,
+      450
+    ]
+  },
+  "source": {
+    "_doc": "Faits repris de beerecos.com (lu le 30/10/2026) — ne rien ajouter sans source.",
+    "pillars": [
+      {
+        "name": "Réseau",
+        "hint": "Recommandations qualifiées"
+      },
+      {
+        "name": "Formation",
+        "hint": "Organisme certifié Qualiopi"
+      },
+      {
+        "name": "Digitalisation",
+        "hint": "Outils IA Bee"
+      }
+    ],
+    "club": {
+      "meetings": "2 réunions par mois",
+      "hours": "10 h – 12 h",
+      "members": "30 à 50 membres"
+    },
+    "program": [
+      [
+        "Accueil",
+        "Convivialité et prise de rendez-vous"
+      ],
+      [
+        "Pitch",
+        "1 minute, une demande précise"
+      ],
+      [
+        "Formation",
+        "Formation commerciale, en groupe"
+      ],
+      [
+        "Étude de cas",
+        "L'intelligence collective"
+      ],
+      [
+        "Recommandations",
+        "Échange de contacts qualifiés"
+      ]
+    ],
+    "levers": [
+      [
+        "Apporteur d'affaires",
+        "Vous devenez apporteur d'affaires de l'ensemble des membres."
+      ],
+      [
+        "Ambassadeur",
+        "En parrainant un nouveau membre : une prime de parrainage."
+      ],
+      [
+        "Animateur",
+        "Une prime d'animation sur les membres que vous animez."
+      ]
+    ],
+    "training": {
+      "badge": "Organisme de formation certifié Qualiopi",
+      "program": "Programme 2026 · 10 unités · 20 modules",
+      "modules": [
+        "M1 · Clarifier son identité business et son avantage compétitif",
+        "M3 · Construire un pitch narratif de haut niveau (StoryPitch™)",
+        "M5 · Social Selling 2026 (LinkedIn + Insta Pro)"
+      ]
+    },
+    "tools": [
+      "BeeBot",
+      "BeePilot",
+      "BeeCard",
+      "BeeNote",
+      "BeeLead"
+    ],
+    "toolBenefits": [
+      "Gérer vos contacts",
+      "Automatiser votre prospection",
+      "Maximiser votre visibilité"
+    ],
+    "cities": [
+      "Bayonne",
+      "Biarritz",
+      "Anglet",
+      "Toulouse",
+      "Paris",
+      "Lyon",
+      "Marseille",
+      "Montpellier",
+      "Rennes",
+      "Pau",
+      "Agen",
+      "Dax",
+      "Mérignac",
+      "Roanne",
+      "Hossegor",
+      "Saint-Jean-de-Luz"
+    ],
+    "clubsTitle": "Plus de 40 clubs en France."
+  }
+}

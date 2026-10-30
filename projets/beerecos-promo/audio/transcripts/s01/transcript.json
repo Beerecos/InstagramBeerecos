@@ -1,0 +1,32 @@
+[
+  {
+    "text": "Vous",
+    "start": 0.04,
+    "end": 0.21,
+    "id": "w0"
+  },
+  {
+    "text": "prospectez",
+    "start": 0.27,
+    "end": 0.85,
+    "id": "w1"
+  },
+  {
+    "text": "seul,",
+    "start": 0.93,
+    "end": 1.21,
+    "id": "w2"
+  },
+  {
+    "text": "faites-vous",
+    "start": 1.43,
+    "end": 1.79,
+    "id": "w3"
+  },
+  {
+    "text": "recommander.",
+    "start": 1.79,
+    "end": 2.35,
+    "id": "w4"
+  }
+]

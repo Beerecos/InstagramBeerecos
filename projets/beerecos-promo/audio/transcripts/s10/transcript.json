@@ -1,0 +1,50 @@
+[
+  {
+    "text": "Birécos,",
+    "start": 0.04,
+    "end": 0.99,
+    "id": "w0"
+  },
+  {
+    "text": "le",
+    "start": 1,
+    "end": 1.1,
+    "id": "w1"
+  },
+  {
+    "text": "réseau",
+    "start": 1.1,
+    "end": 1.41,
+    "id": "w2"
+  },
+  {
+    "text": "d'affaires",
+    "start": 1.41,
+    "end": 1.89,
+    "id": "w3"
+  },
+  {
+    "text": "qui",
+    "start": 2.05,
+    "end": 2.12,
+    "id": "w4"
+  },
+  {
+    "text": "recommande",
+    "start": 2.12,
+    "end": 2.64,
+    "id": "w5"
+  },
+  {
+    "text": "votre",
+    "start": 2.64,
+    "end": 2.91,
+    "id": "w6"
+  },
+  {
+    "text": "business.",
+    "start": 2.91,
+    "end": 3.52,
+    "id": "w7"
+  }
+]
