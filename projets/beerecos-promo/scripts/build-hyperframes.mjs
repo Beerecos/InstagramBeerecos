@@ -52,7 +52,7 @@ for (const fmt of Object.values(cfg.formats)) {
     outro: {
       vars: {
         dot: `${dot}px`, "lockup-top": px(v ? 600 : 170), "logo-w": px(v ? 400 : 300), "site-gap": px(v ? 70 : 44),
-        "site-size": px(v ? 50 : 42), "sig-gap": px(v ? 34 : 22), "sig-size": px(v ? 92 : 78),
+        "site-size": px(v ? 50 : 42), "sig-gap": px(v ? 34 : 22), "sig-size": px(v ? 54 : 44),
       },
       tokens: {
         DOT_PATH: JSON.stringify({ x: center.x - dot / 2, y: center.y - dot / 2, tx: W / 2 - dot / 2, ty: (v ? 600 + 210 : 170 + 160) - dot / 2 }),

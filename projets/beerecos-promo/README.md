@@ -24,7 +24,7 @@ hyperframes/vendor/        ← GSAP 3.14.2 (local, rendu sans réseau)
 remotion/                  ← sources Remotion : Root, Master (montage 60 s + audio + sous-titres), ui.tsx, kit.tsx (fenêtres photo/vidéo, fil bleu), scenes/
 public/brand/              ← logos BeeRecos officiels en SVG (copie de ../../public/brand)
 public/media/              ← médias du site de référence : vidéos et photos (site2/), captures recadrées (captures2/), détourage (detoure/)
-public/fonts/              ← Poppins (charte) et Caveat (manuscrite provisoire), woff2
+public/fonts/              ← Poppins (charte, titres et signature), woff2
 public/clips/              ← séquences HyperFrames rendues (muettes), importées par Remotion
 public/audio/              ← voix (voix/), effets (sfx/), musique (générée, non versionnée)
 audio/                     ← texte phonétique de la voix (lignes.tsv) et transcriptions Whisper

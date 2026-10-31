@@ -31,7 +31,7 @@ Aucun chiffre (clubs, adhérents, gains, statistiques de `/solutions`) n'est uti
 | Photos et vidéos | Elles viennent du site de référence et ont l'aspect de visuels générés. Elles portent la mention « Image(s) d'illustration » et ne sont jamais présentées comme de vrais adhérents ou une vraie réunion. **À remplacer par des tournages authentiques de clubs dès qu'ils existent.** Licence d'usage vidéo à confirmer. |
 | Logo BeeRecos | Fichier officiel du dépôt, identique à celui du site (« extracted from BeeRecos_BrandGuidelines_2026.pdf »). Il est **entièrement bleu**, alors que le brief décrit « Bee » en noir. Fournir la variante bicolore si elle fait foi. |
 | Logo BeeSchool | Introuvable sur le site de référence. Une version typographique provisoire est utilisée : « Bee » noir, « School » bleu, en Poppins. **À remplacer.** |
-| Signature #MonReseauCestTonReseau | Caveat (même police que le site, aucun fichier officiel de signature). Révélée par un masque d'écriture. Approximation à remplacer si un fichier existe. |
+| Signature #MonReseauCestTonReseau | **Poppins SemiBold**, entièrement bleue #2851FF, à votre demande, à la place d'une écriture manuscrite. Révélée par un masque d'écriture, de gauche à droite. Si un fichier de signature officiel existe, il peut la remplacer. |
 | Voix off | Synthèse provisoire. Voir `SCRIPT-VOIX.md`. |
 | Musique et effets | Composés par synthèse dans `scripts/music.py` (116 BPM, graine fixe). Aucun droit tiers. |
 
