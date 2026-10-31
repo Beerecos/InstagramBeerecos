@@ -1,44 +1,110 @@
 [
   {
-    "text": "Chaque",
-    "start": 0.05,
-    "end": 0.21,
+    "text": "Avec",
+    "start": 0.07,
+    "end": 0.31,
     "id": "w0"
   },
   {
-    "text": "membre",
-    "start": 0.3,
-    "end": 0.6,
+    "text": "Biscoul,",
+    "start": 0.31,
+    "end": 0.99,
     "id": "w1"
   },
   {
-    "text": "devient",
-    "start": 0.6,
-    "end": 0.96,
+    "text": "l'école",
+    "start": 0.99,
+    "end": 1.52,
     "id": "w2"
   },
   {
-    "text": "l'apporteur",
-    "start": 0.96,
-    "end": 1.44,
+    "text": "de",
+    "start": 1.52,
+    "end": 1.66,
     "id": "w3"
   },
   {
-    "text": "d'affaire",
-    "start": 1.56,
-    "end": 1.96,
+    "text": "formation",
+    "start": 1.67,
+    "end": 2.37,
     "id": "w4"
   },
   {
-    "text": "des",
-    "start": 1.96,
-    "end": 2.11,
+    "text": "Birécos,",
+    "start": 2.37,
+    "end": 3.04,
     "id": "w5"
   },
   {
-    "text": "autres.",
-    "start": 2.11,
-    "end": 2.62,
+    "text": "développez",
+    "start": 3.22,
+    "end": 3.68,
     "id": "w6"
+  },
+  {
+    "text": "vos",
+    "start": 3.68,
+    "end": 3.86,
+    "id": "w7"
+  },
+  {
+    "text": "compétences",
+    "start": 3.86,
+    "end": 4.44,
+    "id": "w8"
+  },
+  {
+    "text": "pour",
+    "start": 4.55,
+    "end": 4.62,
+    "id": "w9"
+  },
+  {
+    "text": "mieux",
+    "start": 4.62,
+    "end": 4.74,
+    "id": "w10"
+  },
+  {
+    "text": "prospecter,",
+    "start": 4.74,
+    "end": 5.5,
+    "id": "w11"
+  },
+  {
+    "text": "mieux",
+    "start": 5.74,
+    "end": 5.9,
+    "id": "w12"
+  },
+  {
+    "text": "vendre",
+    "start": 5.9,
+    "end": 6.26,
+    "id": "w13"
+  },
+  {
+    "text": "et",
+    "start": 6.26,
+    "end": 6.34,
+    "id": "w14"
+  },
+  {
+    "text": "mieux",
+    "start": 6.38,
+    "end": 6.68,
+    "id": "w15"
+  },
+  {
+    "text": "vous",
+    "start": 6.68,
+    "end": 6.92,
+    "id": "w16"
+  },
+  {
+    "text": "organiser.",
+    "start": 6.92,
+    "end": 7.52,
+    "id": "w17"
   }
 ]

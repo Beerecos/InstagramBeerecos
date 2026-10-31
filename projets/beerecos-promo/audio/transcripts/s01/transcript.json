@@ -1,32 +1,50 @@
 [
   {
-    "text": "Vous",
+    "text": "Votre",
     "start": 0.04,
     "end": 0.21,
     "id": "w0"
   },
   {
-    "text": "prospectez",
-    "start": 0.27,
-    "end": 0.85,
+    "text": "prochaine",
+    "start": 0.3,
+    "end": 0.87,
     "id": "w1"
   },
   {
-    "text": "seul,",
-    "start": 0.93,
-    "end": 1.21,
+    "text": "opportunité",
+    "start": 0.87,
+    "end": 1.57,
     "id": "w2"
   },
   {
-    "text": "faites-vous",
-    "start": 1.43,
-    "end": 1.79,
+    "text": "commence",
+    "start": 1.57,
+    "end": 2.08,
     "id": "w3"
   },
   {
-    "text": "recommander.",
-    "start": 1.79,
-    "end": 2.35,
+    "text": "peut-être",
+    "start": 2.08,
+    "end": 2.63,
     "id": "w4"
+  },
+  {
+    "text": "par",
+    "start": 2.71,
+    "end": 2.9,
+    "id": "w5"
+  },
+  {
+    "text": "une",
+    "start": 2.9,
+    "end": 3.1,
+    "id": "w6"
+  },
+  {
+    "text": "rencontre.",
+    "start": 3.1,
+    "end": 3.8,
+    "id": "w7"
   }
 ]

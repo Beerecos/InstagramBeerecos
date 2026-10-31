@@ -1,9 +1,11 @@
 # beerecos-promo — film promotionnel BeeRecos (60 s)
 
-« BeeRecos, le réseau d'affaires qui recommande votre business. »
+« Tout commence par une rencontre. » — signature : « Mon réseau, c'est ton réseau. »
 
-Même style et même chaîne que le film BeeMarketing (`../beemarketing-promo`). Tous les faits viennent de
-beerecos.com ; les sources sont détaillées dans `NOTE-PRODUCTION.md`.
+Le film présente les trois piliers : réseau d'apporteurs d'affaires, BeeSchool et digitalisation IA.
+- Site de référence : `https://projet-bee-we-bia.vercel.app/beeclub` (futur beerecos.com).
+- Adresse affichée et prononcée : beerecos.com.
+- Sources et choix : `NOTE-PRODUCTION.md`.
 
 | Livrable | Fichier |
 |---|---|
@@ -17,10 +19,11 @@ beerecos.com ; les sources sont détaillées dans `NOTE-PRODUCTION.md`.
 
 ```
 config/promo.json          ← tout ce qui se règle : textes sourcés (bloc « source »), couleurs, timings, formats, URL, audio
-hyperframes/src/           ← sources HyperFrames : accroche (intro.html, 4 s) et signature (outro.html, 5 s), GSAP
+hyperframes/src/           ← sources HyperFrames : accroche (intro.html, 4 s) et signature (outro.html, 6 s), GSAP
 hyperframes/vendor/        ← GSAP 3.14.2 (local, rendu sans réseau)
-remotion/                  ← sources Remotion : Root, Master (montage 60 s + audio + sous-titres), ui.tsx, scenes/
+remotion/                  ← sources Remotion : Root, Master (montage 60 s + audio + sous-titres), ui.tsx, kit.tsx (fenêtres photo/vidéo, fil bleu), scenes/
 public/brand/              ← logos BeeRecos officiels en SVG (copie de ../../public/brand)
+public/media/              ← médias du site de référence : vidéos et photos (site2/), captures recadrées (captures2/), détourage (detoure/)
 public/fonts/              ← Poppins (charte) et Caveat (manuscrite provisoire), woff2
 public/clips/              ← séquences HyperFrames rendues (muettes), importées par Remotion
 public/audio/              ← voix (voix/), effets (sfx/), musique (générée, non versionnée)
@@ -30,8 +33,8 @@ exports/                   ← MP4 finaux et SRT
 ```
 
 Répartition des moteurs :
-- **HyperFrames** : scènes 1 et 10, rendues en MP4 muets dans chaque format.
-- **Remotion** : scènes 2 à 9, montage maître, import des deux clips aux images 0 et 1650, voix, musique avec
+- **HyperFrames** : scène 1 (120 images) et scène 9 (180 images), rendues en MP4 muets dans chaque format.
+- **Remotion** : scènes 2 à 8, montage maître, import des deux clips aux images 0 et 1620, voix, musique avec
   ducking, effets et sous-titres.
 
 Il n'y a pas d'intégration native entre les deux moteurs : ils échangent des fichiers vidéo.
@@ -126,3 +129,10 @@ bash scripts/contact-sheet.sh 9x16 planche.png 300 600 900 1200 1500
   3. Dans les deux cas, recaler `audio.voice[].at` et `captions[]` dans `config/promo.json`. Les temps de chaque mot
      se trouvent dans `audio/transcripts/*/transcript.json`.
 - **CTA** : `labels.cta` et `labels.ctaUrl` (aujourd'hui « Visiter un club » et « beerecos.com »).
+
+## Sous-titres
+Ils sont incrustés par défaut. Pour un rendu sans sous-titres :
+
+```bash
+npx remotion render remotion/index.ts BeeRecos-9x16 exports/raw_9x16_sans-st.mp4 --props='{"format":"vertical","captions":false}'
+```

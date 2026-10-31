@@ -1,14 +1,12 @@
 import type React from "react";
-import { S02Reveal } from "./S02Reveal";
-import { S03Club } from "./S03Club";
-import { S04Program } from "./S04Program";
-import { S05Recommend } from "./S05Recommend";
-import { S06Levers } from "./S06Levers";
-import { S07Training } from "./S07Training";
-import { S08Tools } from "./S08Tools";
-import { S09Clubs } from "./S09Clubs";
+import { S02Brand } from "./S02Brand";
+import { S03Network } from "./S03Network";
+import { S04Value } from "./S04Value";
+import { S05School } from "./S05School";
+import { S06Digital } from "./S06Digital";
+import { S07Pillars } from "./S07Pillars";
+import { S08Invite } from "./S08Invite";
 
 export const SCENES: Record<string, React.FC> = {
-  s02: S02Reveal, s03: S03Club, s04: S04Program, s05: S05Recommend,
-  s06: S06Levers, s07: S07Training, s08: S08Tools, s09: S09Clubs,
+  s02: S02Brand, s03: S03Network, s04: S04Value, s05: S05School, s06: S06Digital, s07: S07Pillars, s08: S08Invite,
 };

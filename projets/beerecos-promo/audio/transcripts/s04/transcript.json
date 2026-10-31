@@ -1,86 +1,56 @@
 [
   {
-    "text": "Au",
+    "text": "Et",
     "start": 0.04,
-    "end": 0.1,
+    "end": 0.11,
     "id": "w0"
   },
   {
-    "text": "programme",
-    "start": 0.1,
-    "end": 0.57,
+    "text": "vos",
+    "start": 0.11,
+    "end": 0.27,
     "id": "w1"
   },
   {
-    "text": "«",
-    "start": 0.57,
-    "end": 0.62,
+    "text": "mises",
+    "start": 0.27,
+    "end": 0.51,
     "id": "w2"
   },
   {
-    "text": "Accueil,",
-    "start": 0.62,
-    "end": 1.07,
+    "text": "en",
+    "start": 0.55,
+    "end": 0.65,
     "id": "w3"
   },
   {
-    "text": "pitch",
-    "start": 1.07,
-    "end": 1.27,
+    "text": "relation",
+    "start": 0.65,
+    "end": 1.09,
     "id": "w4"
   },
   {
-    "text": "d'une",
-    "start": 1.38,
-    "end": 1.58,
+    "text": "peuvent",
+    "start": 1.09,
+    "end": 1.47,
     "id": "w5"
   },
   {
-    "text": "minute,",
-    "start": 1.58,
-    "end": 2.04,
+    "text": "aussi",
+    "start": 1.47,
+    "end": 1.68,
     "id": "w6"
   },
   {
-    "text": "formation,",
-    "start": 2.04,
-    "end": 2.76,
+    "text": "être",
+    "start": 1.75,
+    "end": 1.95,
     "id": "w7"
   },
   {
-    "text": "étude",
-    "start": 2.76,
-    "end": 3.07,
+    "text": "rémunérées.",
+    "start": 2.05,
+    "end": 2.63,
     "id": "w8"
-  },
-  {
-    "text": "de",
-    "start": 3.07,
-    "end": 3.19,
-    "id": "w9"
-  },
-  {
-    "text": "cas",
-    "start": 3.19,
-    "end": 3.31,
-    "id": "w10"
-  },
-  {
-    "text": "et",
-    "start": 3.43,
-    "end": 3.5,
-    "id": "w11"
-  },
-  {
-    "text": "recommandation",
-    "start": 3.5,
-    "end": 4.39,
-    "id": "w12"
-  },
-  {
-    "text": "».",
-    "start": 4.39,
-    "end": 4.59,
-    "id": "w13"
   }
 ]

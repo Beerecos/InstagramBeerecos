@@ -5,7 +5,6 @@ export type FormatKey = keyof typeof raw.formats;
 export type Format = (typeof raw.formats)[FormatKey];
 export const C = raw.colors;
 export const FPS = raw.video.fps;
-export const STAGE = raw.stageSize;
 
 export const scene = (id: string) => {
   const s = raw.scenes.find((x) => x.id === id);

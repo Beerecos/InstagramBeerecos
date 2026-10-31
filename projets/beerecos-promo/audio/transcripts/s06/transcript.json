@@ -1,44 +1,92 @@
 [
   {
-    "text": "Apporteurs",
-    "start": 0.04,
-    "end": 0.44,
+    "text": "Avec",
+    "start": 0.06,
+    "end": 0.27,
     "id": "w0"
   },
   {
-    "text": "d'affaires,",
-    "start": 0.44,
-    "end": 1,
+    "text": "la",
+    "start": 0.35,
+    "end": 0.42,
     "id": "w1"
   },
   {
-    "text": "ambassadeurs,",
-    "start": 1,
-    "end": 1.88,
+    "text": "digitalisation,",
+    "start": 0.42,
+    "end": 1.48,
     "id": "w2"
   },
   {
-    "text": "animateurs,",
-    "start": 1.88,
-    "end": 2.66,
+    "text": "IA",
+    "start": 1.65,
+    "end": 1.73,
     "id": "w3"
   },
   {
-    "text": "chaque",
-    "start": 2.66,
-    "end": 2.97,
+    "text": "découvrait",
+    "start": 1.76,
+    "end": 2.63,
     "id": "w4"
   },
   {
-    "text": "action",
-    "start": 2.97,
-    "end": 3.28,
+    "text": "des",
+    "start": 2.64,
+    "end": 2.77,
     "id": "w5"
   },
   {
-    "text": "compte.",
+    "text": "outils",
+    "start": 2.77,
+    "end": 3.08,
+    "id": "w6"
+  },
+  {
+    "text": "pour",
+    "start": 3.08,
+    "end": 3.28,
+    "id": "w7"
+  },
+  {
+    "text": "gagner",
     "start": 3.28,
     "end": 3.6,
-    "id": "w6"
+    "id": "w8"
+  },
+  {
+    "text": "du",
+    "start": 3.6,
+    "end": 3.74,
+    "id": "w9"
+  },
+  {
+    "text": "temps",
+    "start": 3.74,
+    "end": 4.03,
+    "id": "w10"
+  },
+  {
+    "text": "et",
+    "start": 4.21,
+    "end": 4.22,
+    "id": "w11"
+  },
+  {
+    "text": "accompagner",
+    "start": 4.22,
+    "end": 4.8,
+    "id": "w12"
+  },
+  {
+    "text": "votre",
+    "start": 4.8,
+    "end": 5.09,
+    "id": "w13"
+  },
+  {
+    "text": "activité.",
+    "start": 5.09,
+    "end": 5.59,
+    "id": "w14"
   }
 ]

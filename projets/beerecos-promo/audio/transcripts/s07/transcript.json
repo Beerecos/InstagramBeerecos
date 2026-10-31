@@ -1,68 +1,86 @@
 [
   {
-    "text": "Les",
-    "start": 0.04,
-    "end": 0.18,
+    "text": "des",
+    "start": 0.11,
+    "end": 0.19,
     "id": "w0"
   },
   {
-    "text": "formations",
-    "start": 0.27,
-    "end": 0.82,
+    "text": "rencontres,",
+    "start": 0.19,
+    "end": 0.85,
     "id": "w1"
   },
   {
-    "text": "sont",
-    "start": 0.83,
-    "end": 1.09,
+    "text": "des",
+    "start": 0.99,
+    "end": 1.12,
     "id": "w2"
   },
   {
-    "text": "intégrées",
-    "start": 1.15,
-    "end": 1.68,
+    "text": "compétences,",
+    "start": 1.2,
+    "end": 1.92,
     "id": "w3"
   },
   {
-    "text": "aux",
-    "start": 1.68,
-    "end": 1.87,
+    "text": "des",
+    "start": 2.06,
+    "end": 2.25,
     "id": "w4"
   },
   {
-    "text": "réunions",
-    "start": 1.87,
-    "end": 2.28,
+    "text": "outils,",
+    "start": 2.25,
+    "end": 2.8,
     "id": "w5"
   },
   {
-    "text": "par",
-    "start": 2.57,
-    "end": 2.7,
+    "text": "trois",
+    "start": 2.9,
+    "end": 3.04,
     "id": "w6"
   },
   {
-    "text": "un",
-    "start": 2.7,
-    "end": 2.83,
+    "text": "piliers",
+    "start": 3.11,
+    "end": 3.42,
     "id": "w7"
   },
   {
-    "text": "organisme",
-    "start": 2.83,
-    "end": 3.42,
+    "text": "pour",
+    "start": 3.51,
+    "end": 3.64,
     "id": "w8"
   },
   {
-    "text": "certifié",
-    "start": 3.42,
-    "end": 3.83,
+    "text": "avancer",
+    "start": 3.64,
+    "end": 4,
     "id": "w9"
   },
   {
-    "text": "calliopie.",
-    "start": 3.83,
-    "end": 4.39,
+    "text": "avec",
+    "start": 4,
+    "end": 4.2,
     "id": "w10"
+  },
+  {
+    "text": "des",
+    "start": 4.2,
+    "end": 4.35,
+    "id": "w11"
+  },
+  {
+    "text": "actions",
+    "start": 4.35,
+    "end": 4.72,
+    "id": "w12"
+  },
+  {
+    "text": "concrètes.",
+    "start": 4.72,
+    "end": 5.5,
+    "id": "w13"
   }
 ]

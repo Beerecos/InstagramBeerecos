@@ -1,104 +1,38 @@
 [
   {
-    "text": "et",
+    "text": "Découvrez",
     "start": 0.04,
-    "end": 0.15,
+    "end": 0.65,
     "id": "w0"
   },
   {
     "text": "les",
-    "start": 0.15,
-    "end": 0.38,
+    "start": 0.65,
+    "end": 0.87,
     "id": "w1"
   },
   {
-    "text": "outils",
-    "start": 0.38,
-    "end": 0.84,
+    "text": "clubs",
+    "start": 0.87,
+    "end": 1.01,
     "id": "w2"
   },
   {
-    "text": "digitaux",
-    "start": 0.84,
-    "end": 1.45,
+    "text": "Birecos",
+    "start": 1.25,
+    "end": 1.75,
     "id": "w3"
   },
   {
-    "text": "comme",
-    "start": 1.45,
-    "end": 1.74,
+    "text": "sur",
+    "start": 1.75,
+    "end": 1.97,
     "id": "w4"
   },
   {
-    "text": "Bicard",
-    "start": 1.84,
-    "end": 2.25,
+    "text": "Birecos.com",
+    "start": 1.97,
+    "end": 2.97,
     "id": "w5"
-  },
-  {
-    "text": "ou",
-    "start": 2.29,
-    "end": 2.38,
-    "id": "w6"
-  },
-  {
-    "text": "Bipelot",
-    "start": 2.46,
-    "end": 2.93,
-    "id": "w7"
-  },
-  {
-    "text": "vous",
-    "start": 3.17,
-    "end": 3.24,
-    "id": "w8"
-  },
-  {
-    "text": "aident",
-    "start": 3.24,
-    "end": 3.6,
-    "id": "w9"
-  },
-  {
-    "text": "à",
-    "start": 3.6,
-    "end": 3.68,
-    "id": "w10"
-  },
-  {
-    "text": "gérer",
-    "start": 3.68,
-    "end": 4.03,
-    "id": "w11"
-  },
-  {
-    "text": "vos",
-    "start": 4.04,
-    "end": 4.14,
-    "id": "w12"
-  },
-  {
-    "text": "contacts",
-    "start": 4.21,
-    "end": 4.71,
-    "id": "w13"
-  },
-  {
-    "text": "et",
-    "start": 4.71,
-    "end": 4.84,
-    "id": "w14"
-  },
-  {
-    "text": "votre",
-    "start": 4.84,
-    "end": 5.14,
-    "id": "w15"
-  },
-  {
-    "text": "visibilité.",
-    "start": 5.14,
-    "end": 5.8,
-    "id": "w16"
   }
 ]
