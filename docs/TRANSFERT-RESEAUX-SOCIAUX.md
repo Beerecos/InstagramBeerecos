@@ -42,7 +42,8 @@ Source : `bee-marketing-agent` au commit `6ab3914` (`main`).
 | 3 | Serveur : les 13 Edge Functions sociales restent celles déjà déployées sur le projet BeeMarketing (une seule implémentation qui écrit dans les tables) ; InstagramBeerecos les appelle avec le jeton de session | ✅ |
 | 4 | Clients API → `src/lib/social/` (`NEXT_PUBLIC_BEE_API_URL`, jeton via `@supabase/ssr`), sous-ensemble social de `api.ts`, rendu Reel en ligne ; tests → `tests/unit/social/lib/` | ✅ 28 tests de plus, suite complète 450 verts |
 | 4 bis | Connexion : `src/server/auth/dal.ts` lit `profiles` / `memberships`, absents de la base BeeMarketing → lire `bee_user_profiles` / `user_roles` → lecture serveur de `user_roles` / `organizations` (RLS fermée côté session) ; SUPER_ADMIN ou DIRECTION = admin, sinon lecteur (un seul utilisateur : Cédric, 2026-11-02) | ✅ |
-| 5 | Interface : `src/components/social/` → composants client Next.js (`react-router-dom` → `next/navigation`), pages `/studio`, `/video`, `/calendar` existantes branchées | |
+| 5 | Interface : 45 fichiers → `src/components/social/` (composants client, pont `router.tsx` react-router → next/navigation), page `/publication` (« Réseaux sociaux » dans le menu) : parcours, calendrier, pilote Instagram, montage, Reels IA, carrousels ; e2e `tests/e2e/social.spec.ts` | ✅ partiel |
+| 5 bis | Vues restantes de `/publication` : préparer le post (`PublishWizard`), studio visuel, comptes, automatisation, campagnes à partager, autres validations, La Ruche — un message renvoie vers BeeMarketing | 🟡 |
 | 6 | Vérifications complètes (lint, typecheck, tests, e2e), puis décision de retrait côté BeeMarketing | |
 
 ## Adaptations faites en phase 1
@@ -98,3 +99,13 @@ tout autre rôle, ou aucun → lecteur. Sans `SUPABASE_SECRET_KEY` côté serveu
 - `SUPABASE_SECRET_KEY` (InstagramBeerecos) doit être la clé du projet BeeMarketing, sinon accès en lecture seule.
 - Les modules propres à InstagramBeerecos (missions, mémoire de marque, Watchdog) lisent des tables absentes de la base
   BeeMarketing : ils afficheront une erreur tant que ces tables ne sont pas créées (avec des noms sans collision, après accord).
+
+## Adaptations faites en phase 5
+
+- Route `/publication` conservée (liens internes des écrans inchangés) ; lien « Bibliothèque » `/media` → `/library`.
+- Jetons Tailwind de BeeMarketing ajoutés dans `globals.css` (`mut`, `fg`, `acid`, `brand-soft`…) ; classes globales
+  (`btn-*`, `card`, `pill`, `kicker`, `tab`) limitées au conteneur `.social-studio`, qui force le thème clair.
+- ESLint : 5 règles de Next.js absentes de BeeMarketing désactivées pour `src/components/social/**` uniquement.
+- Deux corrections de types React 19 (`useRef` sans argument, `RefObject<… | null>`).
+- Ressources copiées : pictogrammes BeeRecos (`public/brand/`), Reel de démonstration (`public/reels/demo/`).
+- Dépendance ajoutée : `html-to-image@1.11.13` (export PNG des carrousels, même version que BeeMarketing).

@@ -8,6 +8,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/team", label: "Équipe IA", icon: "team" },
   { href: "/ruche", label: "La Ruche", icon: "hive" },
   { href: "/watchdog", label: "Chien de garde", icon: "shield" },
+  { href: "/publication", label: "Réseaux sociaux", icon: "megaphone" },
   { href: "/studio", label: "Studio", icon: "layers" },
   { href: "/video", label: "Vidéo", icon: "clapperboard" },
   { href: "/calendar", label: "Calendrier", icon: "calendar" },
