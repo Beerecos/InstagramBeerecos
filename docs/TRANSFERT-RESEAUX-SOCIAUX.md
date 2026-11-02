@@ -57,6 +57,22 @@ Source : `bee-marketing-agent` au commit `6ab3914` (`main`).
    `user_roles` ; InstagramBeerecos utilise `organizations` / `memberships`. Les deux applications
    partagent-elles le même projet Supabase (on réutilise les tables existantes) ou InstagramBeerecos a-t-il
    sa propre base (on recrée les tables et on migre les données) ?
+
+   **Constat du 2026-11-02 (lecture seule via le connecteur Supabase) :**
+   - InstagramBeerecos n'a **aucune base déployée** : ses tables (`missions`, `memberships`, `profiles`,
+     `cta_campaigns`, `brand_memory`…) n'existent dans aucun des 6 projets Supabase du compte.
+   - Le projet **BeeMarketing** (`wekbmkjvieagmghjanjb`) contient déjà toutes les tables sociales, avec des
+     données réelles : 11 montages, 12 Reels, 6 gabarits visuels, 26 lignes de statistiques de posts, plus
+     le CRM (791 contacts, 52 leads, clubs, réunions).
+   - Plusieurs tables de fondation d'InstagramBeerecos portent le même nom que des tables de BeeMarketing
+     avec un schéma différent (`organizations`, `roles`, `campaigns`, `approvals`, `audit_logs`) : appliquer
+     telles quelles les migrations d'InstagramBeerecos sur la base BeeMarketing créerait des conflits.
+
+   **Recommandation :** brancher InstagramBeerecos sur le projet BeeMarketing et réutiliser ses tables
+   (sociales, CRM, clubs) sans les recréer ; adapter le code d'InstagramBeerecos au modèle
+   `workspaces` / `user_roles` ; ne créer dans cette base que les tables propres à InstagramBeerecos
+   (missions, mémoire de marque…), sous des noms qui n'entrent pas en collision. Raison : une seule source
+   de vérité pour le parcours Instagram → lead → club → adhésion, et pas de données à migrer.
 2. Doublon à résoudre : `src/domain/video/reel.ts` (InstagramBeerecos) et `src/domain/social/reel-story/`
    (BeeMarketing) couvrent le même besoin. À fusionner en phase 5, pas avant.
 3. La copie `supabase/functions/_shared/montage` de BeeMarketing est générée (`npm run montage:sync`) ; elle
