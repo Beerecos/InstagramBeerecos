@@ -4,7 +4,7 @@ const PAGES = [
   ["/missions", "Missions de l'équipe"],
   ["/approvals", "Boîte de validation"],
   ["/team", "Votre équipe marketing"],
-  ["/calendar", "Calendrier marketing"],
+  ["/calendar", "Calendrier éditorial"],
   ["/campaigns", "Campagnes"],
   ["/leads", "Suivi des prospects Instagram"],
   ["/analytics", "Ce qui crée des visites"],

@@ -28,3 +28,33 @@ describe("adaptateur Recommandation → scènes Motion", () => {
     expect(silent.scenes.some((s) => s.title === "ET\nTOI ?")).toBe(false);
   });
 });
+
+import { readFileSync } from "node:fs";
+import { reelToMotion, splitSpoken } from "@/domain/reels/ai-spec";
+import type { Reel } from "@/domain/social/montage/reels";
+
+describe("script des 72 → réel IA", () => {
+  const structure = JSON.parse(readFileSync(new URL("../../content/reels-72/BeeRecos_72_Reels_Structure.json", import.meta.url), "utf8"));
+  const reels: Reel[] = structure.reels;
+  it("découpe une parole longue sans perdre un mot", () => {
+    const long = "Première phrase assez longue pour remplir. ".repeat(8).trim();
+    const parts = splitSpoken(long, 100);
+    expect(parts.every((p) => p.length <= 100)).toBe(true);
+    expect(parts.join(" ")).toBe(long);
+  });
+  it("reprend toutes les paroles des 72 scripts mot pour mot, CTA puis signature en fin", () => {
+    for (const reel of reels) {
+      const { spec } = reelToMotion(reel);
+      const spoken = spec.scenes.slice(0, -1).map((s) => s.voice).join(" ").replace(/\s+/g, " ");
+      const expected = reel.scenes.map((s) => s.spoken_text).join(" ").replace(/\s+/g, " ").trim();
+      expect(spoken.split(" ").sort()).toEqual(expected.split(" ").sort());
+      expect(spec.scenes.at(-1)?.visual).toBe("signature");
+      expect(spec.scenes.filter((s) => s.visual === "cta").length).toBeLessThanOrEqual(1);
+      expect(spec.scenes.every((s) => s.voice.length <= 220)).toBe(true);
+      expect(spec.cta.keyword).toBe(reel.cta.display_keyword);
+    }
+  });
+  it("garde les identifiants V01–V72 dans le titre", () => {
+    expect(reelToMotion(reels[0]).spec.title.startsWith("V01 · ")).toBe(true);
+  });
+});

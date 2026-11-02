@@ -17,14 +17,20 @@ test("Mes réels est la page d'entrée, avec l'identité Instagram BeeRecos", as
   expect(errors).toEqual([]);
 });
 
-test("navigation principale : trois destinations", async ({ page, isMobile }) => {
+test("navigation : Scripts → Studio → Bibliothèque → Calendrier", async ({ page, isMobile }) => {
   await page.goto("/");
-  const nav = page.getByRole("navigation", { name: isMobile ? "Navigation mobile" : "Navigation principale" });
-  for (const label of ["Mes réels", "Bibliothèque", "Paramètres"]) await expect(nav.getByRole("link", { name: label })).toBeVisible();
-  await nav.getByRole("link", { name: "Bibliothèque" }).click();
+  const nav = () => page.getByRole("navigation", { name: isMobile ? "Navigation mobile" : "Navigation principale" });
+  for (const label of ["Scripts", "Studio", "Bibliothèque", "Calendrier"]) await expect(nav().getByRole("link", { name: label })).toBeVisible();
+  await nav().getByRole("link", { name: "Scripts" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Scripts" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /J'ai déjà mes prises/ })).toHaveAttribute("href", "/reels/tournage");
+  await expect(page.getByRole("link", { name: /Nouveau script avec l'IA/ })).toHaveAttribute("href", "/reels/nouveau/ia");
+  await nav().getByRole("link", { name: "Bibliothèque" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Bibliothèque" })).toBeVisible();
-  await page.getByRole("navigation", { name: isMobile ? "Navigation mobile" : "Navigation principale" }).getByRole("link", { name: "Paramètres" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Paramètres" })).toBeVisible();
+  await nav().getByRole("link", { name: "Calendrier" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Calendrier éditorial" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ajouter un réel terminé" })).toHaveAttribute("href", "/library");
+  await page.goto("/settings");
   await expect(page.getByText("Serveur BeeMarketing (Edge Functions, base partagée)")).toBeVisible();
 });
 

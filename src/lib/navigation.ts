@@ -2,9 +2,11 @@ export type NavItem = { href: string; label: string; icon: string; mobile?: bool
 
 /** Navigation principale (desktop) ; `mobile` = présent dans la barre compacte. */
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Mes réels", icon: "clapperboard", mobile: true },
+  { href: "/scripts", label: "Scripts", icon: "script", mobile: true },
+  { href: "/", label: "Studio", icon: "clapperboard", mobile: true },
   { href: "/library", label: "Bibliothèque", icon: "library", mobile: true },
-  { href: "/settings", label: "Paramètres", icon: "settings", mobile: true },
+  { href: "/calendar", label: "Calendrier", icon: "calendar", mobile: true },
+  { href: "/settings", label: "Paramètres", icon: "settings" },
 ];
 
 export function isActive(pathname: string, href: string): boolean {

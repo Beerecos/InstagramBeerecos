@@ -111,7 +111,7 @@ function SceneEditor({ scene, revision, reel, onSaved, disabled }: { scene: Reel
   );
 }
 
-function ReelSheet({ reelId, onChange, onOpenMontage, uploader }: { reelId: string; onChange: () => void; onOpenMontage: (id: string) => void; uploader: (reelId: string, onDone: (id: string) => void) => ReactNode }) {
+function ReelSheet({ reelId, onChange, onOpenMontage, uploader, aiHref }: { reelId: string; onChange: () => void; onOpenMontage: (id: string) => void; uploader: (reelId: string, onDone: (id: string) => void) => ReactNode; aiHref?: (reelId: string) => string }) {
   const [reel, setReel] = useState<ReelDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [prompteur, setPrompteur] = useState(false);
@@ -156,6 +156,7 @@ function ReelSheet({ reelId, onChange, onOpenMontage, uploader }: { reelId: stri
             : <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={busy} onClick={() => act(() => api.review(reel.reelId, reel.revision, "approved"))}>Valider le texte (révision {reel.revision})</button>}
           {reel.linked ? <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" onClick={() => onOpenMontage(reel.linked!.montageId)}>Ouvrir le montage</button> : null}
           <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" onClick={() => setFilming((f) => !f)}>{reel.linked ? "Nouvelle prise" : "Envoyer la prise filmée"}</button>
+          {aiHref ? <a className="btn-ghost inline-flex min-h-[40px] items-center px-3 text-sm" href={aiHref(reel.reelId)}>Faire en réel IA</a> : null}
         </div>
         {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
         {filming ? uploader(reel.reelId, (id) => { onChange(); onOpenMontage(id); }) : null}
@@ -180,7 +181,7 @@ function ReelSheet({ reelId, onChange, onOpenMontage, uploader }: { reelId: stri
   );
 }
 
-export default function ReelsCatalogue({ onOpenMontage, uploader }: { onOpenMontage: (id: string) => void; uploader: (reelId: string, onDone: (id: string) => void) => ReactNode }) {
+export default function ReelsCatalogue({ onOpenMontage, uploader, aiHref }: { onOpenMontage: (id: string) => void; uploader: (reelId: string, onDone: (id: string) => void) => ReactNode; aiHref?: (reelId: string) => string }) {
   const [list, setList] = useState<ReelSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -236,7 +237,7 @@ export default function ReelsCatalogue({ onOpenMontage, uploader }: { onOpenMont
         <ImportCard onDone={refresh} compact />
       </aside>
       <div className="min-w-0">
-        {selected ? <ReelSheet reelId={selected} onChange={refresh} onOpenMontage={onOpenMontage} uploader={uploader} /> : <p className="text-sm text-mut">Choisissez un Reel dans la liste : son objectif, son texte, ses scènes et le prompteur s&apos;affichent ici.</p>}
+        {selected ? <ReelSheet reelId={selected} onChange={refresh} onOpenMontage={onOpenMontage} uploader={uploader} aiHref={aiHref} /> : <p className="text-sm text-mut">Choisissez un Reel dans la liste : son objectif, son texte, ses scènes et le prompteur s&apos;affichent ici.</p>}
       </div>
     </div>
   );

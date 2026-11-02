@@ -6,7 +6,9 @@
  * distincte (panneau Rendu).
  */
 import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { montage, reels, type MontageDetail } from "@/lib/social/montage-api";
+import { transferStudioMedia, updateDeliverable } from "@/lib/social/editorial-api";
 import { composeCaption, durationWarning, emptyPost, fileSlug, montageSrt, parseHashtags, postWarnings, type ReelPost } from "@/domain/reels/post";
 
 const KEY = (id: string) => `ibr.post.${id}`;
@@ -33,6 +35,8 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
   const [tags, setTags] = useState(() => post.hashtags.join(" "));
   const [saved, setSaved] = useState<"local" | "serveur" | null>(() => (m.post ? "serveur" : readPost(m.id) ? "local" : null));
   const [notice, setNotice] = useState<string | null>(null);
+  const [when, setWhen] = useState("");
+  const [planned, setPlanned] = useState<{ id: string; at: string | null } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const video = useRef<HTMLVideoElement>(null);
@@ -86,6 +90,17 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
     if (!blob) throw new Error("Capture impossible : le serveur vidéo n'autorise pas la lecture de l'image.");
     await saveBlob(blob, `${name}-couverture.png`);
   });
+  // Calendrier éditorial (base partagée) : brouillon de post lié au MP4 de cette version, daté. Le serveur réutilise
+  // le brouillon déjà créé pour ce montage (pas de doublon). Aucune publication ni programmation sur Instagram.
+  const addToCalendar = () => run("cal", async () => {
+    if (!when) throw new Error("Choisis une date et une heure.");
+    const at = new Date(when);
+    if (Number.isNaN(at.getTime())) throw new Error("Date illisible.");
+    const draft = await transferStudioMedia({ sourceType: "montage", sourceId: m.id, expectedSourceVersion: m.updatedAt, channel: "instagram" });
+    const url = /^https:\/\//.test(post.destination.trim()) ? post.destination.trim() : undefined;
+    const saved = await updateDeliverable(draft.id, { title: m.title, content: final, cta: post.cta || null, keyword: post.keyword || null, ...(url ? { destinationUrl: url } : {}), scheduledAt: at.toISOString(), expectedVersion: draft.contentVersion });
+    setPlanned({ id: saved.id, at: saved.scheduledAt });
+  });
   const mp4 = () => run("mp4", async () => {
     const res = await fetch(m.finalVideoUrl!);
     if (!res.ok) throw new Error(`Téléchargement du MP4 impossible (HTTP ${res.status}) : relance la lecture du projet pour renouveler le lien.`);
@@ -137,6 +152,16 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
         </div>
         {!ready ? <p className="text-mut">Le MP4 et la couverture sont disponibles après un rendu terminé de cette version.</p> : null}
         {!srt ? <p className="text-mut">SRT disponible après la transcription.</p> : null}
+      </section>
+      <section aria-labelledby="calendrier" className="space-y-2">
+        <h3 id="calendrier" className="font-semibold">Calendrier éditorial</h3>
+        <p className="text-mut">Ajoute ce post en brouillon à la date voulue. Rien n&apos;est publié ni programmé sur Instagram : la validation et la publication restent des étapes distinctes.</p>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="block">Date et heure prévues<input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="mt-1 block min-h-11 rounded-lg border border-line bg-white px-3" /></label>
+          <button type="button" className="btn-red min-h-11" disabled={!ready || !final || !when || Boolean(busy)} onClick={addToCalendar}>{busy === "cal" ? "Ajout…" : "Ajouter au calendrier"}</button>
+        </div>
+        {!ready ? <p className="text-mut">Disponible quand le MP4 de cette version est rendu.</p> : null}
+        {planned ? <p role="status" className="text-acid-dim">Brouillon ajouté au calendrier{planned.at ? ` pour le ${new Date(planned.at).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" })}` : ""}. <Link href="/calendar" className="text-brand underline">Voir le calendrier</Link></p> : null}
       </section>
       {notice ? <p role="status" className="text-amber-800">{notice}</p> : null}
       {error ? <p role="alert" className="text-red-700">{error}</p> : null}

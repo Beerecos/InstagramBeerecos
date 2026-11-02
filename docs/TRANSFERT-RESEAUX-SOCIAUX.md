@@ -26,18 +26,23 @@ Décision de Cédric : Instagram BeeRecos devient l'outil principal de préparat
 référence et garde son studio jusqu'à vérification. Base Supabase et Edge Functions BeeMarketing partagées
 (aucune migration appliquée, aucune écriture distante, aucun déploiement).
 
-### Parcours et routes
+### Parcours et routes (Scripts → Studio → Bibliothèque → Calendrier)
 
 | Route | Rôle |
 |---|---|
-| `/` | **Mes réels** : projets réels (`montage list`) + brouillons IA non rendus, miniature, source, statut, prochaine action |
-| `/reels/nouveau/video` · `/reels/nouveau/ia` | « Créer un réel » : Importer ma vidéo / Créer avec l'IA → même studio |
-| `/reels/[id]` | Studio d'un projet (MontageStudio) : séquences, aperçu vertical, réglages, timeline ; panneau **Post et export** |
-| `/reels/tournage` | Découper un tournage : fichiers séparés → un projet par fichier ; long rush → plan de segments |
-| `/library` | 72 scripts (catalogue, prompteur, import du dépôt), médias (sons, images, licences) |
-| `/settings` | Capacités réelles du serveur (`settings-get`), charte, préférences du studio |
-| `/formats` | Accès secondaire aux carrousels / visuels |
-| `/publication?vue=…`, `/studio`, `/video` | Redirections (identifiants `montage`, `studioAsset` conservés) |
+| `/scripts` | Les 72 scripts (prompteur, texte, validation) : « Envoyer la prise filmée » → réel filmé ; « Faire en réel IA » → scènes reprises mot pour mot ; nouveau script avec l'IA ; « J'ai déjà mes prises » |
+| `/` | **Studio** (« Mes réels ») : projets, statut réel, prochaine action ; créer un réel filmé ou IA |
+| `/reels/tournage` | Import des prises déjà tournées (un projet par fichier, associé à son script) ; plan de découpe d'un long rush |
+| `/reels/[id]` | Studio d'un réel (`?panel=post` ouvre « Post et export ») |
+| `/reels/nouveau/video` · `/reels/nouveau/ia` (`?script=V12`) | Création d'un réel filmé / IA |
+| `/library` | **Bibliothèque** des réels terminés (MP4 rendu) → « Créer le post » ; médias du studio |
+| `/calendar` | **Calendrier éditorial** partagé : posts ajoutés en brouillon depuis le post d'un réel |
+| `/settings` | Capacités réelles du serveur, charte, préférences |
+| `/formats` | Carrousels / visuels (accès secondaire) |
+| `/publication?vue=…`, `/studio`, `/video` | Redirections (identifiants conservés) |
+
+« Ajouter au calendrier » = transfert du montage en brouillon de post (`transfer-studio-media`, idempotent par montage)
+puis date, légende, CTA et mot-clé (`update`). Aucune publication ni programmation sur Instagram.
 
 ### État réel
 
@@ -81,7 +86,7 @@ référence et garde son studio jusqu'à vérification. Base Supabase et Edge Fu
 
 ### Vérifications (2026-11-02)
 
-`npm run lint` ✅ · `npm run typecheck` ✅ · `npm test` ✅ 516 tests (63 fichiers) + 11 tests `automation/` ·
+`npm run lint` ✅ · `npm run typecheck` ✅ · `npm test` ✅ 519 tests (63 fichiers) + 11 tests `automation/` ·
 `npm run build` (mode démo) ✅ · `npm run test:e2e` ✅ 31 réussis, 3 limités à un format. E2E en mode démo, sans
 serveur de montage ni rendu réel : ils ne prouvent ni un MP4 généré ni une transcription réelle.
 

@@ -47,3 +47,70 @@ export function storyToMotion(story: StorySpec): MotionSpec {
     voice: { provider: "heygen", voiceId: AUDREY_VOICE_ID, speed: DEFAULT_VOICE_SPEED },
   };
 }
+
+import type { Reel } from "@/domain/social/montage/reels";
+
+const VOICE_MAX = 220; // limite d'une voix de scène dans MotionSpec
+const SCENES_MAX = 12;
+const PILLAR: Record<string, MotionSpec["pillar"]> = { reseau: "reseau_monetise", formation: "formation", digitalisation_ia: "digitalisation_ia" };
+
+/** Découpe une parole en morceaux ≤ 220 caractères aux fins de phrase (puis aux virgules), sans perdre un mot. */
+export function splitSpoken(text: string, max = VOICE_MAX): string[] {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= max) return [clean];
+  const parts = clean.match(/[^.!?…]+[.!?…]+["»”]?|[^.!?…]+$/g)?.map((p) => p.trim()).filter(Boolean) ?? [clean];
+  const out: string[] = [];
+  for (const p of parts.flatMap((p) => (p.length <= max ? [p] : p.split(/(?<=,)\s+/)))) {
+    const last = out.at(-1);
+    if (last && `${last} ${p}`.length <= max) out[out.length - 1] = `${last} ${p}`;
+    else out.push(p);
+  }
+  return out;
+}
+
+/**
+ * Un des 72 scripts → scènes de réel IA, dans l'éditeur unique. Paroles reprises mot pour mot (réparties si une
+ * phrase dépasse la limite d'une scène IA), textes à l'écran = overlays du script ; rien n'est inventé : un overlay
+ * absent reste vide et l'éditeur le signale. Signature officielle ajoutée en fin.
+ */
+export function reelToMotion(reel: Reel): { spec: MotionSpec; warnings: string[] } {
+  const warnings: string[] = [];
+  const scenes: MotionScene[] = [];
+  const keyword = reel.cta.display_keyword;
+  reel.scenes.forEach((s, i) => {
+    const chunks = splitSpoken(s.spoken_text);
+    if (chunks.length > 1) warnings.push(`Scène ${i + 1} : parole répartie sur ${chunks.length} scènes IA (limite de ${VOICE_MAX} caractères par voix), texte inchangé.`);
+    const title = (s.overlay.text ?? "").trim();
+    if (!title && s.role !== "cta") warnings.push(`Scène ${i + 1} : aucun texte à l'écran dans le script, à compléter.`);
+    chunks.forEach((voice, k) => scenes.push({
+      id: `s${scenes.length + 1}`,
+      visual: s.role === "cta" ? "cta" : "titre",
+      voice,
+      title: s.role === "cta" ? "Commente" : title,
+      ...(s.role === "cta" ? { pivot: keyword } : {}),
+      ...(k > 0 && s.role === "cta" ? { visual: "titre" as const, title } : {}),
+    }));
+  });
+  // Une seule scène CTA, juste avant la signature : les morceaux qui précèdent le dernier restent des scènes titre.
+  const ctaIdx = scenes.map((x) => x.visual).lastIndexOf("cta");
+  scenes.forEach((x, i) => { if (x.visual === "cta" && i !== ctaIdx) Object.assign(x, { visual: "titre", title: x.title === "Commente" ? "" : x.title, pivot: undefined }); });
+  if (ctaIdx >= 0 && ctaIdx !== scenes.length - 1) {
+    const [cta] = scenes.splice(ctaIdx, 1);
+    scenes.push(cta);
+    warnings.push("La scène d'appel à l'action a été placée en dernier, juste avant la signature.");
+  }
+  scenes.push({ id: `s${scenes.length + 1}`, visual: "signature", voice: OFFICIAL_SIGNATURE_VOICE, title: "" });
+  if (scenes.length > SCENES_MAX) warnings.push(`${scenes.length} scènes : l'éditeur IA en accepte ${SCENES_MAX} au plus, regroupe des scènes avant le rendu.`);
+  const spec: MotionSpec = {
+    kind: "motion", style: MOTION_STYLE_ID,
+    title: `${reel.reel_id} · ${reel.title}`.slice(0, 80),
+    objective: (reel.objective ?? "").slice(0, 160),
+    pillar: PILLAR[reel.primary_pillar ?? ""] ?? "reseau_monetise",
+    targetSeconds: 45,
+    settings: { rythme: "dynamique", texte: "equilibre", presence: "mascotte" },
+    scenes,
+    cta: { keyword, complement: "" },
+    voice: { provider: "heygen", voiceId: AUDREY_VOICE_ID, speed: DEFAULT_VOICE_SPEED },
+  };
+  return { spec, warnings };
+}

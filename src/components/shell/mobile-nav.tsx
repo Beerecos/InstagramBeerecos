@@ -8,7 +8,7 @@ import { NAV_ITEMS, isActive } from "@/lib/navigation";
 import { cn } from "@/components/ui/cn";
 import { NavIcon } from "./nav-icon";
 
-/** Barre compacte mobile : les 3 destinations + menu complet. */
+/** Barre compacte mobile : les 4 étapes du parcours + menu complet (Paramètres, autres formats). */
 export function MobileNav() {
   return <MobileNavView pathname={usePathname()} />;
 }

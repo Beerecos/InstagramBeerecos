@@ -25,6 +25,7 @@ export function CreateReelButtons({ className = "" }: { className?: string }) {
     <div className={`flex flex-wrap gap-2 ${className}`} role="group" aria-label="Créer un réel">
       <Link href="/reels/nouveau/video" className="btn-red min-h-11"><Upload aria-hidden size={16} /> Importer ma vidéo</Link>
       <Link href="/reels/nouveau/ia" className="btn-ghost min-h-11"><Bot aria-hidden size={16} /> Créer avec l&apos;IA</Link>
+      <Link href="/reels/tournage" className="btn-ghost min-h-11">J&apos;ai déjà mes prises</Link>
     </div>
   );
 }
@@ -79,7 +80,7 @@ export default function MyReels() {
         <div>
           <p className="kicker">Instagram BeeRecos</p>
           <h1 className="font-display text-3xl font-semibold">Mes réels</h1>
-          <p className="mt-1 text-sm text-mut">Idée ou rush → script et scènes → montage → post → validation et export.</p>
+          <p className="mt-1 text-sm text-mut">Le studio : tes prises deviennent des réels filmés, tes scripts des réels IA. Les réels terminés vont dans la Bibliothèque, puis au calendrier.</p>
         </div>
         <CreateReelButtons />
       </header>

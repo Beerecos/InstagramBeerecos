@@ -340,7 +340,9 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
   const [error, setError] = useState<string | null>(null);
   const [transcribing, setTranscribing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [panel, setPanel] = useState<Panel>("animations");
+  // Instagram BeeRecos : `?panel=post` ouvre directement « Post et export » (depuis la bibliothèque des réels).
+  const [panelParams] = useSearchParams();
+  const [panel, setPanel] = useState<Panel>(() => PANELS.some((p) => p.key === panelParams.get("panel")) ? panelParams.get("panel") as Panel : "animations");
   const [libraryOpen,setLibraryOpen]=useState(false);
   const [libraryTab,setLibraryTab]=useState<"animations"|"effects"|"sounds">("animations");
   const [expanded,setExpanded]=useState(()=>typeof window!=="undefined"&&window.innerWidth>=1024);
@@ -805,7 +807,7 @@ export default function MontageStudio({ source = "reel", montageId, onOpenMontag
     <div className={open ? "space-y-4" : "mt-5 space-y-4"}>
       {open ? <Editor key={open} id={open} onBack={() => { setOpen(null); refresh(); }} onOpenSource={openSource} /> : <>
         {source === "ai" || sourceRef ? <>
-          <AiEditor sourceRef={sourceRef} onUseMotion={isMontageConfigured ? importMotion : undefined} onUseStory={isMontageConfigured ? importAi : undefined} />
+          <AiEditor sourceRef={sourceRef} scriptId={searchParams.get("script")} onUseMotion={isMontageConfigured ? importMotion : undefined} onUseStory={isMontageConfigured ? importAi : undefined} />
         </> : isMontageConfigured ? <Uploader onDone={setOpen} /> : <p role="status">Le serveur de montage n’est pas configuré.</p>}
         {isMontageConfigured && !compact ? <>
           <details className="card p-4"><summary className="cursor-pointer font-medium">Reprendre un montage</summary>

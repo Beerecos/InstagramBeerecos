@@ -6,7 +6,7 @@ import { listCampaigns, updateDeliverable, type Deliverable, type Campaign } fro
 import { listEditorialAccounts } from "@/lib/social/editorial-api";
 import { CTA_SUGGESTIONS, channelLabel } from "@/lib/social/content";
 import { haptic } from "@/lib/social/haptics";
-import { editorialHref, localDateTime, plannedDateIso } from "@/domain/social/editorial-calendar";
+import { localDateTime, plannedDateIso } from "@/domain/social/editorial-calendar";
 
 /**
  * Aperçu d'un livrable AVANT validation, avec un rendu réaliste par réseau
@@ -334,7 +334,7 @@ export default function PostPreview({
           </p>
 
           {/* Rattachement campagne (§21) */}
-          {!readOnly && ["linkedin", "instagram", "email"].includes(item.channel ?? "") && <Link to={editorialHref({ id: item.id })} onClick={onClose} className="mt-3 block rounded-lg border border-brand px-3 py-2 text-center text-sm text-brand">{item.channel === "email" ? "Modifier l'objet et le message" : "Modifier le texte et les médias"}</Link>}
+          {!readOnly && item.studioSource?.sourceType === "montage" && <Link to={`/reels/${item.studioSource.sourceId}?panel=post`} onClick={onClose} className="mt-3 block rounded-lg border border-brand px-3 py-2 text-center text-sm text-brand">Modifier le réel et son post</Link>}
           <fieldset disabled={busy || linking || readOnly} className="mt-4 space-y-2 rounded-xl border border-line bg-black/[0.02] p-3 disabled:opacity-60">
             <legend className="text-xs font-semibold text-fg">Campagne et date prévue</legend>
             <select aria-label="Campagne du contenu" value={campaignId} onChange={(e) => setCampaignId(e.target.value)}
