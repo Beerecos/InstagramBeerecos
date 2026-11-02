@@ -106,7 +106,7 @@ async function sendTake(id: string, file: File, setStep: (s: string) => void, la
 }
 
 /** `reelId` : prise d'un des 72 Reels (lot S7) — le montage lui est lié et prend son titre. */
-function Uploader({ onDone, reelId }: { onDone: (id: string) => void; reelId?: string }) {
+export function Uploader({ onDone, reelId }: { onDone: (id: string) => void; reelId?: string }) {
   const [files, setFiles] = useState<File[]>([]);
   const [title, setTitle] = useState("");
   const [step, setStep] = useState<string | null>(null);
@@ -343,7 +343,7 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
   const [panel, setPanel] = useState<Panel>("animations");
   const [libraryOpen,setLibraryOpen]=useState(false);
   const [libraryTab,setLibraryTab]=useState<"animations"|"effects"|"sounds">("animations");
-  const [expanded,setExpanded]=useState(()=>window.innerWidth>=1024);
+  const [expanded,setExpanded]=useState(()=>typeof window!=="undefined"&&window.innerWidth>=1024);
   const [monitorView, setMonitorView] = useState<"edit"|"render">("edit");
   const renderedVideo = useRef<HTMLVideoElement>(null);
   const [selection, setSelection] = useState<WordSelection>(null);
@@ -717,7 +717,7 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
 }
 
 /** Page Bibliothèque de l'accueil du montage (gestion des médias, hors montage). */
-function LibraryHome() {
+export function LibraryHome() {
   const lib = useLibrary();
   return (
     <section aria-labelledby="bibliotheque" className="card max-w-2xl p-5">
@@ -753,15 +753,19 @@ function FinalVideos({ list, onOpen }: { list: MontageSummary[] | null; onOpen: 
   );
 }
 
-export default function MontageStudio({ source = "reel" }: { source?: "reel" | "ai" }) {
+/**
+ * Instagram BeeRecos : `montageId` ouvre directement l'éditeur (route /reels/[id]) ; `onOpenMontage` remplace la
+ * navigation par paramètre `?montage=` ; `compact` masque les sections secondaires (pages de création).
+ */
+export default function MontageStudio({ source = "reel", montageId, onOpenMontage, compact = false }: { source?: "reel" | "ai"; montageId?: string; onOpenMontage?: (id: string | null) => void; compact?: boolean }) {
   const [list, setList] = useState<MontageSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const open = searchParams.get("montage");
+  const open = montageId ?? searchParams.get("montage");
   const assetKind=searchParams.get("studioKind"),assetId=searchParams.get("studioAsset"),assetRevision=Number(searchParams.get("studioRevision"));
   const sourceRef:StudioSourceRef|undefined=assetId&&Number.isInteger(assetRevision)&&assetRevision>0&&(assetKind==="motion"||assetKind==="story")?{assetId,revision:assetRevision,kind:assetKind}:undefined;
   const openSource=(ref:StudioSourceRef)=>setSearchParams(previous=>{const next=new URLSearchParams(previous);next.delete("montage");next.set("studioAsset",ref.assetId);next.set("studioRevision",String(ref.revision));next.set("studioKind",ref.kind);return next;},{replace:true});
-  const setOpen = (id: string | null) => setSearchParams((previous) => {
+  const setOpen = (id: string | null) => onOpenMontage ? onOpenMontage(id) : setSearchParams((previous) => {
     const next = new URLSearchParams(previous);
     // The resume channel belongs to this source only, never to a new import or another montage.
     if (!id || id !== previous.get("montage")) next.delete("postChannel");
@@ -811,7 +815,7 @@ export default function MontageStudio({ source = "reel" }: { source?: "reel" | "
           </div>
           {(sourceRef ? sourceRef.kind==="motion" : aiStyle === "motion") ? <MotionStyleSource sourceRef={sourceRef} onUseVideo={isMontageConfigured ? importMotion : undefined} /> : <AiVideoSource sourceRef={sourceRef} onUseVideo={isMontageConfigured ? importAi : undefined} />}
         </> : isMontageConfigured ? <Uploader onDone={setOpen} /> : <p role="status">Le serveur de montage n’est pas configuré.</p>}
-        {isMontageConfigured ? <>
+        {isMontageConfigured && !compact ? <>
           <details className="card p-4"><summary className="cursor-pointer font-medium">Reprendre un montage</summary>
             {error ? <p role="alert" className="text-red-700">{error}</p> : null}
             {list === null && !error ? <p role="status">Chargement…</p> : null}

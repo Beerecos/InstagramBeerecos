@@ -6,8 +6,8 @@ import "./globals.css";
 const poppins = Poppins({ variable: "--font-poppins", subsets: ["latin"], weight: ["100", "300", "400", "500", "600", "700"] });
 
 export const metadata: Metadata = {
-  title: { default: "BeeMarketing", template: "%s · BeeMarketing" },
-  description: "Le système commercial Instagram de BeeRecos : contenu, conversations, visites de clubs.",
+  title: { default: "Instagram BeeRecos", template: "%s · Instagram BeeRecos" },
+  description: "Instagram BeeRecos : préparer les réels BeeRecos, de l'idée ou du rush jusqu'au MP4, à la couverture et à la légende.",
   robots: { index: false, follow: false },
 };
 

@@ -18,8 +18,8 @@ export default function LoginPage() {
         </svg>
         <Logo variant="white" width={210} priority />
         <div className="relative">
-          <p className="text-5xl font-light leading-[1.1] tracking-tight">Du Reel<br /><span className="font-semibold">à la visite de club.</span></p>
-          <p className="mt-6 max-w-md text-white/80">Le système commercial Instagram de BeeRecos : IA puissante, contrôle humain, contenu authentique, acquisition mesurable.</p>
+          <p className="text-5xl font-light leading-[1.1] tracking-tight">De l&apos;idée<br /><span className="font-semibold">au réel prêt à publier.</span></p>
+          <p className="mt-6 max-w-md text-white/80">L&apos;outil de préparation des réels BeeRecos : script, montage, sous-titres, animations, couverture et légende.</p>
         </div>
         <p className="relative text-xs uppercase tracking-[0.18em] text-white/70">Application interne BeeRecos</p>
       </section>

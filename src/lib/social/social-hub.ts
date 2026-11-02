@@ -92,11 +92,28 @@ export function matchesLocal(d: Pick<Deliverable, "title" | "content" | "media">
 
 /** Routes de création communes, en conservant les filtres du tableau. */
 export function studioHref(params: URLSearchParams, source: "reel" | "ai" | "visual"): string {
-  const next = withoutEditor(params);
-  next.delete("montage");
-  next.delete("visual");
-  next.set("vue", source === "ai" ? "reels" : source === "visual" ? "carrousels" : "montage");
-  return `/publication?${next}`;
+  // Instagram BeeRecos : routes dédiées (les filtres de l'ancien tableau /publication ne s'appliquent plus).
+  void params;
+  return source === "ai" ? "/reels/nouveau/ia" : source === "visual" ? "/formats" : "/reels/nouveau/video";
+}
+
+/**
+ * Anciens liens BeeMarketing `/publication?vue=…` → routes d'Instagram BeeRecos, en conservant les identifiants utiles
+ * (montage, source IA, visuel). Tout le reste (tableau, éditeur de post, outils commerciaux) ramène à « Mes réels ».
+ */
+export function legacyPublicationHref(params: URLSearchParams): string {
+  const vue = params.get("vue") ?? "";
+  const montageId = params.get("montage");
+  if (montageId && /^[\w-]{1,64}$/.test(montageId)) return `/reels/${encodeURIComponent(montageId)}`;
+  const keep = (keys: string[]) => {
+    const next = new URLSearchParams();
+    for (const k of keys) { const v = params.get(k); if (v) next.set(k, v); }
+    return next.size ? `?${next}` : "";
+  };
+  if (vue === "reels" || params.has("studioAsset")) return `/reels/nouveau/ia${keep(["studioAsset", "studioRevision", "studioKind"])}`;
+  if (vue === "montage") return "/reels/nouveau/video";
+  if (vue === "carrousels") return `/formats${keep(["visual"])}`;
+  return "/";
 }
 
 export function pipelineStage(d: Pick<Deliverable, "status">): "prepare" | "validate" | "history" {

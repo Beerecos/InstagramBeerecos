@@ -51,7 +51,7 @@ export default function BeeMotionLibrary({ onUse, kept = [], usage = {}, sceneCo
   const [text, setText] = useState("");
   const [category, setCategory] = useState<MotionCategory | null>(null);
   const [previewing, setPreviewing] = useState<string | null>(null);
-  const base = `${window.location.origin}/hyperframes`;
+  const base = `${typeof window !== "undefined" ? window.location.origin : ""}/hyperframes`;
   const all = useMemo(() => listMotions(undefined, kept), [kept]);
   // Seules les catégories réellement fournies apparaissent : pas de filtre vide.
   const categories = useMemo(() => (Object.keys(MOTION_CATEGORIES) as MotionCategory[]).filter((c) => all.some((m) => m.category === c)), [all]);

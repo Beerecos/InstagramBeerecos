@@ -61,16 +61,12 @@ describe("format et action", () => {
 });
 
 describe("studio pipeline", () => {
-  it("preserves filters when opening all three creation types", async () => {
+  it("opens the three creation routes of Instagram BeeRecos (old board filters no longer apply)", async () => {
     const { studioHref } = await import("@/lib/social/social-hub");
-    for (const [source, expected] of [["reel", "montage"], ["ai", "reels"], ["visual", "carrousels"]] as const) {
-      const p = new URLSearchParams(studioHref(new URLSearchParams("q=club&workspaceId=w1&edit=old&postChannel=linkedin"), source).split("?")[1]);
-      expect(p.get("vue")).toBe(expected);
-      expect(p.get("q")).toBe("club");
-      expect(p.get("workspaceId")).toBe("w1");
-      expect(p.has("edit")).toBe(false);
-      expect(p.has("postChannel")).toBe(false);
-    }
+    const old = new URLSearchParams("q=club&workspaceId=w1&edit=old&postChannel=linkedin");
+    expect(studioHref(old, "reel")).toBe("/reels/nouveau/video");
+    expect(studioHref(old, "ai")).toBe("/reels/nouveau/ia");
+    expect(studioHref(old, "visual")).toBe("/formats");
   });
   it("approval remains in validation, not published or scheduled", async () => {
     const { pipelineStage } = await import("@/lib/social/social-hub");
@@ -81,5 +77,31 @@ describe("studio pipeline", () => {
   });
   it("closing a resumed montage clears its identity while keeping scope", () => {
     expect(withoutTool(new URLSearchParams("vue=montage&montage=m1&workspaceId=w1&q=club&postChannel=linkedin")).toString()).toBe("workspaceId=w1&q=club");
+  });
+});
+
+import { legacyPublicationHref, studioHref } from "@/lib/social/social-hub";
+
+describe("liens hérités /publication → Instagram BeeRecos", () => {
+  const href = (q: string) => legacyPublicationHref(new URLSearchParams(q));
+  it("conserve l'identifiant du montage", () => {
+    expect(href("vue=montage&montage=abc-123")).toBe("/reels/abc-123");
+    expect(href("vue=reels&montage=abc-123&postChannel=x")).toBe("/reels/abc-123");
+  });
+  it("rouvre la source IA avec sa version", () => {
+    expect(href("vue=reels&studioAsset=a1&studioRevision=3&studioKind=motion")).toBe("/reels/nouveau/ia?studioAsset=a1&studioRevision=3&studioKind=motion");
+  });
+  it("oriente les autres vues", () => {
+    expect(href("vue=montage")).toBe("/reels/nouveau/video");
+    expect(href("vue=carrousels&visual=v9")).toBe("/formats?visual=v9");
+    expect(href("vue=pilotage")).toBe("/");
+    expect(href("edit=42")).toBe("/");
+  });
+  it("refuse un identifiant douteux", () => {
+    expect(href("montage=../../x")).toBe("/");
+  });
+  it("studioHref pointe vers les routes de création", () => {
+    expect(studioHref(new URLSearchParams(), "ai")).toBe("/reels/nouveau/ia");
+    expect(studioHref(new URLSearchParams(), "reel")).toBe("/reels/nouveau/video");
   });
 });

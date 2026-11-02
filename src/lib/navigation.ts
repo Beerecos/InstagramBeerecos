@@ -2,22 +2,9 @@ export type NavItem = { href: string; label: string; icon: string; mobile?: bool
 
 /** Navigation principale (desktop) ; `mobile` = présent dans la barre compacte. */
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Accueil", icon: "home", mobile: true },
-  { href: "/missions", label: "Missions", icon: "target", mobile: true },
-  { href: "/approvals", label: "Validations", icon: "check", mobile: true },
-  { href: "/team", label: "Équipe IA", icon: "team" },
-  { href: "/ruche", label: "La Ruche", icon: "hive" },
-  { href: "/watchdog", label: "Chien de garde", icon: "shield" },
-  { href: "/publication", label: "Réseaux sociaux", icon: "megaphone" },
-  { href: "/studio", label: "Studio", icon: "layers" },
-  { href: "/video", label: "Vidéo", icon: "clapperboard" },
-  { href: "/calendar", label: "Calendrier", icon: "calendar" },
-  { href: "/campaigns", label: "Campagnes", icon: "megaphone" },
-  { href: "/leads", label: "Prospects", icon: "users" },
-  { href: "/analytics", label: "Statistiques", icon: "chart" },
-  { href: "/library", label: "Bibliothèque", icon: "library" },
-  { href: "/brand", label: "Marque", icon: "badge" },
-  { href: "/settings", label: "Paramètres", icon: "settings" },
+  { href: "/", label: "Mes réels", icon: "clapperboard", mobile: true },
+  { href: "/library", label: "Bibliothèque", icon: "library", mobile: true },
+  { href: "/settings", label: "Paramètres", icon: "settings", mobile: true },
 ];
 
 export function isActive(pathname: string, href: string): boolean {

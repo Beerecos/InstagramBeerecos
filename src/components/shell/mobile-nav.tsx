@@ -8,7 +8,7 @@ import { NAV_ITEMS, isActive } from "@/lib/navigation";
 import { cn } from "@/components/ui/cn";
 import { NavIcon } from "./nav-icon";
 
-/** Barre compacte mobile : 4 raccourcis + menu complet. */
+/** Barre compacte mobile : les 3 destinations + menu complet. */
 export function MobileNav() {
   return <MobileNavView pathname={usePathname()} />;
 }
@@ -21,7 +21,7 @@ export function MobileNavView({ pathname }: { pathname: string }) {
       {open ? (
         <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setOpen(false)}>
           <nav aria-label="Menu complet" className="absolute inset-x-3 bottom-20 max-h-[70dvh] overflow-y-auto rounded-2xl bg-surface-1 p-2 shadow-xl ring-1 ring-line" onClick={(e) => e.stopPropagation()}>
-            {[...NAV_ITEMS, { href: "/conversations", label: "Conversations", icon: "users" }, { href: "/clubs", label: "Clubs", icon: "target" }, { href: "/systeme", label: "Système / Journal", icon: "settings" }].map((item) => (
+            {[...NAV_ITEMS, { href: "/formats", label: "Autres formats", icon: "layers" }].map((item) => (
               <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm", isActive(pathname, item.href) ? "bg-surface-2 font-medium" : "")}>
                 <NavIcon name={item.icon} /> {item.label}
               </Link>

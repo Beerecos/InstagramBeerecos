@@ -1,25 +1,22 @@
 import { expect, test } from "@playwright/test";
 
 const PAGES = [
-  ["/", "Que voulez-vous accomplir"],
   ["/missions", "Missions de l'équipe"],
   ["/approvals", "Boîte de validation"],
   ["/team", "Votre équipe marketing"],
-  ["/studio", "Studio de contenu"],
-  ["/video", "Studio vidéo"],
   ["/calendar", "Calendrier marketing"],
   ["/campaigns", "Campagnes"],
   ["/leads", "Suivi des prospects Instagram"],
   ["/analytics", "Ce qui crée des visites"],
-  ["/library", "Bibliothèque média"],
+  ["/library", "Bibliothèque"],
   ["/brand", "Mémoire de marque"],
-  ["/settings", "Paramètres"],
   ["/settings/integrations", "Intégrations"],
   ["/conversations", "Messagerie Instagram"],
   ["/clubs", "Clubs BeeRecos"],
   ["/systeme", "Exécutions et journal"],
 ] as const;
 
+// Pages héritées de l'architecture missions : hors navigation, toujours joignables par adresse en mode démo.
 test("toutes les sections s'affichent sans erreur", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -37,24 +34,6 @@ test("les anciennes adresses redirigent vers la nouvelle navigation", async ({ p
   await expect(page).toHaveURL(/\/settings\/integrations$/);
 });
 
-test("les données de démonstration sont identifiées et aucun chiffre n'est inventé", async ({ page }) => {
-  await page.goto("/missions");
-  await expect(page.getByText("Démo", { exact: true }).first()).toBeVisible();
-  await page.goto("/");
-  await expect(page.getByRole("table", { name: "Tunnel commercial" })).toContainText("Non disponible");
-});
-
-test("Queen Bee crée une vraie mission ; sans Claude, l'équipe attend honnêtement", async ({ page }) => {
-  await page.goto("/");
-  await page.getByLabel("Votre objectif").first().fill("Prépare-moi une semaine de contenus Instagram pour générer des visites de clubs");
-  await page.getByRole("button", { name: "Lancer la mission" }).first().click();
-  await expect(page).toHaveURL(/\/missions\/[0-9a-f-]{36}$/);
-  await expect(page.getByText("Contenus de la semaine").first()).toBeVisible();
-  await expect(page.getByText("Équipe mobilisée", { exact: true })).toBeVisible();
-  await expect(page.getByText(/Connexion requise : Claude/).first()).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText(/Queen Bee crée la mission/).first()).toBeVisible();
-});
-
 test("valider une production depuis la boîte de validation", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "état partagé : un seul projet décide");
   await page.goto("/approvals");
@@ -62,14 +41,6 @@ test("valider une production depuis la boîte de validation", async ({ page }, i
   await card.getByRole("button", { name: "Valider" }).click();
   await expect(page.getByRole("heading", { name: "Historique" })).toBeVisible();
   await expect(page.locator("li", { hasText: "Page d'atterrissage, formulaire et relances" }).getByText("Validé")).toBeVisible();
-});
-
-test("Queen Bee est accessible partout", async ({ page }) => {
-  await page.goto("/team");
-  await page.getByRole("button", { name: /Demander à Queen Bee/ }).click();
-  await expect(page.getByRole("dialog", { name: "Demander à Queen Bee" })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toBeHidden();
 });
 
 test("intégrations : aucune clé exposée, statut « À configurer »", async ({ page }) => {
@@ -109,16 +80,3 @@ test("la Ruche : bureau pixel piloté par l'état réel des agents", async ({ pa
   expect(errors).toEqual([]);
 });
 
-test("Studio vidéo : aperçu Hyperframes d'un Reel motion design et composition téléchargeable", async ({ page, request }) => {
-  await page.goto("/video");
-  const preview = page.getByTestId("reel-preview").first();
-  await expect(preview.locator("hyperframes-player")).toHaveCount(1, { timeout: 15_000 });
-  const href = await page.getByRole("link", { name: "Télécharger la composition" }).first().getAttribute("href");
-  const res = await request.get(href!);
-  expect(res.status()).toBe(200);
-  expect(res.headers()["content-disposition"]).toContain("attachment");
-  const body = await res.text();
-  expect(body).toContain('data-composition-id="main"');
-  expect(body).toContain("Une recommandation, ça vaut combien ?");
-  expect((await request.get("/api/compositions/inconnu")).status()).toBe(404);
-});
