@@ -1,0 +1,296 @@
+BEERECOS
+STRUCTURE DES REELS ET GUIDE D’INTÉGRATION
+Version du 22 octobre 2026
+
+OBJECTIF
+
+Chaque Reel est un contenu structuré que l’outil peut éditer, mettre en images, sous-titrer et exporter. Une même structure accueille une vidéo tournée en studio, une vidéo générée avec l’IA ou un montage hybride.
+
+Le kit comprend les 72 textes déjà préparés, répartis en 384 scènes éditoriales. Les textes prononcés sont conservés. Les découpages, textes d’habillage, couvertures et indications de cadrage constituent des propositions à valider. Une scène correspond à une idée ; plusieurs scènes peuvent se succéder dans le même plan face caméra.
+
+Les trois libellés de piliers à utiliser dans l’interface et l’habillage sont :
+• Réseau d’apporteurs d’affaires
+• École de formation
+• Digitalisation IA
+
+La monétisation reste un argument du pilier réseau lorsque le sujet l’appelle. Les trois piliers ne sont pas à réciter dans chaque vidéo. V65 les relie explicitement ; son texte prompteur d’origine est conservé dans les données et son habillage utilise les libellés actuels.
+
+1. LES ÉLÉMENTS CONSTITUTIFS D’UN REEL
+
+Un Reel regroupe huit ensembles :
+
+1) La fiche éditoriale : identifiant V01–V72, titre, série, pilier principal, objectif, mot-clé et statut.
+2) Le texte prononcé : les paroles exactes, avec leur version et leur empreinte de contrôle.
+3) Le découpage en scènes : les passages du texte et la fonction de chacun dans le récit.
+4) Les médias : vidéo studio, voix, séquences illustratives, images ou médias générés.
+5) L’habillage : courts textes d’accentuation, onglets, masque de détourage, couleurs et animations.
+6) Les sous-titres : transcription des paroles réellement prononcées, synchronisée avec l’audio final.
+7) La finition : son, carte de fin, couverture et fichier vidéo exporté.
+8) La diffusion : légende du post, compte, programmation, identifiant de publication et lien vers le parcours d’invitation.
+
+Le texte du prompteur, les textes d’accentuation et les sous-titres ont chacun leur champ. Une correction sur un mot-clé visuel ne doit pas modifier la voix.
+
+2. LE DÉROULÉ ÉDITORIAL COMMUN
+
+Le format éditorial BeeRecos reste vertical 9:16, de 35 à 60 secondes au total, CTA et carte de fin compris. La cible de travail du kit est 50 secondes : 48 secondes pour la parole et 2 secondes pour la signature.
+
+Le récit peut utiliser les rôles suivants :
+
+• HOOK — accroche : question, situation reconnaissable ou phrase qui suscite l’intérêt. Le sujet est visible dès la première image. La phrase d’accroche peut occuper plusieurs secondes ; il n’est pas nécessaire de la faire tenir artificiellement en trois secondes.
+• CONTEXT — contexte : préciser la difficulté ou la situation, lorsque le texte le demande.
+• EXAMPLE — exemple : rendre le propos concret avec un métier, une conversation ou une mise en situation.
+• METHOD — méthode : expliquer ce que la personne peut faire ou dire.
+• TAKEAWAY — idée à retenir : rendre la leçon mémorisable.
+• CTA — appel à l’action : un seul mot-clé et une invitation claire à découvrir un club.
+
+Ces rôles sont souples. V22 utilise plusieurs scènes METHOD pour R0, R1 et R2 ; un autre sujet peut commencer directement par un exemple. Les 72 propositions comportent chacune cinq ou six scènes de parole, puis une carte de fin commune.
+
+L’outil doit conserver l’ordre du texte. Il peut changer de cadrage ou de texte à l’écran lors d’un changement d’idée. Un retour à la ligne du prompteur ne déclenche pas automatiquement un nouveau plan.
+
+3. EXEMPLE COMPLET DE CONSTRUCTION POUR V01
+
+Titre interne : Tu connais 500 personnes. Qui sait vraiment quand te recommander ?
+Pilier principal : Réseau d’apporteurs d’affaires
+Couverture proposée : 500 contacts… qui te recommande ?
+Mot-clé : RÉSEAU
+Objectif : demander une visite de club
+
+Découpage proposé sur une base de 50 secondes :
+
+0 à environ 8 secondes — HOOK
+Paroles : Tu as peut-être cinq cents contacts dans ton téléphone. Mais combien savent vraiment quand te recommander ?
+Habillage : 500 contacts… et après ?
+Mise en images : face caméra, texte derrière la personne lorsque le détourage le permet.
+
+Environ 8 à 24 secondes — EXAMPLE
+Paroles : l’exemple du photographe qui accompagne les restaurants préparant une nouvelle carte, puis le lien avec la recommandation.
+Habillage : Photographe pour les restaurants
+Mise en images : garder le visage ; une carte courte ou un onglet illustre la spécialisation.
+
+Environ 24 à 35 secondes — METHOD
+Paroles : expliquer qui l’on aide, dans quelle situation, puis demander à l’interlocuteur ce qu’il a retenu.
+Habillage : Qui aides-tu et quand ?
+Mise en images : cadrage poitrine, onglet qui accompagne la formulation.
+
+Environ 35 à 41 secondes — TAKEAWAY
+Paroles : vérifier que le message est assez clair pour être transmis.
+Habillage : Un message facile à transmettre
+Mise en images : léger rapprochement ; le texte peut apparaître derrière la personne.
+
+Environ 41 à 48 secondes — CTA
+Paroles : Commente RÉSEAU. Je t’envoie les informations pour découvrir BeeRecos et demander une visite de club.
+Habillage : Commente RÉSEAU
+Mise en images : regard caméra ; onglet au-dessus des sous-titres.
+
+48 à 50 secondes — CARTE DE FIN
+Logo officiel et #MonReseauCestTonReseau en écriture manuscrite bleue #2851FF.
+La baseline n’est pas ajoutée aux paroles du script.
+
+Ces temps sont une proposition de répartition. La mesure de la prise de son décide des temps de montage finaux.
+
+4. COMPOSITION VISUELLE ET CHARTE
+
+Utiliser le logo officiel BeeRecos et la carte de fin validée. La configuration attend les références de ces fichiers et des typographies de la charte. Le moteur ne doit pas reconstruire approximativement le logo avec une police de substitution.
+
+La palette de base proposée associe le bleu #2851FF, le noir et le blanc. Le bleu sert à hiérarchiser les mots ou éléments utiles. Les couleurs, tailles, positions et animations proviennent du template, afin de pouvoir faire évoluer l’habillage sans réécrire les 72 fiches.
+
+Textes derrière la personne
+
+Pour produire cet effet, le moteur compose :
+1. La vidéo d’origine.
+2. Le texte destiné à apparaître derrière la personne.
+3. La silhouette du présentateur, extraite de la même image et replacée au premier plan avec un masque.
+4. Les éventuels onglets.
+5. Les sous-titres.
+
+Le masque doit suivre la personne dans le temps. Un simple placement CSS derrière une vidéo opaque ne produit pas cet effet. Il faut un détourage utilisable dans l’aperçu et dans le rendu final.
+
+Si le détourage est instable, si le visage cache un mot essentiel ou si le plan ne contient pas de personne, le mode résolu passe en onglet. Le contenu reste lisible.
+
+Textes en onglet
+
+Un onglet désigne ici un bandeau ou une carte dans la vidéo, avec un texte court. Ce n’est pas un nouvel onglet de navigation du logiciel. Il sert notamment à montrer une étape, un exemple, une objection ou le mot-clé du CTA.
+
+Prévoir généralement deux à six mots, avec un maximum de huit dans les données fournies. Afficher un texte principal à la fois. Les sous-titres restent présents indépendamment.
+
+Zones de composition
+
+Le template fournit des marges éditoriales ajustables pour éviter les commandes Instagram, le bas de l’écran et les zones de recadrage. Ce sont des repères de départ à contrôler dans les aperçus, pas des marges officielles universelles. Les mots indispensables et la couverture doivent rester lisibles dans les contextes de diffusion prévus.
+
+5. SOUS-TITRES
+
+Les sous-titres sont placés en bas au centre, remontés dans la zone utile. Prévoir deux lignes maximum et des groupes courts, généralement trois à sept mots selon le débit et la place disponible.
+
+Pour une vidéo studio, transcrire ce qui est réellement dit. Si Cédric improvise ou change une phrase, les sous-titres suivent la prise enregistrée. Le prompteur reste une référence de préparation.
+
+Pour une voix générée, aligner les mots du texte validé avec le fichier audio effectivement produit. Une estimation du nombre de mots ne suffit pas à synchroniser les sous-titres.
+
+Conserver pour chaque segment le texte, le début et la fin. Garder aussi les temps par mot si un surlignage progressif est utilisé. Les noms BeeRecos, BeeSchool, BeeLive, BeeToBee et BeeCamp doivent être relus.
+
+Les données de sous-titrage restent séparées du texte d’habillage et de la légende du post. Le rendu peut intégrer les sous-titres au MP4 et produire un export SRT ou VTT à partir des mêmes données.
+
+6. AUDIO ET CARTE DE FIN
+
+La voix doit rester intelligible. La musique est facultative ; lorsqu’elle est utilisée, son niveau diminue pendant les paroles. Les médias audio choisis doivent disposer des droits d’usage nécessaires à la diffusion prévue.
+
+La carte de fin dure deux secondes dans le template proposé. Elle reprend le logo officiel et la baseline manuscrite bleue. La durée finale inclut cette carte. Si la prise dépasse la plage prévue, reprendre le débit, les silences ou le texte avec validation, plutôt que couper une phrase de manière automatique.
+
+7. TROIS MODES DE PRODUCTION
+
+STUDIO
+Importer la vidéo de Cédric, choisir la prise, effectuer les coupes utiles, préparer l’audio final, transcrire, aligner les scènes, appliquer l’habillage puis exporter.
+
+IA
+Valider le texte, choisir la voix et le type de médias autorisés, produire les médias, mesurer l’audio obtenu, aligner les scènes, appliquer le même habillage et exporter. Le fournisseur de génération et le moteur de composition sont des services distincts à relier selon les capacités de l’outil.
+
+HYBRIDE
+Conserver une vidéo ou une voix réelle et ajouter des séquences illustratives. La voix, les sous-titres et le montage partagent une seule chronologie finale.
+
+Le kit sélectionne STUDIO par défaut pour les 72 fiches. Les trois modes utilisent le même contrat de données.
+
+8. CONTRAT DE DONNÉES
+
+Fichier BeeRecos_Configuration_Reels.json
+Il contient le format, la charte, les modes de production, les règles d’habillage, de sous-titrage, de CTA, les états de travail et les références de services à renseigner.
+
+Fichier BeeRecos_72_Reels_Structure.json
+Il contient les 72 objets Reel et leurs 384 scènes.
+
+Champs essentiels d’un objet Reel :
+
+reel_id : identifiant stable V01 à V72.
+revision : version du contenu structurée par l’outil.
+title : titre de repérage, non prononcé.
+primary_pillar et secondary_pillars : classement éditorial.
+script.text : texte prononcé de référence.
+script.sha256 : empreinte de contrôle du texte source.
+scenes : séquences éditoriales associées à des paragraphes du texte.
+media : médias à importer ou générer.
+subtitles : transcription, segments et temps par mot.
+cta : mot-clé, objectif, destination et données d’attribution.
+cover : couverture autonome, distincte de la première image vidéo.
+social_caption : légende destinée au post Instagram.
+approval : version et personne ayant validé le contenu.
+render : aperçu et exports produits.
+publication : compte, programmation et résultat de publication.
+analytics : mesures disponibles et conversions suivies.
+
+Chaque scène contient :
+
+scene_id : identifiant stable dans la révision.
+role : hook, context, example, method, takeaway ou cta.
+paragraph_indices : paragraphes sources, numérotés à partir de zéro.
+spoken_text : copie dérivée de ces paragraphes pour faciliter le montage.
+overlay : texte d’accentuation, mode préféré, mode réellement utilisé et repli en onglet.
+visual_direction : consigne de cadrage ou d’illustration.
+source_clip : média source et points d’entrée/sortie, à renseigner après import.
+timing : temps prévus et temps réellement alignés, exprimés en millisecondes.
+
+Le script reste la source de vérité. Les paroles des scènes doivent être régénérées à partir de script.text et de paragraph_indices après chaque modification. La concaténation de spoken_text avec deux retours à la ligne doit reproduire le texte source exactement. Ne pas permettre deux éditions indépendantes contradictoires.
+
+Les champs actual_start_ms, actual_end_ms, measured_ms et les sous-titres sont volontairement non renseignés : aucun audio n’a été importé ou généré dans ce kit. Les champs planned_* constituent une proposition à 50 secondes, calculée selon la longueur des passages. Ils ne doivent pas être utilisés comme des sous-titres synchronisés.
+
+Les données source_clip.in_ms et source_clip.out_ms concernent le média d’origine. Les temps actual_* des scènes concernent la vidéo finale. Une coupe ou un changement de vitesse impose de recalculer la correspondance.
+
+La légende du post, les médias, les identifiants de compte et les routes de destination restent à renseigner. null signifie « non renseigné ou non mesuré » et ne doit pas être affiché comme zéro.
+
+9. CHAÎNE DE FABRICATION
+
+1. Choisir V01–V72 ou créer une fiche.
+2. Valider le texte et le mot-clé.
+3. Choisir STUDIO, IA ou HYBRIDE.
+4. Importer ou générer les médias.
+5. Effectuer les coupes et construire la bande son finale.
+6. Transcrire et aligner les mots, les scènes et les sous-titres.
+7. Résoudre l’habillage, notamment le détourage ou son repli en onglet.
+8. Générer un aperçu.
+9. Vérifier la version et la durée du rendu, puis valider.
+10. Produire le MP4, la couverture et les exports de sous-titres.
+11. Programmer la diffusion lorsque le compte et le parcours d’invitation sont prêts.
+12. Enregistrer le résultat réel de publication et suivre les conversions disponibles.
+
+Le moteur de rendu doit être adapté aux traitements vidéo et fonctionner en tâche de fond. L’outil reçoit un identifiant de tâche, son avancement et les erreurs. La navigation dans l’interface doit rester possible pendant ce traitement. Réutiliser l’hébergement existant ou des services gérés : ce modèle n’impose pas un serveur personnel à administrer.
+
+Un aperçu interactif dans le navigateur ne constitue pas un export vidéo. Le MP4 doit contenir l’image, la voix, les sous-titres et la carte de fin correctement synchronisés.
+
+10. ÉTATS ET VERSIONS
+
+Séparer au minimum les états éditoriaux, ceux des médias, du rendu et de la publication. Le champ editorial_status=approved ne signifie pas que le fichier est déjà rendu, programmé ou publié.
+
+Une validation doit porter sur la révision exacte à publier. Modifier le texte, une coupe, le CTA ou l’habillage invalide la validation du rendu concerné. Les modifications purement graphiques peuvent réutiliser l’audio et la transcription lorsque la chronologie reste identique.
+
+Une publication passe à published lorsque le connecteur a confirmé le résultat et fourni l’identifiant du média publié. Si une requête expire sans résultat certain, utiliser needs_reconciliation et rechercher ce qui s’est passé avant toute nouvelle tentative. Cela évite de publier deux fois le même Reel.
+
+Conserver les dates programmées en UTC et afficher l’heure Europe/Paris. Une date choisie dans un calendrier devient scheduled seulement lorsque la tâche de publication a été effectivement enregistrée.
+
+11. ORGANISATION DE LA PAGE RÉSEAUX SOCIAUX
+
+Conserver une page unique avec un sélecteur Reel / Story / Carrousel.
+
+Pour un Reel, prévoir :
+• À gauche, la liste des contenus et leurs filtres.
+• Au centre, l’aperçu vertical et la liste chronologique des scènes.
+• À droite, le panneau contextuel de la scène ou du contenu sélectionné.
+
+Les sections Texte, Scènes, Médias, Sous-titres, Habillage et Publication appartiennent à cet éditeur. Elles peuvent être des panneaux repliables ou contextuels sans devenir six nouvelles pages principales.
+
+Une scène doit permettre de modifier son texte d’habillage, le mode derrière la personne ou onglet, son média et son cadrage. L’aperçu montre les modifications. Les actions principales sont Générer un aperçu, Valider la version, Exporter et Programmer ; leur disponibilité dépend des états réels.
+
+Les formats Story et Carrousel peuvent partager le sujet, le pilier, les médias et le CTA d’un Reel. Ils doivent disposer de variantes adaptées et versionnées ; leurs pages ou écrans ne sont pas obtenus en recopiant aveuglément la chronologie du Reel.
+
+12. CTA ET PARCOURS D’INVITATION
+
+Chaque Reel porte un seul mot-clé : CLUB, RÉSEAU, FORMATION, DIGITALISATION, INVITATION, VISITE ou BUSINESS. Le mot prononcé, le mot affiché, la légende et la règle d’automatisation doivent correspondre.
+
+La règle détecte un mot entier, après normalisation des accents et de la casse, sur le post concerné. Éviter qu’une correspondance partielle dans un autre mot déclenche un envoi. Dédupliquer les événements reçus et les tentatives d’envoi.
+
+Parcours cible : commentaire contenant le mot-clé → message privé avec lien d’invitation suivi → landing page → choix du club et de la date de réunion → formulaire → parcours de confirmation et de présence existant.
+
+Le suivi doit distinguer la provenance technique du contenu, par exemple V01/Instagram, de l’identité du membre invitant. Un Reel générique ne suffit pas à attribuer automatiquement la paternité à une personne. Le formulaire doit pouvoir recueillir cette information lorsque le lien ne la fournit pas. Un identifiant de parrainage transmis dans un lien doit être vérifié côté serveur et ne pas écraser silencieusement une paternité déjà enregistrée.
+
+La documentation Meta consultée prévoit une seule réponse privée initiale à un commentaire, envoyée dans les sept jours pour un post ou un Reel. La poursuite de l’échange dépend ensuite d’une réponse de la personne et de la fenêtre de messagerie applicable, indiquée à 24 heures dans la documentation de messagerie consultée. Une séquence de qualification en plusieurs messages doit donc tenir compte de la réponse de l’utilisateur. Le premier message peut déjà contenir le lien vers le formulaire d’invitation.
+
+La réception des commentaires et l’envoi de messages nécessitent un connecteur effectivement autorisé. Les identifiants et secrets restent côté serveur. Le kit décrit le parcours ; il n’active aucun envoi.
+
+13. BRANCHEMENT DE LA PUBLICATION
+
+La publication Instagram est un service distinct du rendu. Le flux documenté par Meta utilise un conteneur de média puis sa publication. Le connecteur doit surveiller le traitement, récupérer les identifiants réels et gérer les erreurs. Les permissions varient selon le mode de connexion choisi ; vérifier le compte et la version de l’API au branchement.
+
+Le mode standard documenté par Meta demande que le média soit accessible lors de sa récupération par la plateforme. La durée de validité d’une URL de transfert doit couvrir cette opération ; les jetons de connexion ne doivent pas être incorporés au JSON public du Reel.
+
+Les limites et capacités du fournisseur doivent être contrôlées par le connecteur. Les paramètres 1080×1920, 30 images par seconde, MP4/H.264/AAC sont les choix d’export du template proposé, à contrôler contre les contraintes du connecteur retenu. La plage 35–60 secondes est la règle éditoriale BeeRecos.
+
+14. CONTRÔLES AVANT DIFFUSION
+
+• La vidéo finale dure entre 35 et 60 secondes, fin de marque comprise.
+• Toutes les phrases prévues sont audibles et le CTA est complet.
+• Les sous-titres correspondent à la bande son finale.
+• Les textes sont lisibles, sans collision avec le visage, les sous-titres ou les commandes de lecture.
+• Le détourage est propre ou le repli en onglet est appliqué.
+• Le logo et la baseline sont les bons fichiers.
+• Le mot-clé du CTA et la règle de commentaire correspondent.
+• Le lien d’invitation mène au bon formulaire, avec la provenance et la paternité correctement prises en compte.
+• La version validée est celle du MP4 envoyé au connecteur.
+• Les statuts publié, programmé et les métriques reflètent des résultats confirmés.
+
+15. IMPORT DU KIT
+
+Importer d’abord BeeRecos_Configuration_Reels.json comme configuration de template. Importer ensuite BeeRecos_72_Reels_Structure.json en conservant les identifiants V01–V72. Si ces identifiants existent déjà, associer les nouvelles données à leur révision plutôt que créer un deuxième contenu portant le même identifiant.
+
+Les objets sont des propositions éditoriales needs_review. Renseigner les assets officiels, les médias, la route de landing page et les connexions avant de proposer un rendu ou une publication. Le développeur doit mapper ces données à son modèle existant ; les fichiers ne sont pas un module logiciel installé ni un raccordement API déjà effectué.
+
+BeeRecos_Exemple_V01.json isole le premier Reel pour faciliter la première intégration. Après validation de ce parcours sur une vidéo réelle, appliquer le même modèle aux autres fiches.
+
+SOURCES TECHNIQUES
+
+Documentation officielle Meta consultée le 22 octobre 2026 :
+Content Publishing
+https://developers.facebook.com/documentation/instagram-platform/content-publishing.md/
+
+Instagram Private Replies
+https://developers.facebook.com/documentation/instagram-platform/private-replies.md/
+
+Instagram Messaging Private Replies
+https://developers.facebook.com/documentation/business-messaging/instagram-messaging/features/private-replies.md/
+
+Les règles de composition, le découpage des 72 scripts et les temps planifiés sont des propositions éditoriales BeeRecos. Les règles de compte, de publication et de messagerie doivent suivre la version de documentation applicable au branchement.

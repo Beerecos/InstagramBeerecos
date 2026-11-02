@@ -1,0 +1,337 @@
+import { z } from "zod";
+
+/**
+ * Montage d'une vidéo tournée, décrit par un seul fichier `<projet>.edit.json` (source de vérité).
+ * Règle d'or : TOUS les temps sont en millisecondes de la prise d'origine, jamais du temps monté.
+ * Recouper un silence ne décale donc aucune animation : chaque instant reste ancré sur un mot prononcé.
+ * Plusieurs prises (lot S3 bis) : elles sont posées bout à bout sur une « bande de prises » (prise 1 de 0 à d1,
+ * prise 2 de d1 à d1 + d2…) et tous les temps sont ceux de cette bande ; un morceau ne chevauche jamais deux prises.
+ */
+
+const ms = z.number().int("nombre entier de millisecondes attendu").min(0, "doit être positif ou nul");
+/** Nom de fichier simple, à côté du fichier edit.json : aucun chemin, aucun caractère spécial. */
+const fileName = (ext: RegExp, kind: string) =>
+  z.string().regex(/^[\w.-]+$/, "nom de fichier simple attendu (lettres, chiffres, . _ -)").regex(ext, `fichier ${kind} attendu`);
+
+/**
+ * Accent : « bleu » seulement (décision du 2026-10-22). Les montages enregistrés avant en « violet » ou « vert » se
+ * relisent en bleu, sans erreur : ils passent à la charte au prochain enregistrement.
+ */
+export const AccentSchema = z.preprocess((v) => (v === "violet" || v === "vert" ? "bleu" : v), z.enum(["bleu"]).default("bleu"));
+
+export const RangeSchema = z.strictObject({ fromMs: ms, toMs: ms });
+
+export const PlacementSchema = z.strictObject({
+  x: z.number().min(-1080).max(1080).default(0),
+  y: z.number().min(-1920).max(1920).default(0),
+  scale: z.number().min(.25).max(2).default(1),
+  opacity: z.number().min(0).max(1).default(1),
+  enter: z.enum(["native", "fade", "slide"]).default("native"),
+  exit: z.enum(["none", "fade"]).default("none"),
+});
+export type Placement = z.infer<typeof PlacementSchema>;
+
+export const CustomAnimationSchema = z.strictObject({
+  id: z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/).optional(),
+  groupId: z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/).optional(),
+  name: z.string().regex(/^[a-z0-9-]+$/, "nom d'animation en minuscules (a-z, 0-9, -)"),
+  fromMs: ms,
+  toMs: ms,
+  props: z.record(z.string(), z.unknown()).default({}),
+  label: z.string().max(80).optional(),
+  /** Version BeeMotion figée à l'enregistrement ; absente = montage antérieur, rendu avec la version courante. */
+  version: z.number().int().min(1).max(999).optional(),
+  placement: PlacementSchema.optional(),
+}).refine((c) => c.name !== "logo-fin" || c.placement?.enter !== "slide", "Le logo officiel s’anime uniquement en opacité.");
+
+export const SoundSchema = z.strictObject({
+  file: fileName(/\.(mp3|wav|m4a|aac|ogg)$/i, "audio (.mp3, .wav, .m4a, .aac, .ogg)"),
+  atMs: ms,
+  volume: z.number().min(0).max(1).default(1),
+  durationMs: ms.optional(),
+});
+
+/** Réglages des sous-titres (repères de montage, voir CAPTION_DEFAULTS) : zone haute, largeur et corps. */
+export const CaptionStyleSchema = z.strictObject({
+  fontFamily: z.enum(["Poppins", "Caveat"]).optional(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  highlightColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  top: z.number().int().min(900, "doit être à 900 px au moins (zone trop haute)").max(1700, "doit être à 1700 px au plus (zone trop basse)").optional(),
+  maxWidth: z.number().int().min(400).max(1000).optional(),
+  fontSize: z.number().int().min(32).max(120).optional(),
+});
+
+/**
+ * Rythme du montage (lot S6, Reels dynamiques) : zoom alterné à chaque coupe (plan large / plan serré, l'astuce des
+ * montages face caméra qui cache les coupes) et un son de la bibliothèque joué à l'entrée de chaque animation.
+ */
+export const RythmeSchema = z.strictObject({
+  zoomCoupes: z.boolean().default(false),
+  /** Échelle du plan serré (1,10 = 110 %). */
+  zoom: z.number().min(1.04, "doit être à 104 % au moins").max(1.2, "doit être à 120 % au plus").default(1.1),
+  /** Son de la bibliothèque joué à l'entrée de chaque animation (absent = aucun). */
+  sonAnimations: fileName(/\.(mp3|wav|m4a|aac|ogg)$/i, "audio (.mp3, .wav, .m4a, .aac, .ogg)").optional(),
+  volumeSon: z.number().min(0).max(1).default(0.35),
+});
+export type Rythme = z.infer<typeof RythmeSchema>;
+
+/** Style Motion (2026-10-25) : absent = rendu d'avant. */
+export const MotionRhythmSchema = z.enum(["pose", "dynamique", "tres_dynamique"]);
+export type MotionRhythm = z.infer<typeof MotionRhythmSchema>;
+export const MotionStyleSchema = z.strictObject({
+  nom: z.literal("motion"),
+  rythme: MotionRhythmSchema.default("dynamique"),
+  musique: z.boolean().default(false),
+});
+export type MotionStyle = z.infer<typeof MotionStyleSchema>;
+
+const videoFile = () => fileName(/\.(mp4|mov|m4v|webm)$/i, "vidéo (.mp4, .mov, .m4v, .webm)");
+
+/** Nombre de prises et durée cumulée maximale d'un montage (décision du 2026-10-22). */
+export const MAX_TAKES = 6;
+export const MAX_STRIP_MS = 600_000;
+
+/** Une prise de la bande, dans l'ordre d'envoi. */
+export const TakeSchema = z.strictObject({ file: videoFile(), durationMs: ms.min(1000, "prise trop courte (1 s minimum)") });
+
+/** Détourage d'une prise (lot S5) : la personne seule sur fond transparent, vidéo WebM VP9 avec alpha. */
+export const matteFile = () => fileName(/\.webm$/i, "de détourage (.webm avec transparence)");
+
+export const EditSchema = z.strictObject({
+  video: videoFile(),
+  /** Prises bout à bout (absent = une seule prise, `video`). La première est `video`. */
+  takes: z.array(TakeSchema).min(1).max(MAX_TAKES, `doit compter ${MAX_TAKES} prises au plus`).optional(),
+  /** Détourage par prise (lot S5) : nom de la prise → fichier de détourage, posé à côté. Sert au titre derrière le sujet. */
+  mattes: z.record(z.string(), matteFile()).optional(),
+  captions: fileName(/\.json$/i, "de sous-titres (.json)").optional(),
+  /** Accent de la vidéo : le bleu BeeRecos seul (brand.ts). */
+  accent: AccentSchema,
+  /** Morceaux GARDÉS de la prise, dans l'ordre (coupes sèches entre eux). */
+  ranges: z.array(RangeSchema).min(1, "au moins un morceau à garder"),
+  subtitles: z.boolean().default(true),
+  captionStyle: CaptionStyleSchema.default({}),
+  /** Gain de la voix (1 = inchangé, 3,98 = +12 dB au maximum). */
+  framing: z.strictObject({x:z.number().min(-540).max(540),y:z.number().min(-960).max(960),scale:z.number().min(1).max(2)}).optional(),
+  outro: z.strictObject({durationMs:z.literal(2000),baseline:z.boolean().default(true)}).optional(),
+  voiceGain: z.number().min(0).max(3.98).default(1),
+  custom: z.array(CustomAnimationSchema).default([]),
+  /** Choix explicites pour les propositions de Bee ; absent = ancien montage, [] = sans animations IA. */
+  animationChoices: z.array(z.string().regex(/^[a-z0-9-]+$/)).max(100)
+    .refine((names) => new Set(names).size === names.length, "chaque animation se choisit une seule fois").optional(),
+  sounds: z.array(SoundSchema).default([]),
+  /** Rythme (lot S6) : absent = montage d'avant, sans zoom ni son d'animation. */
+  rythme: RythmeSchema.optional(),
+  /** Style Motion (2026-10-25) : absent = rendu d'avant. */
+  style: MotionStyleSchema.optional(),
+  /** Optional official BeeRecos logo, kept separate from timed animation cards. */
+  logo: z.strictObject({
+    width: z.number().int().min(150).max(360).default(220),
+    right: z.number().int().min(40).max(300).default(170),
+    bottom: z.number().int().min(80).max(600).default(260),
+    opacity: z.number().min(.35).max(1).default(1),
+  }).optional(),
+});
+
+export type Edit = z.infer<typeof EditSchema>;
+export type Range = z.infer<typeof RangeSchema>;
+export type Take = z.infer<typeof TakeSchema>;
+
+/** Prise posée sur la bande : [fromMs, toMs) de la bande. */
+export type PlacedTake = { file: string; fromMs: number; toMs: number };
+
+/** Prises posées bout à bout ; sans liste de prises, la seule prise couvre toute la bande. */
+export function takeStrip(edit: Pick<Edit, "video" | "takes">): PlacedTake[] {
+  if (!edit.takes?.length) return [{ file: edit.video, fromMs: 0, toMs: Number.POSITIVE_INFINITY }];
+  let at = 0;
+  return edit.takes.map((t) => {
+    const placed = { file: t.file, fromMs: at, toMs: at + t.durationMs };
+    at += t.durationMs;
+    return placed;
+  });
+}
+
+/** Début (ms de la bande) de chaque prise après la première : un raccord de prise. */
+export const takeBreaks = (edit: Pick<Edit, "video" | "takes">) => takeStrip(edit).slice(1).map((t) => t.fromMs);
+
+/** Numéro (0, 1…) de la prise qui contient cet instant de la bande. */
+export function takeIndexAt(strip: PlacedTake[], ms: number): number {
+  const i = strip.findIndex((t) => ms < t.toMs);
+  return i < 0 ? strip.length - 1 : i;
+}
+
+/** Coupe les morceaux aux raccords de prises (sans rien changer au montage obtenu : les morceaux restent bout à bout). */
+export function splitAtTakes(ranges: Range[], breaks: number[]): Range[] {
+  if (!breaks.length) return ranges;
+  const out: Range[] = [];
+  for (const r of ranges) {
+    let from = r.fromMs;
+    for (const b of breaks) if (b > from && b < r.toMs) { out.push({ fromMs: from, toMs: b }); from = b; }
+    out.push({ fromMs: from, toMs: r.toMs });
+  }
+  return out;
+}
+
+/** Mot du transcript (fichier `<projet>.json`), temps en ms de la prise. */
+export const CaptionWordSchema = z.object({ text: z.string(), startMs: ms, endMs: ms });
+export const CaptionsSchema = z.array(CaptionWordSchema);
+export type CaptionWord = z.infer<typeof CaptionWordSchema>;
+
+const TYPES: Record<string, string> = { number: "nombre", string: "texte", boolean: "vrai/faux", array: "liste", object: "objet" };
+
+function pathOf(path: PropertyKey[]): string {
+  return path.reduce<string>((s, k) => (typeof k === "number" ? `${s}[${k}]` : s ? `${s}.${String(k)}` : String(k)), "") || "(racine)";
+}
+
+/** Traduit une erreur zod en une ligne française lisible : « • ranges[0].toMs → nombre attendu ». */
+export function formatIssue(issue: z.core.$ZodIssue): string {
+  const at = pathOf(issue.path);
+  switch (issue.code) {
+    case "invalid_type":
+      return issue.input === undefined ? `• ${at} → clé obligatoire manquante` : `• ${at} → ${TYPES[issue.expected] ?? issue.expected} attendu`;
+    case "unrecognized_keys":
+      return `• ${at} → clé inconnue : ${issue.keys.join(", ")}`;
+    case "invalid_value":
+      return `• ${at} → valeur non autorisée — choix possibles : ${issue.values.map(String).join(", ")}`;
+    case "too_small":
+      return issue.origin === "array" ? `• ${at} → ${issue.message.startsWith("au moins") ? issue.message : `au moins ${issue.minimum} élément(s)`}` : `• ${at} → ${/^(doit|au moins)/.test(issue.message) ? issue.message : `minimum ${issue.minimum}`}`;
+    case "too_big":
+      return issue.origin === "string" ? `• ${at} → ${issue.maximum} caractères maximum` : `• ${at} → ${/^doit/.test(issue.message) ? issue.message : `maximum ${issue.maximum}`}`;
+    default:
+      return `• ${at} → ${issue.message}`;
+  }
+}
+
+/** Vérifications que le schéma ne peut pas exprimer : ordre des morceaux, fenêtres valides. */
+export function checkCoherence(edit: Edit): string[] {
+  const errors: string[] = [];
+  edit.ranges.forEach((r, i) => {
+    if (r.toMs <= r.fromMs) errors.push(`• ranges[${i}] → toMs (${r.toMs}) doit être après fromMs (${r.fromMs})`);
+    const prev = edit.ranges[i - 1];
+    if (prev && r.fromMs < prev.toMs) errors.push(`• ranges[${i}] → chevauche ou précède le morceau précédent (début ${r.fromMs} < fin ${prev.toMs}) : les morceaux doivent être triés sans chevauchement`);
+  });
+  if (edit.takes?.length) {
+    if (edit.takes[0].file !== edit.video) errors.push("• takes[0] → la première prise doit être la vidéo du montage (video)");
+    const files = new Set<string>();
+    edit.takes.forEach((t, i) => {
+      if (files.has(t.file)) errors.push(`• takes[${i}] → prise « ${t.file} » en double`);
+      files.add(t.file);
+    });
+    const strip = edit.takes.reduce((n, t) => n + t.durationMs, 0);
+    if (strip > MAX_STRIP_MS) errors.push(`• takes → ${MAX_STRIP_MS / 60_000} min de prises au plus en tout (${Math.round(strip / 1000)} s)`);
+    const last = edit.ranges[edit.ranges.length - 1];
+    if (last && last.toMs > strip) errors.push(`• ranges → le dernier morceau finit après la dernière prise (${last.toMs} > ${strip} ms)`);
+  }
+  if (edit.mattes) {
+    const files = new Set(takeStrip(edit).map((t) => t.file));
+    const seen = new Set<string>();
+    for (const [take, matte] of Object.entries(edit.mattes)) {
+      if (!files.has(take)) errors.push(`• mattes.${take} → aucune prise de ce nom dans le montage`);
+      if (files.has(matte) || seen.has(matte)) errors.push(`• mattes.${take} → « ${matte} » est déjà une prise ou un autre détourage`);
+      seen.add(matte);
+    }
+  }
+  const end = edit.ranges[edit.ranges.length - 1]?.toMs ?? 0;
+  edit.custom.forEach((c, i) => {
+    if (c.toMs <= c.fromMs) errors.push(`• custom[${i}] → toMs (${c.toMs}) doit être après fromMs (${c.fromMs})`);
+    if (c.fromMs >= end) errors.push(`• custom[${i}] → commence après la fin du montage (${end} ms)`);
+  });
+  edit.sounds.forEach((s, i) => {
+    if (s.atMs >= end) errors.push(`• sounds[${i}] → placé après la fin du montage (${end} ms)`);
+  });
+  return errors;
+}
+
+export type ParseResult = { ok: true; edit: Edit } | { ok: false; errors: string[] };
+
+/**
+ * Point d'entrée unique : schéma strict (clé inconnue = erreur) puis cohérence, erreurs en français. Avec plusieurs
+ * prises, un morceau qui franchit un raccord est coupé en deux à ce raccord (chaque morceau lit une seule prise).
+ */
+export function parseEdit(input: unknown): ParseResult {
+  const parsed = EditSchema.safeParse(input, { reportInput: true });
+  if (!parsed.success) return { ok: false, errors: parsed.error.issues.map(formatIssue) };
+  const errors = checkCoherence(parsed.data);
+  if (errors.length) return { ok: false, errors };
+  const breaks = takeBreaks(parsed.data);
+  return { ok: true, edit: breaks.length ? { ...parsed.data, ranges: splitAtTakes(parsed.data.ranges, breaks) } : parsed.data };
+}
+
+/** Morceau posé sur la sortie : [fromMs, toMs) de la prise, joué à partir de `atMs` du montage. */
+export type Segment = Range & { atMs: number };
+
+/** Pose les morceaux gardés bout à bout. */
+export function layout(ranges: Range[]): Segment[] {
+  let at = 0;
+  return ranges.map((r) => {
+    const seg = { ...r, atMs: at };
+    at += r.toMs - r.fromMs;
+    return seg;
+  });
+}
+
+export const totalMs = (segments: Segment[]) => {
+  const last = segments[segments.length - 1];
+  return last ? last.atMs + last.toMs - last.fromMs : 0;
+};
+
+/**
+ * `F(ms)` : temps de la prise → temps du montage. Un instant tombé dans une coupe saute au début du
+ * morceau suivant (l'animation démarre au raccord) ; après le dernier morceau, c'est la fin du montage.
+ */
+export function toOutputMs(segments: Segment[], sourceMs: number): number {
+  for (const s of segments) {
+    if (sourceMs < s.fromMs) return s.atMs;
+    if (sourceMs < s.toMs) return s.atMs + sourceMs - s.fromMs;
+  }
+  return totalMs(segments);
+}
+
+/** Mot recalé sur le montage, avec le numéro du morceau qui le contient (pour changer de page à chaque raccord). */
+export type PlacedWord = CaptionWord & { segment?: number };
+
+/** Recale le transcript sur le montage : un mot est gardé si son milieu tombe dans un morceau. */
+export function remapCaptions(words: CaptionWord[], segments: Segment[]): PlacedWord[] {
+  const out: PlacedWord[] = [];
+  for (const w of words) {
+    const mid = (w.startMs + w.endMs) / 2;
+    const segment = segments.findIndex((x) => mid >= x.fromMs && mid < x.toMs);
+    if (segment < 0) continue;
+    const s = segments[segment];
+    const clamp = (t: number) => s.atMs + Math.min(Math.max(t, s.fromMs), s.toMs) - s.fromMs;
+    out.push({ text: w.text, startMs: clamp(w.startMs), endMs: clamp(w.endMs), segment });
+  }
+  return out;
+}
+
+export type CaptionPage = { startMs: number; endMs: number; words: PlacedWord[] };
+
+/**
+ * Pages de sous-titres karaoké (temps du montage) : 4 mots et 26 caractères au plus en vertical,
+ * nouvelle page après une fin de phrase, à chaque raccord et après un silence de plus de 650 ms. Une page reste affichée jusqu'à la suivante si l'écart est court.
+ */
+export function captionPages(words: PlacedWord[], opts: { maxWords?: number; maxChars?: number; gapMs?: number } = {}): CaptionPage[] {
+  const { maxWords = 4, maxChars = 26, gapMs = 650 } = opts;
+  const pages: CaptionPage[] = [];
+  let cur: PlacedWord[] = [];
+  const flush = () => {
+    if (cur.length) pages.push({ startMs: cur[0].startMs, endMs: cur[cur.length - 1].endMs, words: cur });
+    cur = [];
+  };
+  for (const w of words) {
+    const text = w.text.trim();
+    if (!text) continue;
+    const word = { ...w, text };
+    const prev = cur[cur.length - 1];
+    const chars = cur.reduce((n, x) => n + x.text.length + 1, 0) + text.length;
+    const breakAfterPrev = prev && (/[.?!…]$/.test(prev.text) || prev.segment !== word.segment);
+    if (cur.length && (breakAfterPrev || cur.length >= maxWords || chars > maxChars || word.startMs - prev.endMs > gapMs)) flush();
+    cur.push(word);
+  }
+  flush();
+  pages.forEach((p, i) => {
+    const next = pages[i + 1];
+    if (next && next.startMs - p.endMs <= gapMs) p.endMs = next.startMs;
+  });
+  return pages;
+}

@@ -1,0 +1,340 @@
+{
+  "schema_version": "1.0.0",
+  "template_id": "beerecos_reel_vertical_v1",
+  "purpose": "Contrat de données et proposition de montage pour 72 Reels BeeRecos",
+  "created_on": "2026-10-22",
+  "locale": "fr-FR",
+  "status": "editorial_proposal",
+  "pillars": {
+    "reseau": "Réseau d’apporteurs d’affaires",
+    "formation": "École de formation",
+    "digitalisation_ia": "Digitalisation IA"
+  },
+  "series": [
+    {
+      "id": "S01",
+      "label": "Rencontres et développement du réseau",
+      "reels_from": "V01",
+      "reels_to": "V06"
+    },
+    {
+      "id": "S02",
+      "label": "Recommandations et mises en relation",
+      "reels_from": "V07",
+      "reels_to": "V12"
+    },
+    {
+      "id": "S03",
+      "label": "Prospection et création de contenu",
+      "reels_from": "V13",
+      "reels_to": "V18"
+    },
+    {
+      "id": "S04",
+      "label": "Rendez-vous commerciaux et objections",
+      "reels_from": "V19",
+      "reels_to": "V24"
+    },
+    {
+      "id": "S05",
+      "label": "Relation client et fidélisation",
+      "reels_from": "V25",
+      "reels_to": "V30"
+    },
+    {
+      "id": "S06",
+      "label": "Le quotidien du dirigeant",
+      "reels_from": "V31",
+      "reels_to": "V36"
+    },
+    {
+      "id": "S07",
+      "label": "Communication et compréhension de l’autre",
+      "reels_from": "V37",
+      "reels_to": "V42"
+    },
+    {
+      "id": "S08",
+      "label": "Organisation et formation",
+      "reels_from": "V43",
+      "reels_to": "V48"
+    },
+    {
+      "id": "S09",
+      "label": "Digitalisation et intelligence artificielle",
+      "reels_from": "V49",
+      "reels_to": "V54"
+    },
+    {
+      "id": "S10",
+      "label": "Découvrir la vie de BeeRecos",
+      "reels_from": "V55",
+      "reels_to": "V60"
+    },
+    {
+      "id": "S11",
+      "label": "Visite adhésion et premiers pas",
+      "reels_from": "V61",
+      "reels_to": "V66"
+    },
+    {
+      "id": "S12",
+      "label": "Animation et développement des clubs",
+      "reels_from": "V67",
+      "reels_to": "V72"
+    }
+  ],
+  "format": {
+    "width_px": 1080,
+    "height_px": 1920,
+    "aspect_ratio": "9:16",
+    "fps": 30,
+    "export_container": "mp4",
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "min_duration_ms": 35000,
+    "max_duration_ms": 60000,
+    "target_duration_ms": 50000,
+    "closing_card_duration_ms": 2000,
+    "duration_rule": "Durée éditoriale totale BeeRecos, carte de fin et CTA compris ; contrôler le fichier exporté."
+  },
+  "brand": {
+    "name": "BeeRecos",
+    "primary_color": "#2851FF",
+    "dark_color": "#111111",
+    "light_color": "#FFFFFF",
+    "logo_asset_ref": null,
+    "heading_font_asset_ref": null,
+    "subtitle_font_asset_ref": null,
+    "baseline": "#MonReseauCestTonReseau",
+    "baseline_color": "#2851FF",
+    "baseline_style": "handwritten",
+    "closing_card_asset_ref": null,
+    "asset_policy": "Réutiliser le logo et la carte de fin officiels. Renseigner les références d’assets avant le rendu ; ne pas redessiner le logo."
+  },
+  "production_modes": {
+    "studio": {
+      "label": "Importer ma vidéo",
+      "voice_source": "source_video",
+      "presenter_source": "source_video"
+    },
+    "ai": {
+      "label": "Générer avec l’IA",
+      "voice_source": "approved_generated_audio",
+      "presenter_source": "generated_or_licensed_media"
+    },
+    "hybrid": {
+      "label": "Combiner ma vidéo et l’IA",
+      "voice_source": "source_video_or_approved_generated_audio",
+      "presenter_source": "mixed"
+    }
+  },
+  "visual_rules": {
+    "hook_visible_from_first_frame": true,
+    "main_overlay_max_words": 8,
+    "main_overlay_target_words": [
+      2,
+      6
+    ],
+    "main_overlay_max_lines": 2,
+    "max_simultaneous_main_overlays": 1,
+    "allowed_overlay_modes": [
+      "behind_subject",
+      "tab",
+      "none"
+    ],
+    "behind_subject_requires_temporal_person_mask": true,
+    "behind_subject_fallback": "tab",
+    "behind_subject_readability_check": "Si le masque cache un mot essentiel ou si le détourage est instable, déplacer le texte ou passer en onglet.",
+    "layer_order": [
+      "base_video",
+      "behind_subject_text",
+      "person_foreground_mask",
+      "tab_overlay",
+      "subtitles",
+      "optional_brand_mark"
+    ],
+    "safe_area": {
+      "kind": "configurable_editorial_guides",
+      "top_inset_ratio": 0.1,
+      "bottom_inset_ratio": 0.2,
+      "left_inset_ratio": 0.08,
+      "right_inset_ratio": 0.16,
+      "validation": "Repères initiaux à contrôler dans l’aperçu Instagram ; ils ne constituent pas des marges officielles universelles."
+    },
+    "motion": "Révélations sobres et recadrages légers aux changements d’idée ; aucun changement de plan imposé à chaque ligne."
+  },
+  "captions": {
+    "source": "final_edited_audio",
+    "placement": "bottom_center_inside_safe_area",
+    "max_lines": 2,
+    "target_words_per_cue": [
+      3,
+      7
+    ],
+    "cue_policy": "Les groupes suivent les mots prononcés et la lisibilité ; ce nombre de mots est un repère éditorial, pas une durée fixe.",
+    "burn_in": true,
+    "export_sidecars": [
+      "srt",
+      "vtt"
+    ],
+    "word_timestamps_required_for_word_highlight": true,
+    "allow_unmeasured_cues": false,
+    "actual_transcript_overrides_prompt_for_captions": true
+  },
+  "audio": {
+    "voice_priority": true,
+    "music_optional": true,
+    "music_asset_ref": null,
+    "music_ducking_when_voice": true,
+    "pronunciation_review": [
+      "BeeRecos",
+      "BeeSchool",
+      "BeeLive",
+      "BeeToBee",
+      "BeeCamp",
+      "R zéro",
+      "R un",
+      "R deux"
+    ]
+  },
+  "timeline": {
+    "unit": "milliseconds",
+    "reference": "final_output_timeline",
+    "planning_method": "Répartition proportionnelle au nombre de mots dans 48 secondes de parole, suivies de 2 secondes de carte de fin.",
+    "planned_is_not_measured": true,
+    "actual_alignment_source": "final_edited_audio",
+    "source_clip_time_is_separate_from_output_time": true,
+    "end_is_exclusive": true
+  },
+  "cta": {
+    "goal": "club_visit",
+    "one_keyword_per_reel": true,
+    "allowed_display_keywords": [
+      "RÉSEAU",
+      "BUSINESS",
+      "CLUB",
+      "INVITATION",
+      "VISITE",
+      "FORMATION",
+      "DIGITALISATION"
+    ],
+    "matching": "Unicode sans accents, minuscules, mots entiers, limité au post concerné ; pas de correspondance par sous-chaîne.",
+    "deduplicate_by": [
+      "platform",
+      "account_id",
+      "comment_id"
+    ],
+    "repeat_contact_policy": "Une invitation par personne et par Reel tant que la conversation n’a pas repris ; éviter les doublons lors des retries.",
+    "landing_route_ref": null,
+    "landing_required_fields": [
+      "club_id",
+      "meeting_id",
+      "invited_by_or_referral"
+    ],
+    "attribution_rule": "Distinguer la source du Reel du membre invitant ; vérifier le jeton de parrainage côté serveur et conserver la paternité déjà enregistrée."
+  },
+  "workflow": {
+    "editorial_states": [
+      "draft",
+      "needs_review",
+      "approved"
+    ],
+    "media_states": [
+      "missing",
+      "processing",
+      "ready",
+      "failed"
+    ],
+    "render_states": [
+      "not_started",
+      "rendering",
+      "preview_ready",
+      "final_ready",
+      "failed"
+    ],
+    "publication_states": [
+      "not_scheduled",
+      "scheduled",
+      "publishing",
+      "published",
+      "failed",
+      "needs_reconciliation"
+    ],
+    "publish_requires": [
+      "approved_current_revision",
+      "valid_final_render",
+      "working_cta_route",
+      "provider_authorization",
+      "registered_schedule_or_publish_action"
+    ],
+    "default_approval": "manual",
+    "publish_idempotency_scope": [
+      "platform",
+      "account_id",
+      "reel_id",
+      "revision"
+    ],
+    "unknown_publish_result": "Rechercher le résultat auprès du fournisseur avant de republier ; ne pas relancer à l’aveugle.",
+    "display_timezone": "Europe/Paris",
+    "persist_schedule_as": "UTC instant with original display timezone",
+    "revision_rules": {
+      "script_or_source_audio_change": "Invalider transcription, alignement, rendu et validation de la version courante.",
+      "cut_or_speed_change": "Recalculer les timecodes sur la bande son finale et invalider le rendu approuvé.",
+      "overlay_or_brand_change": "Conserver l’audio lorsque possible, recalculer le rendu et demander une nouvelle validation.",
+      "published_item_change": "Créer une nouvelle révision ; ne pas présenter l’ancienne publication comme mise à jour."
+    }
+  },
+  "interface": {
+    "section": "Réseaux sociaux",
+    "format_selector": [
+      "Reel",
+      "Story",
+      "Carrousel"
+    ],
+    "layout": [
+      "liste_des_contenus",
+      "apercu_vertical",
+      "panneau_contextuel"
+    ],
+    "reel_editor_sections": [
+      "Texte",
+      "Scènes",
+      "Médias",
+      "Sous-titres",
+      "Habillage",
+      "Publication"
+    ],
+    "navigation_rule": "Sections dans le même éditeur ou panneau contextuel ; éviter six nouvelles pages ou une série d’onglets principaux.",
+    "primary_actions": [
+      "Générer un aperçu",
+      "Valider la version",
+      "Exporter",
+      "Programmer"
+    ]
+  },
+  "provider_contract": {
+    "render_provider_ref": null,
+    "transcription_provider_ref": null,
+    "voice_provider_ref": null,
+    "video_generation_provider_ref": null,
+    "publishing_provider_ref": null,
+    "api_version_policy": "Choisir une version prise en charge au moment du branchement et conserver ce paramètre côté serveur.",
+    "credentials_policy": "Références de connexion côté serveur ; aucun token ou secret dans les fichiers Reel ni dans le navigateur.",
+    "runtime_policy": "Réutiliser l’infrastructure existante et des traitements gérés ; aucun VPS personnel n’est imposé par ce modèle."
+  },
+  "technical_sources": [
+    {
+      "title": "Meta Instagram Content Publishing",
+      "url": "https://developers.facebook.com/documentation/instagram-platform/content-publishing.md/"
+    },
+    {
+      "title": "Meta Instagram Private Replies",
+      "url": "https://developers.facebook.com/documentation/instagram-platform/private-replies.md/"
+    },
+    {
+      "title": "Meta Instagram Messaging Private Replies",
+      "url": "https://developers.facebook.com/documentation/business-messaging/instagram-messaging/features/private-replies.md/"
+    }
+  ]
+}

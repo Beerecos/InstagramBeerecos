@@ -1,0 +1,251 @@
+{
+  "reel_id": "V01",
+  "revision": 1,
+  "format": "reel",
+  "title": "Tu connais 500 personnes. Qui sait vraiment quand te recommander ?",
+  "template_ref": "beerecos_reel_vertical_v1",
+  "series_ref": "S01",
+  "primary_pillar": "reseau",
+  "secondary_pillars": [],
+  "objective": "club_visit",
+  "production_mode": "studio",
+  "editorial_status": "needs_review",
+  "script": {
+    "version": 1,
+    "text": "Tu as peut-être cinq cents contacts dans ton téléphone.\nMais combien savent vraiment quand te recommander ?\n\nImagine que tu sois photographe.\nTes contacts connaissent ton métier.\nMais savent-ils que tu accompagnes les restaurants\nqui préparent une nouvelle carte ?\n\nCette précision peut leur faire penser à toi\nau détour d’une conversation.\n\nLa prochaine fois que tu présentes ton activité,\nexplique qui tu aides et dans quelle situation.\nPuis demande à ton interlocuteur\nce qu’il a retenu.\n\nTu sauras si ton message est assez clair\npour être transmis à quelqu’un d’autre.\n\nCommente RÉSEAU.\nJe t’envoie les informations pour découvrir BeeRecos\net demander une visite de club.",
+    "sha256": "e9176791227e0006ba5d1f673e99af1f76ad11f8b3c31d4a13a6700a98dcf2b3",
+    "word_count": 106,
+    "source": "72 textes prompteur version 2"
+  },
+  "scenes": [
+    {
+      "scene_id": "V01_S01",
+      "role": "hook",
+      "paragraph_indices": [
+        0
+      ],
+      "spoken_text": "Tu as peut-être cinq cents contacts dans ton téléphone.\nMais combien savent vraiment quand te recommander ?",
+      "overlay": {
+        "text": "500 contacts… et après ?",
+        "preferred_mode": "behind_subject",
+        "resolved_mode": null,
+        "fallback_mode": "tab",
+        "person_mask_asset_ref": null
+      },
+      "visual_direction": "Face caméra, regard direct ; faire apparaître 500 contacts derrière la personne.",
+      "source_clip": {
+        "asset_ref": null,
+        "in_ms": null,
+        "out_ms": null
+      },
+      "timing": {
+        "planned_start_ms": 0,
+        "planned_end_ms": 7698,
+        "actual_start_ms": null,
+        "actual_end_ms": null,
+        "status": "estimated_only"
+      }
+    },
+    {
+      "scene_id": "V01_S02",
+      "role": "example",
+      "paragraph_indices": [
+        1,
+        2
+      ],
+      "spoken_text": "Imagine que tu sois photographe.\nTes contacts connaissent ton métier.\nMais savent-ils que tu accompagnes les restaurants\nqui préparent une nouvelle carte ?\n\nCette précision peut leur faire penser à toi\nau détour d’une conversation.",
+      "overlay": {
+        "text": "Photographe pour les restaurants",
+        "preferred_mode": "tab",
+        "resolved_mode": null,
+        "fallback_mode": "tab",
+        "person_mask_asset_ref": null
+      },
+      "visual_direction": "Conserver le visage ; ajouter une carte texte présentant cet exemple de spécialisation.",
+      "source_clip": {
+        "asset_ref": null,
+        "in_ms": null,
+        "out_ms": null
+      },
+      "timing": {
+        "planned_start_ms": 7698,
+        "planned_end_ms": 23547,
+        "actual_start_ms": null,
+        "actual_end_ms": null,
+        "status": "estimated_only"
+      }
+    },
+    {
+      "scene_id": "V01_S03",
+      "role": "method",
+      "paragraph_indices": [
+        3
+      ],
+      "spoken_text": "La prochaine fois que tu présentes ton activité,\nexplique qui tu aides et dans quelle situation.\nPuis demande à ton interlocuteur\nce qu’il a retenu.",
+      "overlay": {
+        "text": "Qui aides-tu et quand ?",
+        "preferred_mode": "tab",
+        "resolved_mode": null,
+        "fallback_mode": "tab",
+        "person_mask_asset_ref": null
+      },
+      "visual_direction": "Plan poitrine ; afficher les deux questions successivement dans le même onglet.",
+      "source_clip": {
+        "asset_ref": null,
+        "in_ms": null,
+        "out_ms": null
+      },
+      "timing": {
+        "planned_start_ms": 23547,
+        "planned_end_ms": 34868,
+        "actual_start_ms": null,
+        "actual_end_ms": null,
+        "status": "estimated_only"
+      }
+    },
+    {
+      "scene_id": "V01_S04",
+      "role": "takeaway",
+      "paragraph_indices": [
+        4
+      ],
+      "spoken_text": "Tu sauras si ton message est assez clair\npour être transmis à quelqu’un d’autre.",
+      "overlay": {
+        "text": "Un message facile à transmettre",
+        "preferred_mode": "behind_subject",
+        "resolved_mode": null,
+        "fallback_mode": "tab",
+        "person_mask_asset_ref": null
+      },
+      "visual_direction": "Léger rapprochement du cadrage au moment de la conclusion.",
+      "source_clip": {
+        "asset_ref": null,
+        "in_ms": null,
+        "out_ms": null
+      },
+      "timing": {
+        "planned_start_ms": 34868,
+        "planned_end_ms": 41208,
+        "actual_start_ms": null,
+        "actual_end_ms": null,
+        "status": "estimated_only"
+      }
+    },
+    {
+      "scene_id": "V01_S05",
+      "role": "cta",
+      "paragraph_indices": [
+        5
+      ],
+      "spoken_text": "Commente RÉSEAU.\nJe t’envoie les informations pour découvrir BeeRecos\net demander une visite de club.",
+      "overlay": {
+        "text": "Commente RÉSEAU",
+        "preferred_mode": "tab",
+        "resolved_mode": null,
+        "fallback_mode": "tab",
+        "person_mask_asset_ref": null
+      },
+      "visual_direction": "Face caméra et regard direct ; afficher le mot-clé dans un onglet lisible au-dessus de la zone de sous-titres, sans le transformer en bouton cliquable.",
+      "source_clip": {
+        "asset_ref": null,
+        "in_ms": null,
+        "out_ms": null
+      },
+      "timing": {
+        "planned_start_ms": 41208,
+        "planned_end_ms": 48000,
+        "actual_start_ms": null,
+        "actual_end_ms": null,
+        "status": "estimated_only"
+      }
+    }
+  ],
+  "closing_card": {
+    "use_template_asset": true,
+    "planned_start_ms": 48000,
+    "planned_end_ms": 50000,
+    "actual_start_ms": null,
+    "actual_end_ms": null
+  },
+  "duration": {
+    "target_ms": 50000,
+    "planned_ms": 50000,
+    "measured_ms": null,
+    "status": "estimated_only"
+  },
+  "media": {
+    "source_video_asset_ref": null,
+    "voice_asset_ref": null,
+    "music_asset_ref": null,
+    "status": "missing"
+  },
+  "subtitles": {
+    "source": "final_edited_audio",
+    "transcript_text": null,
+    "word_timestamps": [],
+    "cues": [],
+    "status": "pending_transcription"
+  },
+  "cta": {
+    "display_keyword": "RÉSEAU",
+    "normalized_keyword": "reseau",
+    "spoken_text": "Commente RÉSEAU.\nJe t’envoie les informations pour découvrir BeeRecos\net demander une visite de club.",
+    "goal": "club_visit",
+    "landing_route_ref": null,
+    "referral_token_ref": null,
+    "inviter_member_ref": null,
+    "utm": {
+      "source": "instagram",
+      "medium": "organic_social",
+      "campaign": null,
+      "content": "V01"
+    }
+  },
+  "cover": {
+    "text": "500 contacts… qui te recommande ?",
+    "asset_ref": null,
+    "status": "draft"
+  },
+  "social_caption": {
+    "text": null,
+    "status": "to_write"
+  },
+  "approval": {
+    "approved_by": null,
+    "approved_at": null,
+    "approved_revision": null
+  },
+  "render": {
+    "state": "not_started",
+    "job_ref": null,
+    "rendered_revision": null,
+    "preview_asset_ref": null,
+    "final_mp4_asset_ref": null,
+    "srt_asset_ref": null,
+    "vtt_asset_ref": null
+  },
+  "publication": {
+    "state": "not_scheduled",
+    "platform": "instagram",
+    "account_ref": null,
+    "scheduled_at_utc": null,
+    "display_timezone": "Europe/Paris",
+    "provider_container_id": null,
+    "platform_post_id": null,
+    "permalink": null,
+    "published_at": null,
+    "error": null
+  },
+  "analytics": {
+    "fetched_at": null,
+    "views": null,
+    "average_watch_time_ms": null,
+    "keyword_comments": null,
+    "dm_sent": null,
+    "link_clicks": null,
+    "registrations": null,
+    "attendees": null,
+    "members": null
+  },
+  "integration_notes": []
+}
