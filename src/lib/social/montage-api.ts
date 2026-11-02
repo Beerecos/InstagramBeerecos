@@ -12,6 +12,7 @@ import type { MediaItem, MediaKind } from "@/domain/social/montage/media";
 import type { Brief, CtaObjective, Storyboard, StoryboardStatus, StudioSettings } from "@/domain/social/montage/ideation";
 import type { BlockIntent, Hook } from "@/domain/social/montage/narrative";
 import type { Reel, ScenePatch } from "@/domain/social/montage/reels";
+import type { MontagePost, PostInput } from "@/domain/social/montage/post";
 
 export const isMontageConfigured = Boolean(apiUrl);
 
@@ -31,7 +32,7 @@ async function call<T>(body: Record<string, unknown>): Promise<T> {
 export type RenderStatus = "rendering" | "done" | "failed" | null;
 export type MontageSummary = { id: string; title: string; status: MontageStatus; durationMs: number | null; keptMs: number | null; workspaceId: string | null; createdAt: string; updatedAt: string; renderStatus: RenderStatus; sentToReels: boolean; finalVideoUrl?: string | null };
 export type MontageDetail = MontageSummary & { aiSource?: { source: StudioSourceRef; verified: boolean } | null; edit: Edit | null; captions: CaptionWord[]; canUndo: boolean; canRedo?: boolean; previewApproved?: boolean; previewApprovedAt?: string | null;
-  brief?: Brief | null; storyboard?: Storyboard | null; storyboardStatus?: StoryboardStatus | null; storyboardApprovedAt?: string | null; reel?: { reelId: string; revision: number; keyword: string; approved: boolean } | null; seededRevision?: number | null; error: string | null; renderError: string | null; finalVideoUrl: string | null };
+  brief?: Brief | null; storyboard?: Storyboard | null; storyboardStatus?: StoryboardStatus | null; storyboardApprovedAt?: string | null; post?: MontagePost | null; reel?: { reelId: string; revision: number; keyword: string; approved: boolean } | null; seededRevision?: number | null; error: string | null; renderError: string | null; finalVideoUrl: string | null };
 
 /** Un des 72 Reels (lot S7) : états réels lus sur son montage lié (null = pas encore filmé). */
 export type ReelLinked = {
@@ -122,5 +123,7 @@ export const montage = {
   suggest: (id: string, baseUpdatedAt: string) => call<{ suggestions: Suggestion[]; rejected: Rejected[] }>({ action: "suggest", id, baseUpdatedAt }),
   render: (id: string) => call<{ renderStatus: RenderStatus }>({ action: "render", id }),
   renderStatus: (id: string) => call<{ renderStatus: RenderStatus; renderError?: string; finalVideoUrl?: string | null; heygenStatus?: string }>({ action: "render-status", id }),
+  /** Préparation du post (Instagram BeeRecos) : n'écrit que la légende, jamais la vidéo ni sa version. */
+  savePost: (id: string, post: PostInput, baseUpdatedAt: string) => call<{ post: MontagePost }>({ action: "post-save", id, post, baseUpdatedAt }),
   toReel: (id: string, caption: string) => call<{ reelContentId: string; slotAt: string }>({ action: "to-reel", id, caption }),
 };

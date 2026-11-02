@@ -153,3 +153,31 @@ describe("reprise d'un rendu après rechargement (Instagram BeeRecos)", () => {
     expect(job.error).toMatch(/Reprise du rendu impossible/);
   });
 });
+
+describe("index des rendus : une version déjà soumise n'est jamais payée deux fois", () => {
+  it("suit le rendu existant de la même version sans voix, envoi ni soumission", async () => {
+    const base = harness();
+    const calls: Record<string, unknown>[] = [];
+    const api: OnlineDeps["api"] = async (body) => {
+      calls.push(body);
+      if (body.action === "jobs") return { jobs: [{ jobId: "job-ancien", renderId: "render-ancien", state: "submitted" }] };
+      return base.deps.api(body);
+    };
+    const r = createOnlineRenderer({ ...base.deps, api });
+    const { id } = r.start(DEMO_MOTION);
+    const job = await until(() => r.get(id));
+    expect(job.state).toBe("done");
+    expect(calls.some((c) => ["tts", "upload-url", "submit"].includes(String(c.action)))).toBe(false);
+    expect(calls.find((c) => c.action === "status")).toMatchObject({ jobId: "job-ancien", renderId: "render-ancien" });
+    expect(String(calls[0].fingerprint)).toMatch(/^[0-9a-f]{8}$/);
+  });
+  it("un rendu échoué ne bloque pas une nouvelle génération ; l'empreinte accompagne la soumission", async () => {
+    const base = harness();
+    const api: OnlineDeps["api"] = async (body) => body.action === "jobs" ? { jobs: [{ jobId: "j", renderId: "r", state: "failed" }] } : base.deps.api(body);
+    const r = createOnlineRenderer({ ...base.deps, api });
+    const { id } = r.start(DEMO_MOTION);
+    await until(() => r.get(id));
+    const submit = base.calls.find((c) => c.action === "submit");
+    expect(submit?.fingerprint).toMatch(/^[0-9a-f]{8}$/);
+  });
+});

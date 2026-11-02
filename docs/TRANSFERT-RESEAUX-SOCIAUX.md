@@ -58,10 +58,12 @@ référence et garde son studio jusqu'à vérification. Base Supabase et Edge Fu
 1. **Long rush en ligne** : envoi reprenable > 500 Mo, transcription asynchrone > 10 min, extraits FFmpeg côté serveur
    et projets portant la référence au rush et à ses bornes → **évolution de la fonction `montage` (BeeMarketing)**,
    non faite : nécessite un traitement hors Edge Function (FFmpeg) et l'accord de Cédric pour déployer.
-2. **Légende et rendus IA durables multi-appareils** : la fonction `montage` n'a pas de champ « post » par projet, et
-   `studio-render` ne liste pas les rendus d'un utilisateur. Aujourd'hui : légende sur l'appareil (sauf 72 réels),
-   suivi de rendu IA dans le navigateur qui l'a lancé. Changement serveur limité à préparer (colonne additive
-   `montages.post jsonb` + action `post-save` ; action `jobs` de `studio-render`).
+2. **Légende et rendus IA durables multi-appareils** : changement serveur **prêt, non déployé** — branche
+   BeeMarketing `claude/studio-post-et-rendus` (migration additive `montages.post`, action `post-save` de `montage`,
+   action `jobs` + index privé de `studio-render`, tests Edge et PGlite, procédure
+   `docs/studio/INSTAGRAM_BEERECOS_20261102.md`). Instagram BeeRecos l'utilise déjà : légende enregistrée sur le
+   serveur, rendu IA d'une version déjà soumise suivi au lieu d'être repayé. Tant que le serveur n'est pas déployé :
+   repli automatique (légende sur l'appareil, génération normale).
 3. **Variables d'InstagramBeerecos** (Vercel) : `NEXT_PUBLIC_BEE_API_URL=https://wekbmkjvieagmghjanjb.functions.supabase.co`,
    `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` et `SUPABASE_SECRET_KEY` du projet BeeMarketing
    (secret côté serveur uniquement). Domaine d'InstagramBeerecos à ajouter aux URL de redirection Supabase Auth.
@@ -79,7 +81,7 @@ référence et garde son studio jusqu'à vérification. Base Supabase et Edge Fu
 
 ### Vérifications (2026-11-02)
 
-`npm run lint` ✅ · `npm run typecheck` ✅ · `npm test` ✅ 514 tests (63 fichiers) + 11 tests `automation/` ·
+`npm run lint` ✅ · `npm run typecheck` ✅ · `npm test` ✅ 516 tests (63 fichiers) + 11 tests `automation/` ·
 `npm run build` (mode démo) ✅ · `npm run test:e2e` ✅ 31 réussis, 3 limités à un format. E2E en mode démo, sans
 serveur de montage ni rendu réel : ils ne prouvent ni un MP4 généré ni une transcription réelle.
 

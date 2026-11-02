@@ -6,7 +6,7 @@
  * distincte (panneau Rendu).
  */
 import { useMemo, useRef, useState } from "react";
-import { reels, type MontageDetail } from "@/lib/social/montage-api";
+import { montage, reels, type MontageDetail } from "@/lib/social/montage-api";
 import { composeCaption, durationWarning, emptyPost, fileSlug, montageSrt, parseHashtags, postWarnings, type ReelPost } from "@/domain/reels/post";
 
 const KEY = (id: string) => `ibr.post.${id}`;
@@ -28,9 +28,11 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
   const version = m.updatedAt;
   const keyword = m.reel?.keyword ?? m.brief?.motCle ?? "";
   // Panneau ouvert sur clic, toujours côté navigateur : lecture directe de la légende enregistrée sur cet appareil.
-  const [post, setPost] = useState<ReelPost>(() => readPost(m.id) ?? emptyPost(version, keyword));
+  // Source de vérité : le post enregistré sur le serveur avec le montage ; à défaut, la copie de cet appareil.
+  const [post, setPost] = useState<ReelPost>(() => (m.post ? { ...m.post } : readPost(m.id) ?? emptyPost(version, keyword)));
   const [tags, setTags] = useState(() => post.hashtags.join(" "));
-  const [saved, setSaved] = useState<"local" | "serveur" | null>(() => (readPost(m.id) ? "local" : null));
+  const [saved, setSaved] = useState<"local" | "serveur" | null>(() => (m.post ? "serveur" : readPost(m.id) ? "local" : null));
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const video = useRef<HTMLVideoElement>(null);
@@ -48,15 +50,29 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
     setBusy(label); setError(null);
     try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : "Action impossible."); } finally { setBusy(null); }
   };
-  const save = () => {
+  const saveLocal = () => {
     const next = { ...post, version };
     setPost(next);
     if (writePost(m.id, next)) setSaved("local"); else setError("Enregistrement impossible dans ce navigateur.");
   };
+  const save = () => run("save", async () => {
+    const { caption, cta, keyword, destination, hashtags, coverMs } = post;
+    try {
+      const r = await montage.savePost(m.id, { caption, cta, keyword, destination, hashtags, coverMs: Math.round(coverMs) }, version);
+      setPost((p) => ({ ...p, version: r.post.version }));
+      writePost(m.id, { ...post, version: r.post.version });
+      setSaved("serveur"); setNotice(null);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "";
+      // Serveur pas encore mis à jour (action inconnue) : la légende reste sur cet appareil, sans perte.
+      if (/Action inconnue|inconnue|unknown/i.test(message)) { saveLocal(); setNotice("Serveur pas encore à jour : légende enregistrée sur cet appareil seulement."); return; }
+      throw e;
+    }
+  });
   const saveOnReel = () => run("reel", async () => {
     if (!m.reel) return;
     await reels.saveCaption(m.reel.reelId, m.reel.revision, final);
-    save(); setSaved("serveur");
+    saveLocal(); setSaved("serveur");
   });
   const cover = () => run("cover", async () => {
     const v = video.current;
@@ -104,9 +120,9 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
         <details><summary className="cursor-pointer font-medium">Texte final ({final.length} caractères)</summary><pre className="mt-2 whitespace-pre-wrap rounded-lg bg-black/[0.04] p-3 font-sans">{final || "—"}</pre></details>
         {[dur, ...warnings].filter(Boolean).length ? <ul className="list-disc space-y-1 pl-5 text-amber-800">{[dur, ...warnings].filter(Boolean).map((w) => <li key={w!}>{w}</li>)}</ul> : null}
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className="btn-ghost min-h-11" onClick={save}>Enregistrer sur cet appareil</button>
-          {m.reel ? <button type="button" className="btn-ghost min-h-11" disabled={Boolean(busy) || !final} onClick={saveOnReel}>{busy === "reel" ? "Enregistrement…" : `Enregistrer sur ${m.reel.reelId} (serveur)`}</button> : null}
-          <span role="status" className="text-xs text-mut">{saved === "serveur" ? `Enregistrée sur ${m.reel?.reelId} et sur cet appareil.` : saved === "local" ? "Enregistrée sur cet appareil." : "Modifications non enregistrées."}</span>
+          <button type="button" className="btn-ghost min-h-11" disabled={Boolean(busy)} onClick={save}>{busy === "save" ? "Enregistrement…" : "Enregistrer la légende"}</button>
+          {m.reel ? <button type="button" className="btn-ghost min-h-11" disabled={Boolean(busy) || !final} onClick={saveOnReel}>{busy === "reel" ? "Enregistrement…" : `Reprendre sur le script ${m.reel.reelId}`}</button> : null}
+          <span role="status" className="text-xs text-mut">{saved === "serveur" ? "Enregistrée sur le serveur avec ce montage." : saved === "local" ? "Enregistrée sur cet appareil." : "Modifications non enregistrées."}</span>
         </div>
       </section>
 
@@ -122,6 +138,7 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
         {!ready ? <p className="text-mut">Le MP4 et la couverture sont disponibles après un rendu terminé de cette version.</p> : null}
         {!srt ? <p className="text-mut">SRT disponible après la transcription.</p> : null}
       </section>
+      {notice ? <p role="status" className="text-amber-800">{notice}</p> : null}
       {error ? <p role="alert" className="text-red-700">{error}</p> : null}
     </div>
   );

@@ -17,7 +17,7 @@ function durationOf(file: File): Promise<number> {
   return new Promise((resolve, reject) => {
     const v = document.createElement("video");
     v.preload = "metadata";
-    v.onloadedmetadata = () => { const d = v.duration; URL.revokeObjectURL(v.src); Number.isFinite(d) ? resolve(Math.round(d * 1000)) : reject(new Error("Durée illisible.")); };
+    v.onloadedmetadata = () => { const d = v.duration; URL.revokeObjectURL(v.src); if (Number.isFinite(d)) resolve(Math.round(d * 1000)); else reject(new Error("Durée illisible.")); };
     v.onerror = () => { URL.revokeObjectURL(v.src); reject(new Error("Format vidéo non lisible par le navigateur.")); };
     v.src = URL.createObjectURL(file);
   });

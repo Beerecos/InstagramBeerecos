@@ -4,6 +4,8 @@ import {
   type MotionSpec, type MotionVoiceAsset, type SequenceKey, type StorySpec, type VoiceAsset, type ZipEntry,
 } from "@/domain/social/reel-story";
 import type { RenderJob } from "./reel-render-client";
+import { motionFingerprint } from "@/domain/social/reel-story/motion-spec";
+import { specFingerprint } from "@/domain/social/spec-fingerprint";
 
 /**
  * RENDU EN LIGNE d'une Vidéo IA (2026-10-24, « les vidéos se génèrent depuis le site en ligne ») : aucun poste de rendu.
@@ -133,8 +135,23 @@ export function createOnlineRenderer(deps: OnlineDeps) {
     const job = r.job;
     try {
       job.state = "running";
-      job.step = "Voix off";
       const motion = isMotionSpec(spec);
+      // Instagram BeeRecos : cette version a-t-elle déjà été soumise (autre appareil, onglet fermé) ? Alors on suit ce
+      // rendu au lieu de payer voix et rendu une seconde fois. Serveur non mis à jour (action inconnue) : on continue.
+      const fingerprint = motion ? motionFingerprint(spec) : specFingerprint(spec);
+      try {
+        const known = await deps.api({ action: "jobs", fingerprint });
+        const prior = (Array.isArray(known.jobs) ? known.jobs : []).find((e: { state?: string; jobId?: string; renderId?: string }) => e && e.state !== "failed" && e.jobId && e.renderId) as { jobId: string; renderId: string } | undefined;
+        if (prior) {
+          r.jobId = prior.jobId; r.renderId = prior.renderId;
+          job.serverJobId = prior.jobId; job.renderId = prior.renderId;
+          job.warnings.push("Cette version a déjà été soumise au rendu : suivi repris, sans nouvelle voix ni nouveau rendu facturé (voix et SRT de l'aperçu non régénérés).");
+          job.step = "Rendu de la vidéo (en ligne) — suivi repris";
+          job.progress = 25;
+          return;
+        }
+      } catch { /* index des rendus indisponible : génération normale */ }
+      job.step = "Voix off";
       const built = motion ? await buildMotion(deps, spec, (p) => { job.progress = p; }) : await buildStory(deps, spec, (p) => { job.progress = p; });
       job.voice = built.voice;
       if (built.motionVoice) job.motionVoice = built.motionVoice;
@@ -145,7 +162,7 @@ export function createOnlineRenderer(deps: OnlineDeps) {
       r.jobId = String(up.jobId);
       job.serverJobId = r.jobId;
       await deps.upload(String(up.uploadUrl), buildZip(built.entries));
-      const sub = await deps.api({ action: "submit", jobId: r.jobId, title: built.title });
+      const sub = await deps.api({ action: "submit", jobId: r.jobId, title: built.title, fingerprint });
       r.renderId = String(sub.renderId);
       job.renderId = r.renderId;
       if (built.srt) r.srtUrl = deps.objectUrl(new TextEncoder().encode(built.srt), "application/x-subrip");
