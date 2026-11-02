@@ -49,7 +49,22 @@ export const SoundSchema = z.strictObject({
   atMs: ms,
   volume: z.number().min(0).max(1).default(1),
   durationMs: ms.optional(),
+  /** Musique (Instagram BeeRecos, 2026-11-03) : volume baissé automatiquement pendant la voix (absent = inchangé). */
+  duck: z.strictObject({ volume: z.number().min(0).max(1).default(0.2) }).optional(),
 });
+
+/**
+ * Illustration vidéo (B-roll, Instagram BeeRecos, 2026-11-03) : clip de la bibliothèque posé par-dessus la prise,
+ * en temps de la bande source comme les animations (il suit les coupes), sans son (la voix reste celle de la prise).
+ * `clipInMs` : point d'entrée dans le clip ; `focusX` : cadrage horizontal d'un clip 16:9 dans le 9:16 (0 à 100 %).
+ */
+export const BrollSchema = z.strictObject({
+  file: fileName(/\.(mp4|mov|webm)$/i, "vidéo (.mp4, .mov, .webm)"),
+  fromMs: ms,
+  toMs: ms,
+  clipInMs: ms.default(0),
+  focusX: z.number().min(0).max(100).default(50),
+}).refine((b) => b.toMs - b.fromMs >= 300, "un clip d'illustration dure au moins 0,3 s");
 
 /** Réglages des sous-titres (repères de montage, voir CAPTION_DEFAULTS) : zone haute, largeur et corps. */
 export const CaptionStyleSchema = z.strictObject({
@@ -120,6 +135,8 @@ export const EditSchema = z.strictObject({
   animationChoices: z.array(z.string().regex(/^[a-z0-9-]+$/)).max(100)
     .refine((names) => new Set(names).size === names.length, "chaque animation se choisit une seule fois").optional(),
   sounds: z.array(SoundSchema).default([]),
+  /** Clips d'illustration (B-roll) : absent = aucun. */
+  broll: z.array(BrollSchema).max(30, "30 clips d'illustration au plus").optional(),
   /** Rythme (lot S6) : absent = montage d'avant, sans zoom ni son d'animation. */
   rythme: RythmeSchema.optional(),
   /** Style Motion (2026-10-25) : absent = rendu d'avant. */

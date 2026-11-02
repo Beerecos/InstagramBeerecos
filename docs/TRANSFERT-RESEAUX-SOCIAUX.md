@@ -53,6 +53,7 @@ puis date, légende, CTA et mot-clé (`update`). Aucune publication ni programma
 | **Montage instantané** : coupe, rétablissement, recadrage, sous-titres et correction de mots appliqués tout de suite ; enregistrement en arrière-plan (file sérialisée, regroupement, version serveur vérifiée, conflit signalé sans écrasement, nouvelle tentative) ; annuler / refaire locaux immédiats (Ctrl+Z, Ctrl+Maj+Z) ; alerte si l'on quitte pendant un enregistrement | ✅ (`src/domain/studio/edit-sync.ts`, e2e avec serveur simulé) |
 | **Timeline** : timecode à l'image, zoom jusqu'à 320 px/s, couper au curseur (S) sans rien retirer, morceaux de la piste Vidéo sélectionnables, retirer (Suppr, rétablissable) et tirer leurs bords à la souris ou aux flèches (bornés par les voisins et les changements de prise), aimantation sur les mots, les coupes et la tête de lecture, forme d'onde décodée dans le navigateur (prises de 250 Mo au plus) | ✅ (`src/domain/studio/timeline.ts`, e2e sur une vraie vidéo FFmpeg) |
 | **Raccourcis de monteur** : Espace lecture/pause, K pause, L lecture, J recule d'1 s (le lecteur Hyperframes n'a pas de lecture arrière), ← → une image (Maj : une seconde), Début/Fin, I / O repères de zone, X coupe la zone (sur plusieurs morceaux), Échap efface, aide « ⌨ Raccourcis » | ✅ (e2e clavier sur ordinateur) |
+| **Pistes en plus** : clips d'illustration (B-roll) envoyés dans la bibliothèque (.mp4/.mov/.webm, 200 Mo), « Illustrer au curseur », durée, départ dans le clip, cadrage horizontal 9:16, piste Illustrations de la timeline ; musique « Baisser pendant la voix » avec volume réglable — même composition pour l'aperçu et le MP4 | ✅ côté application ; ⚠️ envoi des clips et rendu : lot serveur BeeMarketing `claude/studio-post-et-rendus` à déployer (migration `20261103090000_montage_media_video.sql`) |
 | Invalidation des rendus et validations après modification | ✅ côté serveur (`STALE`, empreinte de planche) — logique BeeMarketing, non modifiée |
 | Post et export : couverture prise dans le MP4, légende/CTA/mot-clé/destination/hashtags liés à la version, MP4, PNG, TXT, SRT recalculé sur les coupes | ✅ sans Meta, DM ni calendrier ; légende sur l'appareil, ou sur le serveur pour un des 72 réels (`reel-caption-save`) |
 | Éditeur IA unique (MotionSpec) : brief, scènes, voix, visuels, aperçu, rendu ; « Recommandation » = modèle converti en scènes ; contenus hérités lisibles et repris en scènes | ✅ |
@@ -78,8 +79,8 @@ puis date, légende, CTA et mot-clé (`update`). Aucune publication ni programma
    (secret côté serveur uniquement). Domaine d'InstagramBeerecos à ajouter aux URL de redirection Supabase Auth.
 4. Services côté Supabase (déjà gérés par BeeMarketing) : ElevenLabs (transcription), Claude (propositions),
    HeyGen (`HEYGEN_API_KEY` : voix Audrey et rendu). Génération de plans vidéo par un fournisseur externe : non raccordée.
-5. Clips d'illustration et overlays animés (vidéo/transparence) : non pris en charge par la bibliothèque actuelle
-   (sons et images) — lot à part (`docs/studio/REFERENCE_VIDEO_20261102.md` de BeeMarketing).
+5. Clips d'illustration : pris en charge (lot serveur à déployer). Overlays animés **avec transparence** (arbre, icônes
+   3D…) : non pris en charge — il faut des fichiers avec canal alpha (WebM VP9) et un contrôle dédié.
 
 ### Points à arbitrer
 
@@ -90,8 +91,8 @@ puis date, légende, CTA et mot-clé (`update`). Aucune publication ni programma
 
 ### Vérifications (2026-11-02)
 
-`npm run lint` ✅ · `npm run typecheck` ✅ · `npm test` ✅ 538 tests (66 fichiers) + 11 tests `automation/` ·
-`npm run build` (mode démo) ✅ · `npm run test:e2e` ✅ 39 réussis (serveur BeeMarketing simulé : `tests/e2e/bee-api.ts`), 3 limités à un format. E2E en mode démo, sans
+`npm run lint` ✅ · `npm run typecheck` ✅ · `npm test` ✅ 543 tests (67 fichiers) + 11 tests `automation/` ·
+`npm run build` (mode démo) ✅ · `npm run test:e2e` ✅ 40 réussis (serveur BeeMarketing simulé : `tests/e2e/bee-api.ts`), 3 limités à un format. E2E en mode démo, sans
 serveur de montage ni rendu réel : ils ne prouvent ni un MP4 généré ni une transcription réelle.
 
 ## Périmètre inventorié

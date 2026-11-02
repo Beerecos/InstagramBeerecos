@@ -13,13 +13,13 @@ import { checkTimeline } from "@/domain/social/montage/suggest";
  */
 
 const sec = (ms: number) => `${(ms / 1000).toFixed(1).replace(".", ",")} s`;
-const ACCEPT: Record<MediaKind, string> = { son: "audio/mpeg,audio/wav,audio/mp4,audio/aac,audio/ogg,.mp3,.wav,.m4a,.aac,.ogg", image: "image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" };
+const ACCEPT: Record<MediaKind, string> = { son: "audio/mpeg,audio/wav,audio/mp4,audio/aac,audio/ogg,.mp3,.wav,.m4a,.aac,.ogg", image: "image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp", video: "video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm" };
 
-/** Durée d'un son lue par le navigateur (facultative). */
-function audioDurationMs(file: File): Promise<number | null> {
+/** Durée d'un son ou d'un clip vidéo lue par le navigateur (facultative). */
+function audioDurationMs(file: File, tag: "audio" | "video" = "audio"): Promise<number | null> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
-    const a = document.createElement("audio");
+    const a = document.createElement(tag);
     a.preload = "metadata";
     a.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(Number.isFinite(a.duration) ? Math.max(1, Math.round(a.duration * 1000)) : null); };
     a.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
@@ -43,7 +43,7 @@ function MediaUpload({ onDone }: { onDone: () => void }) {
     setError(null);
     try {
       setStep("Préparation…");
-      const durationMs = kind === "son" ? await audioDurationMs(file) : null;
+      const durationMs = kind === "son" ? await audioDurationMs(file) : kind === "video" ? await audioDurationMs(file, "video") : null;
       const created = await montage.mediaCreate({ kind, title: title.trim() || file.name.replace(/\.[^.]+$/, ""), fileName: file.name, size: file.size, licence, sourceUrl: source.trim() || undefined });
       setStep("Envoi…");
       const res = await fetch(created.uploadUrl, { method: "PUT", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
@@ -67,7 +67,7 @@ function MediaUpload({ onDone }: { onDone: () => void }) {
             className={`rounded-lg px-3 py-1.5 text-sm ${kind === k ? "bg-brand text-white" : "bg-black/[0.04] text-mut"}`}>{MEDIA_KIND_LABELS[k]}</button>
         ))}
       </div>
-      <label className="block text-sm font-medium">Fichier ({kind === "son" ? ".mp3, .wav, .m4a, 20 Mo au plus" : ".png, .jpg, .webp, 10 Mo au plus"})
+      <label className="block text-sm font-medium">Fichier ({kind === "son" ? ".mp3, .wav, .m4a, 20 Mo au plus" : kind === "video" ? ".mp4, .mov, .webm, 200 Mo au plus (clip d'illustration, sans son)" : ".png, .jpg, .webp, 10 Mo au plus"})
         <input key={kind} type="file" accept={ACCEPT[kind]} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="mt-1 block w-full text-sm" />
       </label>
       <label className="block text-sm font-medium">Titre<input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} className={field} /></label>
@@ -100,7 +100,20 @@ export default function StudioMedia({ library, onRefresh, editor }: Props) {
     if (clash.length) return setError(clash.join("\n"));
     void run(m.id, () => editor.onSave({ ...editor.edit, custom }));
   };
-  const setSound = (i: number, patch: { volume?: number } | null) => {
+  // Clips d'illustration (B-roll, 2026-11-03) : posés au curseur pour 3 s (ou la durée du clip), muets, cadrage réglable.
+  const placeBroll = (m: MediaItem) => {
+    if (!editor) return;
+    const len = Math.max(300, Math.min(3000, m.durationMs ?? 3000));
+    const broll = [...(editor.edit.broll ?? []), { file: m.fileName, fromMs: at, toMs: at + len, clipInMs: 0, focusX: 50 }].sort((a, b) => a.fromMs - b.fromMs);
+    void run(m.id, () => editor.onSave({ ...editor.edit, broll }));
+  };
+  const setBroll = (i: number, patch: Partial<NonNullable<Edit["broll"]>[number]> | null) => {
+    if (!editor) return;
+    const list = editor.edit.broll ?? [];
+    const broll = patch === null ? list.filter((_, j) => j !== i) : list.map((b, j) => (j === i ? { ...b, ...patch } : b));
+    void run(`b${i}`, () => editor.onSave({ ...editor.edit, broll }));
+  };
+  const setSound = (i: number, patch: { volume?: number; duck?: { volume: number } | undefined } | null) => {
     if (!editor) return;
     const sounds = patch === null ? editor.edit.sounds.filter((_, j) => j !== i) : editor.edit.sounds.map((s, j) => (j === i ? { ...s, ...patch } : s));
     void run(`s${i}`, () => editor.onSave({ ...editor.edit, sounds }));
@@ -159,11 +172,52 @@ export default function StudioMedia({ library, onRefresh, editor }: Props) {
                   <input type="range" min={0} max={1} step={0.05} defaultValue={s.volume} disabled={disabled} aria-label={`Volume de ${title(s.file)}`}
                     onMouseUp={(e) => setSound(i, { volume: Number((e.target as HTMLInputElement).value) })} onKeyUp={(e) => setSound(i, { volume: Number((e.target as HTMLInputElement).value) })} />
                 </label>
+                <label className="flex items-center gap-1 text-xs text-mut">
+                  <input type="checkbox" checked={Boolean(s.duck)} disabled={disabled} onChange={(e) => setSound(i, { duck: e.target.checked ? { volume: 0.2 } : undefined })} />
+                  Baisser pendant la voix
+                </label>
+                {s.duck ? (
+                  <label className="flex items-center gap-1 text-xs text-mut">à
+                    <input type="range" min={0} max={1} step={0.05} defaultValue={s.duck.volume} disabled={disabled} aria-label={`Volume de ${title(s.file)} pendant la voix`}
+                      onMouseUp={(e) => setSound(i, { duck: { volume: Number((e.target as HTMLInputElement).value) } })} onKeyUp={(e) => setSound(i, { duck: { volume: Number((e.target as HTMLInputElement).value) } })} />
+                  </label>
+                ) : null}
                 <button type="button" className="btn-ghost min-h-[32px] px-2 text-xs" disabled={disabled} onClick={() => setSound(i, null)}>Retirer</button>
               </li>
             ))}
           </ul>
           <p className="text-xs text-mut">Curseur de lecture : {sec(at)} (temps de la prise). Lisez la vidéo jusqu&apos;à l&apos;instant voulu puis placez le média.</p>
+        </section>
+      ) : null}
+      {editor ? (
+        <section aria-label="Illustrations du montage" className="space-y-1">
+          <h4 className="text-sm font-medium">Illustrations (B-roll)</h4>
+          {(editor.edit.broll ?? []).length === 0 ? <p className="text-xs text-mut">Aucun clip : ajoute un clip vidéo à la bibliothèque, puis « Illustrer au curseur ». La voix de la prise reste entendue.</p> : null}
+          <ul className="space-y-2">
+            {(editor.edit.broll ?? []).map((b, i) => (
+              <li key={`${b.file}-${b.fromMs}-${i}`} className="space-y-1 rounded-lg border border-line p-2 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="w-28 tabular-nums text-mut">{sec(b.fromMs)} → {sec(b.toMs)}</span>
+                  <span className="min-w-0 flex-1 truncate">{title(b.file)}</span>
+                  <button type="button" className="btn-ghost min-h-[32px] px-2 text-xs" disabled={disabled} onClick={() => setBroll(i, null)}>Retirer</button>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 text-xs text-mut">
+                  <label className="flex items-center gap-1">Durée (s)
+                    <input type="number" min={0.3} max={60} step={0.1} defaultValue={(b.toMs - b.fromMs) / 1000} disabled={disabled} aria-label={`Durée de l'illustration ${i + 1}`} className="w-16 rounded border border-line px-1"
+                      onBlur={(e) => { const v = Math.round(Number(e.target.value) * 1000); if (v >= 300 && v !== b.toMs - b.fromMs) setBroll(i, { toMs: b.fromMs + v }); }} />
+                  </label>
+                  <label className="flex items-center gap-1">Départ dans le clip (s)
+                    <input type="number" min={0} step={0.1} defaultValue={b.clipInMs / 1000} disabled={disabled} aria-label={`Départ dans le clip ${i + 1}`} className="w-16 rounded border border-line px-1"
+                      onBlur={(e) => { const v = Math.max(0, Math.round(Number(e.target.value) * 1000)); if (v !== b.clipInMs) setBroll(i, { clipInMs: v }); }} />
+                  </label>
+                  <label className="flex items-center gap-1">Cadrage 9:16
+                    <input type="range" min={0} max={100} step={5} defaultValue={b.focusX} disabled={disabled} aria-label={`Cadrage horizontal de l'illustration ${i + 1}`}
+                      onMouseUp={(e) => setBroll(i, { focusX: Number((e.target as HTMLInputElement).value) })} onKeyUp={(e) => setBroll(i, { focusX: Number((e.target as HTMLInputElement).value) })} />
+                  </label>
+                </div>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
       <section aria-label="Bibliothèque de médias" className="space-y-2">
@@ -178,10 +232,11 @@ export default function StudioMedia({ library, onRefresh, editor }: Props) {
                 <p className="truncate font-medium">{m.title}</p>
                 <p className="truncate text-xs text-mut">{MEDIA_KIND_LABELS[m.kind]}{m.durationMs ? ` · ${sec(m.durationMs)}` : ""} · {m.licence}</p>
                 {m.kind === "son" && m.url ? <audio src={m.url} controls preload="none" className="mt-1 h-8 w-full max-w-[260px]" aria-label={`Écouter ${m.title}`} /> : null}
+                {m.kind === "video" && m.url ? <video src={m.url} controls muted preload="metadata" className="mt-1 h-24 rounded bg-black" aria-label={`Voir ${m.title}`} /> : null}
               </div>
               {editor ? (
-                <button type="button" className="btn-red min-h-[36px] px-3 text-xs" disabled={disabled} onClick={() => (m.kind === "son" ? placeSound(m) : placeImage(m))}>
-                  {m.kind === "son" ? "Placer au curseur" : "Afficher au curseur"}
+                <button type="button" className="btn-red min-h-[36px] px-3 text-xs" disabled={disabled} onClick={() => (m.kind === "son" ? placeSound(m) : m.kind === "video" ? placeBroll(m) : placeImage(m))}>
+                  {m.kind === "son" ? "Placer au curseur" : m.kind === "video" ? "Illustrer au curseur" : "Afficher au curseur"}
                 </button>
               ) : (
                 <button type="button" className="btn-ghost min-h-[36px] px-3 text-xs" disabled={Boolean(busy)} onClick={() => run(m.id, async () => { await montage.mediaDelete(m.id); onRefresh(); })}>Supprimer</button>

@@ -8,11 +8,11 @@ import type { Edit } from "./edit";
  * Les polices ne s'importent pas : la charte n'autorise que Poppins et Caveat (baseline), déjà fournies au rendu.
  */
 
-export const MEDIA_KINDS = ["son", "image"] as const;
+export const MEDIA_KINDS = ["son", "image", "video"] as const;
 export type MediaKind = (typeof MEDIA_KINDS)[number];
-export const MEDIA_EXTENSIONS: Record<MediaKind, readonly string[]> = { son: ["mp3", "wav", "m4a", "aac", "ogg"], image: ["png", "jpg", "jpeg", "webp"] };
-export const MEDIA_MAX_BYTES: Record<MediaKind, number> = { son: 20 * 1024 * 1024, image: 10 * 1024 * 1024 };
-export const MEDIA_KIND_LABELS: Record<MediaKind, string> = { son: "Son", image: "Image" };
+export const MEDIA_EXTENSIONS: Record<MediaKind, readonly string[]> = { son: ["mp3", "wav", "m4a", "aac", "ogg"], image: ["png", "jpg", "jpeg", "webp"], video: ["mp4", "mov", "webm"] };
+export const MEDIA_MAX_BYTES: Record<MediaKind, number> = { son: 20 * 1024 * 1024, image: 10 * 1024 * 1024, video: 200 * 1024 * 1024 };
+export const MEDIA_KIND_LABELS: Record<MediaKind, string> = { son: "Son", image: "Image", video: "Clip vidéo" };
 
 /** Média tel que le Studio le voit. */
 export type MediaItem = { id: string; kind: MediaKind; title: string; fileName: string; durationMs: number | null; licence: string; sourceUrl: string | null; url?: string | null };
@@ -47,6 +47,7 @@ export function usedMedia(edit: Edit): string[] {
   const files = new Set<string>(edit.sounds.map((s) => s.file));
   if (edit.rythme?.sonAnimations) files.add(edit.rythme.sonAnimations);
   for (const c of edit.custom) if (c.name === "image" && typeof c.props.fichier === "string") files.add(c.props.fichier);
+  for (const b of edit.broll ?? []) files.add(b.file);
   return [...files];
 }
 
@@ -63,6 +64,9 @@ export function mediaErrors(edit: Edit, library: MediaRef[]): string[] {
     if (c.name !== "image") return;
     const f = String(c.props.fichier ?? "");
     if (kindOf.get(f) !== "image") errors.push(`• custom[${i}] → « ${f} » n'est pas une image de la bibliothèque`);
+  });
+  (edit.broll ?? []).forEach((b, i) => {
+    if (kindOf.get(b.file) !== "video") errors.push(`• broll[${i}] → « ${b.file} » n'est pas un clip vidéo de la bibliothèque`);
   });
   return errors;
 }

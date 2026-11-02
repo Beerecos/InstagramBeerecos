@@ -101,3 +101,38 @@ test("raccourcis de monteur : image par image, I / O puis X coupe la zone", asyn
   await expect(page.getByTestId("timeline-zone")).toHaveCount(0);
   await expect(tc).toContainText("/ 0:04.00");
 });
+
+test("pistes en plus : clip d'illustration au curseur, cadrage, musique baissée pendant la voix", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "panneaux larges : vérifié sur ordinateur");
+  let version = 1;
+  let edit = initialEdit("prise.mp4", 6000);
+  const saved: typeof edit[] = [];
+  const media = [
+    { id: "c1", kind: "video", title: "Réunion", fileName: "reunion.mp4", durationMs: 8000, licence: "Pixabay", sourceUrl: null, url: "https://bee-api.test/fichiers/reunion.mp4" },
+    { id: "s1", kind: "son", title: "Musique douce", fileName: "musique.mp3", durationMs: 30000, licence: "Pixabay", sourceUrl: null, url: "https://bee-api.test/fichiers/musique.mp3" },
+  ];
+  await page.route("https://bee-api.test/fichiers/**", (route) => route.fulfill({ status: 404, body: "" }));
+  await mockBee(page, {
+    "media-list": () => ({ media }),
+    get: () => ({ montage: { id: "m4", title: "Prise", status: "ready", durationMs: 6000, keptMs: 6000, workspaceId: null, createdAt: "t", updatedAt: `v${version}`, renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit, captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: "https://bee-api.test/fichiers/prise.mp4" }),
+    "save-edit": (body) => { edit = body.edit as typeof edit; saved.push(edit); version++; return {}; },
+  });
+  await page.goto("/reels/m4");
+  await page.getByRole("button", { name: "Médias", exact: true }).click();
+  await page.getByRole("button", { name: "Illustrer au curseur" }).click();
+  await expect(page.getByText("Tout est enregistré")).toBeVisible();
+  expect(saved.at(-1)!.broll).toEqual([{ file: "reunion.mp4", fromMs: 0, toMs: 3000, clipInMs: 0, focusX: 50 }]);
+  await expect(page.getByTestId("timeline-broll")).toHaveCount(1);
+  await expect(page.locator("hyperframes-player")).toHaveAttribute("srcdoc", /class="broll"/);
+
+  const focus = page.getByLabel("Cadrage horizontal de l'illustration 1");
+  await focus.focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect.poll(() => saved.at(-1)!.broll?.[0].focusX).toBe(45);
+
+  await page.getByRole("button", { name: "Placer au curseur" }).click();
+  await expect.poll(() => saved.at(-1)!.sounds.length).toBe(1);
+  await page.getByLabel("Baisser pendant la voix").click();
+  await expect.poll(() => saved.at(-1)!.sounds[0].duck).toEqual({ volume: 0.2 });
+  await expect(page.locator("hyperframes-player")).toHaveAttribute("srcdoc", /id="sfx-0-0" src="https:\/\/bee-api\.test\/fichiers\/musique\.mp3"[^>]*data-volume="0\.2"[\s\S]*id="sfx-0-1"[^>]*data-volume="1"/);
+});

@@ -33,7 +33,8 @@ const BASE_CSS = `
       .take { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
       .anim-host { position: absolute; inset: 0; z-index: 6; }
       .anim-host.behind { z-index: 3; }
-      .matte-wrap { position: absolute; inset: 0; z-index: 5; opacity: 0; }`;
+      .matte-wrap { position: absolute; inset: 0; z-index: 5; opacity: 0; }
+      .broll { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 2; }`;
 
 /** Sous-titres : bloc centré en x = 540, deux lignes au plus, Poppins Medium, contraste sobre (CAPTION_DEFAULTS). */
 export function captionCss(style: Edit["captionStyle"] = {}): string {
@@ -74,6 +75,34 @@ ${o.clips.join("\n")}
   </body>
 </html>
 `;
+}
+
+/** Fenêtres de parole en temps du montage : mots gardés par les coupes, rapprochés (< 400 ms), avec 120 ms de marge. */
+export function speechWindows(words: CaptionWord[], segments: ReturnType<typeof layout>): { fromMs: number; toMs: number }[] {
+  const kept = words.filter((w) => segments.some((g) => w.startMs >= g.fromMs && w.endMs <= g.toMs))
+    .map((w) => ({ fromMs: Math.max(0, toOutputMs(segments, w.startMs) - 120), toMs: toOutputMs(segments, w.endMs) + 120 }));
+  const out: { fromMs: number; toMs: number }[] = [];
+  for (const w of kept) {
+    const last = out[out.length - 1];
+    if (last && w.fromMs - last.toMs < 400) last.toMs = Math.max(last.toMs, w.toMs);
+    else out.push({ ...w });
+  }
+  return out;
+}
+
+/** Morceaux d'un son baissé pendant la parole : début (montage), durée, point de lecture dans le fichier, volume. */
+export function duckPieces(atMs: number, durationMs: number, speech: { fromMs: number; toMs: number }[], volume: number, ducked: number, endMs: number) {
+  const stop = Math.min(atMs + Math.max(0, durationMs), endMs);
+  const pieces: { atMs: number; durationMs: number; mediaStartMs: number; volume: number }[] = [];
+  let t = atMs;
+  const push = (to: number, v: number) => { if (to - t >= 20) pieces.push({ atMs: t, durationMs: to - t, mediaStartMs: t - atMs, volume: v }); t = Math.max(t, to); };
+  for (const w of speech) {
+    if (w.toMs <= t || t >= stop) continue;
+    if (w.fromMs > t) push(Math.min(w.fromMs, stop), volume);
+    if (t < stop) push(Math.min(w.toMs, stop), ducked);
+  }
+  if (t < stop) push(stop, volume);
+  return pieces;
 }
 
 export function buildEditComposition(input: unknown, words: CaptionWord[], opts: EditCompositionOptions): string {
@@ -167,7 +196,23 @@ export function buildEditComposition(input: unknown, words: CaptionWord[], opts:
     clips.push(`      <audio id="whoosh-${i}" src="${media(son)}" data-start="${s(F(c.fromMs))}" data-duration="1" data-volume="${edit.rythme?.volumeSon ?? 0.35}" data-track-index="5"></audio>`);
   });
 
+  // Clips d'illustration (B-roll) : au-dessus de la prise, sous les titres, le détourage et les sous-titres ; muets.
+  (edit.broll ?? []).forEach((b, i) => {
+    const start = F(b.fromMs), visible = F(b.toMs) - start;
+    if (visible <= 0) return;
+    clips.push(`      <video id="broll-${i}" class="broll" src="${media(b.file)}" data-start="${s(start)}" data-duration="${s(visible)}" data-media-start="${s(b.clipInMs)}" data-has-audio="false" muted playsinline data-track-index="8" style="object-position: ${b.focusX}% 50%"></video>`);
+  });
+
+  // Musique baissée pendant la voix : le même fichier joué en morceaux successifs, au volume voulu (temps du montage).
+  const speech = speechWindows(words, segments);
+  const end = totalMs(segments) + (edit.outro ? edit.outro.durationMs : 0);
   edit.sounds.forEach((snd, i) => {
+    if (snd.duck) {
+      duckPieces(F(snd.atMs), snd.durationMs ?? end - F(snd.atMs), speech, snd.volume, Math.min(snd.volume, snd.duck.volume), end).forEach((p, k) => {
+        clips.push(`      <audio id="sfx-${i}-${k}" src="${media(snd.file)}" data-start="${s(p.atMs)}" data-duration="${s(p.durationMs)}" data-media-start="${s(p.mediaStartMs)}" data-volume="${p.volume}" data-track-index="3"></audio>`);
+      });
+      return;
+    }
     const dur = snd.durationMs !== undefined ? ` data-duration="${s(snd.durationMs)}"` : "";
     clips.push(`      <audio id="sfx-${i}" src="${media(snd.file)}" data-start="${s(F(snd.atMs))}"${dur} data-volume="${snd.volume}" data-track-index="3"></audio>`);
   });
