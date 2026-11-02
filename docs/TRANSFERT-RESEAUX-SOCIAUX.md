@@ -41,7 +41,7 @@ Source : `bee-marketing-agent` au commit `6ab3914` (`main`).
 | 2 | Schéma : **aucune migration** — base BeeMarketing partagée (décision du 2026-11-02), tables sociales réutilisées telles quelles | ✅ décidé |
 | 3 | Serveur : les 13 Edge Functions sociales restent celles déjà déployées sur le projet BeeMarketing (une seule implémentation qui écrit dans les tables) ; InstagramBeerecos les appelle avec le jeton de session | ✅ |
 | 4 | Clients API → `src/lib/social/` (`NEXT_PUBLIC_BEE_API_URL`, jeton via `@supabase/ssr`), sous-ensemble social de `api.ts`, rendu Reel en ligne ; tests → `tests/unit/social/lib/` | ✅ 28 tests de plus, suite complète 450 verts |
-| 4 bis | Connexion : `src/server/auth/dal.ts` lit `profiles` / `memberships`, absents de la base BeeMarketing → lire `bee_user_profiles` / `user_roles` avec une table de correspondance des rôles | 🟡 correspondance à valider |
+| 4 bis | Connexion : `src/server/auth/dal.ts` lit `profiles` / `memberships`, absents de la base BeeMarketing → lire `bee_user_profiles` / `user_roles` → lecture serveur de `user_roles` / `organizations` (RLS fermée côté session) ; SUPER_ADMIN ou DIRECTION = admin, sinon lecteur (un seul utilisateur : Cédric, 2026-11-02) | ✅ |
 | 5 | Interface : `src/components/social/` → composants client Next.js (`react-router-dom` → `next/navigation`), pages `/studio`, `/video`, `/calendar` existantes branchées | |
 | 6 | Vérifications complètes (lint, typecheck, tests, e2e), puis décision de retrait côté BeeMarketing | |
 
@@ -88,15 +88,13 @@ Source : `bee-marketing-agent` au commit `6ab3914` (`main`).
 - Non portés (restent dans BeeMarketing avec les Edge Functions) : tests d'endpoints qui simulent `supabase/functions/_shared`
   (`social-publications-endpoint`, `deliverables-endpoint`, `studio-transfer`), et `reel-render-local` (serveur de rendu local).
 
-## Correspondance des rôles proposée (à valider)
+## Rôles (décision du 2026-11-02)
 
-| Rôle BeeMarketing (`user_roles.role_key`) | Rôle InstagramBeerecos |
-|---|---|
-| SUPER_ADMIN, DIRECTION | admin |
-| MARKETING | content_manager |
-| REGIONAL_MANAGER, ANIMATOR, SUPER_ANIMATOR | club_manager |
-| SALES, TELEPROSPECTOR, AMBASSADOR, SUPER_AMBASSADOR | sales |
-| MEMBER, SYSTEM_AGENT, aucun rôle | viewer |
+Seul utilisateur : Cédric (SUPER_ADMIN dans BeeMarketing). Règle retenue : `SUPER_ADMIN` ou `DIRECTION` → admin ;
+tout autre rôle, ou aucun → lecteur. Sans `SUPABASE_SECRET_KEY` côté serveur : lecteur (jamais d'élévation par défaut).
 
-Plusieurs rôles : le plus élevé l'emporte. Les Edge Functions continuent d'appliquer leurs propres règles
-(`_shared/permissions.ts`) : cette correspondance ne règle que l'affichage et les actions propres à InstagramBeerecos.
+## Points d'attention pour la mise en service
+
+- `SUPABASE_SECRET_KEY` (InstagramBeerecos) doit être la clé du projet BeeMarketing, sinon accès en lecture seule.
+- Les modules propres à InstagramBeerecos (missions, mémoire de marque, Watchdog) lisent des tables absentes de la base
+  BeeMarketing : ils afficheront une erreur tant que ces tables ne sont pas créées (avec des noms sans collision, après accord).

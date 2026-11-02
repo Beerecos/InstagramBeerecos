@@ -44,3 +44,13 @@ const MATRIX: Record<Role, readonly Permission[]> = {
 export function can(role: Role, permission: Permission): boolean {
   return MATRIX[role].includes(permission);
 }
+
+/**
+ * Base partagée avec BeeMarketing (2026-11-02) : les rôles viennent de `user_roles.role_key`.
+ * Un seul utilisateur prévu (Cédric) : la direction est administratrice, tout autre rôle reste lecteur.
+ */
+export const BEEMARKETING_ADMIN_ROLES = ["SUPER_ADMIN", "DIRECTION"] as const;
+
+export function roleFromBeeMarketing(roleKeys: readonly string[]): Role {
+  return roleKeys.some((k) => (BEEMARKETING_ADMIN_ROLES as readonly string[]).includes(k)) ? "admin" : "viewer";
+}

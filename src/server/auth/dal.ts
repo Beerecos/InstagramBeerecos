@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { isDemoMode } from "@/lib/env/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { ROLES, can, type Permission, type Role } from "@/domain/roles";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { can, roleFromBeeMarketing, type Permission, type Role } from "@/domain/roles";
 
 export type CurrentUser = {
   id: string;
@@ -26,7 +27,7 @@ const DEMO_USER: CurrentUser = {
 
 /**
  * Data Access Layer : seule porte d'entrée pour connaître l'utilisateur courant.
- * Vérifie le JWT (getClaims) puis lit l'adhésion sous RLS. Mémoïsé par requête.
+ * Vérifie le JWT (getClaims) puis lit le rôle BeeMarketing (`user_roles`) côté serveur. Mémoïsé par requête.
  */
 export const getCurrentUser = cache(async (): Promise<CurrentUser> => {
   // Toujours évalué à la requête, jamais figé au build (quel que soit l'environnement de build).
@@ -38,20 +39,24 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser> => {
   const claims = auth?.claims;
   if (!claims?.sub) redirect("/login");
 
-  const [{ data: profile }, { data: membership }] = await Promise.all([
-    supabase.from("profiles").select("full_name").eq("id", claims.sub).maybeSingle(),
-    supabase
-      .from("memberships")
-      .select("role, organization:organizations(id, name)")
-      .eq("user_id", claims.sub)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  // Base BeeMarketing : `user_roles` et `organizations` n'ont pas de politique de lecture pour la session
+  // (RLS fermée). Lecture serveur à privilèges élevés, limitée à l'utilisateur dont le JWT vient d'être vérifié.
+  let roleKeys: string[] = [];
+  let org: { id: string; name: string } | null = null;
+  try {
+    const admin = createSupabaseAdminClient();
+    const [{ data: roles }, { data: organization }] = await Promise.all([
+      admin.from("user_roles").select("role_key").eq("user_id", claims.sub),
+      admin.from("organizations").select("id, name").order("created_at", { ascending: true }).limit(1).maybeSingle(),
+    ]);
+    roleKeys = (roles ?? []).map((r) => String(r.role_key));
+    org = (organization as { id: string; name: string } | null) ?? null;
+  } catch {
+    // Clé secrète absente : accès en lecture seule, jamais d'élévation par défaut.
+  }
 
-  const fullName = (profile?.full_name as string | null) ?? (claims.email as string | undefined) ?? "";
-  const role = ROLES.includes(membership?.role as Role) ? (membership!.role as Role) : "viewer";
-  const org = membership?.organization as unknown as { id: string; name: string } | null;
+  const fullName = (claims.email as string | undefined) ?? "";
+  const role: Role = roleFromBeeMarketing(roleKeys);
 
   return {
     id: claims.sub,
