@@ -51,6 +51,7 @@ puis date, légende, CTA et mot-clé (`update`). Aucune publication ni programma
 |---|---|
 | Montage filmé (import multi-prises, transcription, clic sur un mot, correction du texte sans toucher l'audio, coupes et rétablissement, annuler/refaire, cadrage/zoom, sous-titres, animations par séquence, sons, médias, retours, planche contact, rendu) | ✅ code BeeMarketing raccordé ; exécution réelle = fonction `montage` (non testée ici contre la production) |
 | **Montage instantané** : coupe, rétablissement, recadrage, sous-titres et correction de mots appliqués tout de suite ; enregistrement en arrière-plan (file sérialisée, regroupement, version serveur vérifiée, conflit signalé sans écrasement, nouvelle tentative) ; annuler / refaire locaux immédiats (Ctrl+Z, Ctrl+Maj+Z) ; alerte si l'on quitte pendant un enregistrement | ✅ (`src/domain/studio/edit-sync.ts`, e2e avec serveur simulé) |
+| **Timeline** : timecode à l'image, zoom jusqu'à 320 px/s, couper au curseur (S) sans rien retirer, morceaux de la piste Vidéo sélectionnables, retirer (Suppr, rétablissable) et tirer leurs bords à la souris ou aux flèches (bornés par les voisins et les changements de prise), aimantation sur les mots, les coupes et la tête de lecture, forme d'onde décodée dans le navigateur (prises de 250 Mo au plus) | ✅ (`src/domain/studio/timeline.ts`, e2e sur une vraie vidéo FFmpeg) |
 | Invalidation des rendus et validations après modification | ✅ côté serveur (`STALE`, empreinte de planche) — logique BeeMarketing, non modifiée |
 | Post et export : couverture prise dans le MP4, légende/CTA/mot-clé/destination/hashtags liés à la version, MP4, PNG, TXT, SRT recalculé sur les coupes | ✅ sans Meta, DM ni calendrier ; légende sur l'appareil, ou sur le serveur pour un des 72 réels (`reel-caption-save`) |
 | Éditeur IA unique (MotionSpec) : brief, scènes, voix, visuels, aperçu, rendu ; « Recommandation » = modèle converti en scènes ; contenus hérités lisibles et repris en scènes | ✅ |
@@ -88,8 +89,8 @@ puis date, légende, CTA et mot-clé (`update`). Aucune publication ni programma
 
 ### Vérifications (2026-11-02)
 
-`npm run lint` ✅ · `npm run typecheck` ✅ · `npm test` ✅ 528 tests (65 fichiers) + 11 tests `automation/` ·
-`npm run build` (mode démo) ✅ · `npm run test:e2e` ✅ 37 réussis (serveur BeeMarketing simulé : `tests/e2e/bee-api.ts`), 3 limités à un format. E2E en mode démo, sans
+`npm run lint` ✅ · `npm run typecheck` ✅ · `npm test` ✅ 533 tests (66 fichiers) + 11 tests `automation/` ·
+`npm run build` (mode démo) ✅ · `npm run test:e2e` ✅ 38 réussis (serveur BeeMarketing simulé : `tests/e2e/bee-api.ts`), 3 limités à un format. E2E en mode démo, sans
 serveur de montage ni rendu réel : ils ne prouvent ni un MP4 généré ni une transcription réelle.
 
 ## Périmètre inventorié

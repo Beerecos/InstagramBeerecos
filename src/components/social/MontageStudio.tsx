@@ -36,6 +36,7 @@ import type { Scene } from "@/domain/social/montage/scenes";
 import ReelBrandCharter from "@/components/social/ReelBrandCharter";
 import MontagePublish from "@/components/social/MontagePublish";
 import AiEditor from "@/components/reels/ai-editor";
+import { useWaveform } from "@/components/reels/use-waveform";
 import { EditSync, History, type SyncState } from "@/domain/studio/edit-sync";
 import PostPanel from "@/components/reels/post-panel";
 import type { CustomAnimation } from "@/domain/social/montage/suggest";
@@ -44,7 +45,7 @@ import { isMontageConfigured, montage, reels, type MontageDetail, type MontageSu
 import { buildEditComposition } from "@/domain/social/montage/edit-composition";
 import { MAX_UPLOAD_BYTES, MONTAGE_STATUS_LABELS, takesOf } from "@/domain/social/montage/montage";
 import { energyFrames, speechIslands } from "@/domain/social/montage/pipeline";
-import { layout, MAX_STRIP_MS, MAX_TAKES, takeBreaks, toOutputMs, type Edit } from "@/domain/social/montage/edit";
+import { layout, MAX_STRIP_MS, MAX_TAKES, takeBreaks, takeStrip, toOutputMs, type Edit } from "@/domain/social/montage/edit";
 import { checkStudioEdit, cutSource, outputToSourceMs, restoreSource, wordSpan } from "@/domain/social/montage/studio";
 import { MATTE_COMMAND, MATTE_MAX_BYTES, matteAt } from "@/domain/social/montage/matte";
 
@@ -449,7 +450,27 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
   const shownRanges = proposal?.edit.ranges ?? data?.montage.edit?.ranges;
   const segments = useMemo(() => (shownRanges ? layout(shownRanges) : []), [shownRanges]);
   const scenes = useMemo(() => studioSequences(data?.montage.captions ?? [], shownRanges ?? [], data?.montage.reel?.keyword), [data?.montage.captions, data?.montage.reel?.keyword, shownRanges]);
-  const onTime = useCallback((seconds: number) => setPlayOut(Math.round(seconds * 1000)), []);
+  // Après un déplacement manuel, la position choisie est gardée jusqu'à ce que le lecteur l'ait rejointe (ou reparte
+  // en lecture) : ses mises à jour périodiques ne ramènent pas la tête de lecture à l'ancienne position.
+  const manualSeek = useRef<{ ms: number; at: number; last: number | null } | null>(null);
+  const onTime = useCallback((seconds: number) => {
+    const ms = Math.round(seconds * 1000);
+    const s = manualSeek.current;
+    if (s) {
+      const caughtUp = Math.abs(ms - s.ms) <= 150;
+      const playing = s.last !== null && ms !== s.last && Date.now() - s.at > 1500;
+      s.last = ms;
+      if (!caughtUp && !playing) return;
+      manualSeek.current = null;
+    }
+    setPlayOut(ms);
+  }, []);
+  const waveTakes = useMemo(() => {
+    const e = data?.montage.edit;
+    if (!e || !data?.videoUrl) return [];
+    return takeStrip(e).map((t) => ({ key: t.file, url: t.file === e.video ? data.videoUrl! : data.takeUrls?.[t.file] ?? "", fromMs: t.fromMs, toMs: t.toMs })).filter((t) => t.url);
+  }, [data]);
+  const { wave, note: waveNote } = useWaveform(waveTakes, data?.montage.durationMs ?? 0);
 
   if (error && !data) return <p role="alert" className="text-sm text-red-700">{error}</p>;
   if (!data) return <p role="status" className="text-sm text-mut">Chargement du montage…</p>;
@@ -479,6 +500,9 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
     if (!segments.length) return;
     const seconds = toOutputMs(segments, sourceMs) / 1000;
     setMonitorView("edit");
+    // La tête de lecture suit le déplacement tout de suite, même sans lecture (couper au curseur, timecode).
+    manualSeek.current = { ms: Math.round(seconds * 1000), at: Date.now(), last: null };
+    setPlayOut(Math.round(seconds * 1000));
     if (player.current) player.current.seek(seconds); else pendingSeek.current = seconds;
   };
   /** Attend la fin de l'enregistrement en arrière-plan avant une action serveur (rendu, transcription…). */
@@ -780,7 +804,7 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
       </section>:null}
       {m.edit && m.durationMs ? (
         <StudioTimeline onDeleteScene={deleteScene} deleteDisabled={unsaved} onOpenSounds={()=>{setLibraryTab("sounds");setLibraryOpen(true);}} onOpenLibrary={()=>{setLibraryTab("animations");setLibraryOpen(true);}} scenes={scenes} selectedScene={activeScene?.index} onSelectScene={selectScene} onDropScene={(name,scene,fromIndex)=>animations.current?.place(name,scene,fromIndex)} durationMs={m.durationMs} ranges={proposal?.edit.ranges ?? m.edit.ranges} captions={m.captions} custom={proposal?.edit.custom ?? draft} sounds={proposal?.edit.sounds ?? m.edit.sounds} outroMs={(proposal?.edit??m.edit).outro?.durationMs} onSeekOutro={()=>{setMonitorView("edit");player.current?.seek(segments.reduce((n,s)=>n+s.toMs-s.fromMs,0)/1000);}} playheadMs={playSource}
-          onSeek={seekSource} selected={selectedAnim} onSelectAnimation={(i) => { setSelectedId(draft[i]?.id ?? null); const scene=scenes.find(s=>draft[i].fromMs>=s.startMs&&draft[i].fromMs<s.endMs); if(scene)setSelectedSceneIndex(scene.index); setPanel("animations"); }} takeBreaks={breaks} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChangeAnimation={(_i,a) => changeAnimation(a)} />
+          onSeek={seekSource} selected={selectedAnim} onSelectAnimation={(i) => { setSelectedId(draft[i]?.id ?? null); const scene=scenes.find(s=>draft[i].fromMs>=s.startMs&&draft[i].fromMs<s.endMs); if(scene)setSelectedSceneIndex(scene.index); setPanel("animations"); }} takeBreaks={breaks} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChangeAnimation={(_i,a) => changeAnimation(a)} onChangeRanges={proposal ? undefined : (r) => { if (m.edit) void save({ ...m.edit, ranges: r }); }} waveform={wave} waveformNote={waveNote} />
       ) : null}
       <p role="status" className="text-xs text-mut">{unsaved ? "Modifications locales non enregistrées : appliquez ou annulez la proposition et enregistrez les animations avant le transfert." : "Montage enregistré sur le serveur."}</p>
       <StudioTransfer sourceType="montage" sourceId={m.id} expectedSourceVersion={m.updatedAt} disabled={!m.edit || saving || animationBusy || unsaved || transcribing} />
