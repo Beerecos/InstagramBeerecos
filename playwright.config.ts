@@ -11,12 +11,13 @@ export default defineConfig({
     { name: "desktop", use: { ...devices["Desktop Chrome"], launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } } },
     { name: "mobile", use: { ...devices["Pixel 7"], launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } } },
   ],
-  // Mode démo : aucune donnée réelle, aucun appel externe.
+  // Mode démo : aucune donnée réelle, aucun appel externe. Le serveur BeeMarketing est une adresse fictive
+  // (https://bee-api.test) que les tests simulent avec page.route ; non simulée, elle échoue proprement.
   webServer: {
     command: `npm run build && npx next start -p ${PORT}`,
     url: `http://localhost:${PORT}/api/health`,
     timeout: 300_000,
     reuseExistingServer: !process.env.CI,
-    env: { BEEMARKETING_DEMO_MODE: "1", NEXT_TELEMETRY_DISABLED: "1" },
+    env: { BEEMARKETING_DEMO_MODE: "1", NEXT_TELEMETRY_DISABLED: "1", NEXT_PUBLIC_BEE_API_URL: "https://bee-api.test" },
   },
 });

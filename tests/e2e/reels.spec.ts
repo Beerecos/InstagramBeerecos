@@ -1,16 +1,22 @@
 import { expect, test } from "@playwright/test";
+import { mockBee } from "./bee-api";
 
 // Studio des réels (Instagram BeeRecos), en mode démo : aucun appel réel, aucun serveur de montage configuré.
 test("Mes réels est la page d'entrée, avec l'identité Instagram BeeRecos", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  const summary = { id: "m1", title: "V12 · Le réseau qui recommande", status: "uploaded", durationMs: 40000, keptMs: null, workspaceId: null, createdAt: "2026-11-02T09:00:00.000Z", updatedAt: "2026-11-02T10:00:00.000Z", renderStatus: null, sentToReels: false, finalVideoUrl: null };
+  await mockBee(page, { list: () => ({ montages: [summary] }), get: () => ({ montage: { ...summary, aiSource: null, edit: null, captions: [], canUndo: false, error: null, renderError: null }, videoUrl: null }) });
   await page.goto("/");
   await expect(page).toHaveTitle(/Mes réels · Instagram BeeRecos/);
   await expect(page.getByRole("heading", { level: 1, name: "Mes réels" })).toBeVisible();
   const create = page.getByRole("group", { name: "Créer un réel" }).first();
   await expect(create.getByRole("link", { name: "Importer ma vidéo" })).toHaveAttribute("href", "/reels/nouveau/video");
   await expect(create.getByRole("link", { name: "Créer avec l'IA" })).toHaveAttribute("href", "/reels/nouveau/ia");
-  await expect(page.getByText(/serveur de montage n'est pas configuré/)).toBeVisible();
+  const card = page.getByRole("link", { name: /V12 · Le réseau qui recommande/ });
+  await expect(card).toHaveAttribute("href", "/reels/m1");
+  await expect(card).toContainText("Vidéo reçue");
+  await expect(card).toContainText("Lancer la transcription");
   // Plus de barre Queen Bee ni de TopBar issues des missions.
   await expect(page.getByRole("button", { name: /Demander à Queen Bee/ })).toHaveCount(0);
   await expect(page.getByText("Claude à connecter")).toHaveCount(0);

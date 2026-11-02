@@ -36,6 +36,7 @@ import type { Scene } from "@/domain/social/montage/scenes";
 import ReelBrandCharter from "@/components/social/ReelBrandCharter";
 import MontagePublish from "@/components/social/MontagePublish";
 import AiEditor from "@/components/reels/ai-editor";
+import { EditSync, History, type SyncState } from "@/domain/studio/edit-sync";
 import PostPanel from "@/components/reels/post-panel";
 import type { CustomAnimation } from "@/domain/social/montage/suggest";
 import { stampMotionVersions } from "@/domain/social/montage/beemotion";
@@ -332,8 +333,10 @@ function useLibrary() {
   return { library, error, refresh };
 }
 
+type MontageData = Awaited<ReturnType<typeof montage.get>>;
+
 function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; onOpenSource:(source:StudioSourceRef)=>void }) {
-  const [data, setData] = useState<{ montage: MontageDetail; videoUrl: string | null; takeUrls?: Record<string, string>; mediaUrls?: Record<string, string>; matteUrls?: Record<string, string> } | null>(null);
+  const [data, setData] = useState<MontageData | null>(null);
   /** Avertissements du dernier contrôle du storyboard (gardés quand le panneau Idéation se recharge). */
   const [ideationWarnings, setIdeationWarnings] = useState<string[]>([]);
   const lib = useLibrary();
@@ -370,8 +373,44 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
   const saved = useRef<string>("[]");
   const [logo,setLogo]=useState<Edit["logo"]>();
   const savedLogo=useRef<string|undefined>(undefined);
+  // Montage instantané : file d'enregistrement en arrière-plan et historique local (annuler / refaire immédiats).
+  const sync = useRef<EditSync<Edit, { i: number; text: string }, MontageData> | null>(null);
+  const editHistory = useRef(new History<Edit>());
+  const undoOrder = useRef<("draft" | "edit")[]>([]);
+  const redoOrder = useRef<("draft" | "edit")[]>([]);
+  const [syncState, setSyncState] = useState<SyncState>({ status: "enregistré", pending: 0 });
+  const hydrateRef = useRef<(r: MontageData, resetDraft?: boolean) => void>(() => {});
+  const shortcuts = useRef({ undo: () => {}, redo: () => {} });
+  useEffect(() => {
+    // Ctrl/Cmd+Z, Ctrl/Cmd+Maj+Z ou Ctrl+Y, hors des champs de saisie (leur annulation native reste disponible).
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName))) return;
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) { e.preventDefault(); shortcuts.current.undo(); }
+      else if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); shortcuts.current.redo(); }
+    };
+    const onLeave = (e: BeforeUnloadEvent) => { if (sync.current?.busy) { e.preventDefault(); e.returnValue = ""; } };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("beforeunload", onLeave);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("beforeunload", onLeave); };
+  }, []);
+  if (!sync.current) sync.current = new EditSync<Edit, { i: number; text: string }, MontageData>({
+    saveEdit: (edit, base) => montage.saveEdit(id, edit, base),
+    fixWords: (fixes) => montage.fixWords(id, fixes),
+    fetch: async () => { const r = await montage.get(id); return { data: r, updatedAt: r.montage.updatedAt }; },
+    onFresh: (r) => hydrateRef.current(r),
+    onState: setSyncState,
+  }, "");
   const load = useCallback((resetDraft = false) => {
     return montage.get(id).then((r) => {
+      if (!sync.current?.busy) sync.current?.reset(r.montage.updatedAt);
+      else return; // des modifications locales partent encore : la version fraîche arrivera par la file
+      hydrateRef.current(r, resetDraft);
+    }).catch((e) => setError(e.message));
+  }, [id]);
+  hydrateRef.current = (r: MontageData, resetDraft = false) => {
       if (r.montage.edit) r.montage.edit.custom = withAnimationIds(r.montage.edit.custom);
       setData(r);
       const beforeLogo=savedLogo.current;
@@ -388,8 +427,7 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
       const nextChoices = r.montage.edit?.animationChoices;
       setAnimationChoices((c) => resetDraft || JSON.stringify(c) === previouslySavedChoices ? nextChoices : c);
       savedChoices.current = JSON.stringify(nextChoices);
-    }).catch((e) => setError(e.message));
-  }, [id]);
+  };
   useEffect(() => { void load(); }, [load]);
   const renderStatus = data?.montage.renderStatus;
   useEffect(() => {
@@ -422,6 +460,7 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
     const normalized = withAnimationIds(next);
     if (JSON.stringify(normalized) === JSON.stringify(draft)) return;
     draftUndo.current = [...draftUndo.current, draft].slice(-30); draftRedo.current = [];
+    undoOrder.current = [...undoOrder.current, "draft" as const].slice(-60); redoOrder.current = [];
     setMonitorView("edit");
     setDraft(normalized);
     if (!normalized.some((a) => a.id === selectedId)) setSelectedId(normalized[normalized.length - 1]?.id ?? null);
@@ -442,14 +481,46 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
     setMonitorView("edit");
     if (player.current) player.current.seek(seconds); else pendingSeek.current = seconds;
   };
+  /** Attend la fin de l'enregistrement en arrière-plan avant une action serveur (rendu, transcription…). */
+  const settle = async () => {
+    for (let i = 0; i < 600 && sync.current?.busy; i++) await new Promise((r) => setTimeout(r, 100));
+    if (sync.current && ["conflit", "erreur"].includes(syncState.status)) throw new Error("Enregistrement en attente : réglez-le avant cette action.");
+  };
   const act = async (fn: () => Promise<unknown>) => {
     setSaving(true); setError(null);
-    try { await fn(); await load(); return true; } catch (e) { setError(e instanceof Error ? e.message : "Action impossible."); return false; } finally { setSaving(false); }
+    try { await settle(); await fn(); await load(); return true; } catch (e) { setError(e instanceof Error ? e.message : "Action impossible."); return false; } finally { setSaving(false); }
   };
-  const save = (edit: Edit) => act(() => montage.saveEdit(m.id, edit, m.updatedAt));
+  // Coupe, rétablissement, recadrage, sous-titres… : appliqués tout de suite, enregistrés en arrière-plan.
+  const applyLocal = (edit: Edit) => setData((d) => d ? { ...d, montage: { ...d.montage, edit, keptMs: edit.ranges.reduce((n, r) => n + r.toMs - r.fromMs, 0) } } : d);
+  const save = async (edit: Edit) => {
+    if (!m.edit || frozen) return false;
+    setError(null);
+    editHistory.current.record(m.edit);
+    undoOrder.current = [...undoOrder.current, "edit" as const].slice(-60); redoOrder.current = [];
+    applyLocal(edit);
+    sync.current?.pushEdit(edit);
+    return true;
+  };
+  const fixWord = (i: number, text: string) => {
+    setData((d) => d ? { ...d, montage: { ...d.montage, captions: d.montage.captions.map((w, k) => (k === i ? { ...w, text } : w)) } } : d);
+    sync.current?.pushFix([{ i, text }]);
+  };
+  const undo = () => {
+    const kind = undoOrder.current.pop();
+    if (kind === "draft") { const previous = draftUndo.current.pop(); if (previous) { draftRedo.current.push(draft); setDraft(previous); redoOrder.current.push("draft"); } return; }
+    if (kind === "edit" && m.edit) { const previous = editHistory.current.undo(m.edit); if (previous) { applyLocal(previous); sync.current?.pushEdit(previous); redoOrder.current.push("edit"); } return; }
+    if (!unsaved) void act(() => montage.undo(m.id));
+  };
+  const redo = () => {
+    const kind = redoOrder.current.pop();
+    if (kind === "draft") { const next = draftRedo.current.pop(); if (next) { draftUndo.current.push(draft); setDraft(next); undoOrder.current.push("draft"); } return; }
+    if (kind === "edit" && m.edit) { const next = editHistory.current.redo(m.edit); if (next) { applyLocal(next); sync.current?.pushEdit(next); undoOrder.current.push("edit"); } return; }
+    if (!unsaved) void act(() => montage.redo(m.id));
+  };
+  shortcuts.current = { undo: () => { if (!saving && !animationBusy && !frozen) undo(); }, redo: () => { if (!saving && !animationBusy && !frozen) redo(); } };
   const transcribe = async () => {
     setTranscribing(true); setError(null);
-    try { await montage.transcribe(m.id); } catch (e) { setError(e instanceof Error ? e.message : "Transcription impossible."); } finally { setTranscribing(false); load(); }
+    try { await settle(); await montage.transcribe(m.id); } catch (e) { setError(e instanceof Error ? e.message : "Transcription impossible."); } finally { setTranscribing(false); load(); }
   };
   const cutWords = (from: number, to: number) => {
     if (!m.edit) return;
@@ -485,12 +556,12 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
   const showRendered = monitorView === "render" && !unsaved && m.renderStatus === "done" && Boolean(m.finalVideoUrl);
   const applyProposal = async (p: Proposal) => {
     setSaving(true);
-    try { await montage.saveEdit(m.id, p.edit, p.baseUpdatedAt); setProposal(null); await load(true); }
+    try { await settle(); await montage.saveEdit(m.id, p.edit, p.source ? sync.current!.baseVersion : p.baseUpdatedAt); setProposal(null); await load(true); }
     finally { setSaving(false); }
   };
   const saveDraft = async (custom: CustomAnimation[] = draft) => {
     setSaving(true); setError(null);
-    try { await montage.saveEdit(m.id, { ...m.edit!, custom: stampMotionVersions(withAnimationIds(custom)), animationChoices, logo }, m.updatedAt); await load(true); }
+    try { await settle(); await montage.saveEdit(m.id, { ...m.edit!, custom: stampMotionVersions(withAnimationIds(custom)), animationChoices, logo }, sync.current!.baseVersion || m.updatedAt); await load(true); }
     catch (e) { setError(e instanceof Error ? e.message : "Enregistrement impossible."); throw e; }
     finally { setSaving(false); }
   };
@@ -501,7 +572,8 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
     }
     setSaving(true); setError(null); setNotice(null); setProposal(null);
     try {
-      let baseUpdatedAt = m.updatedAt;
+      await settle();
+      let baseUpdatedAt = sync.current?.baseVersion || m.updatedAt;
       if (!m.captions.length) {
         setTranscribing(true); await montage.transcribe(m.id); setTranscribing(false);
         baseUpdatedAt = (await montage.get(m.id)).montage.updatedAt;
@@ -517,6 +589,7 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
   const seedReel = async () => {
     setSaving(true); setError(null); setNotice(null); setProposal(null);
     try {
+      await settle();
       const r = await reels.seed(m.id);
       setNotice(`${r.placed} animation(s) du Reel posée(s) sur la voix (révision ${r.revision}). ↶ Annuler le défait.${r.warnings.length ? `\n${r.warnings.join("\n")}` : ""}`);
       setPanel("animations");
@@ -535,17 +608,14 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
         <button type="button" className="btn-ghost min-h-[44px] px-3 text-sm" onClick={()=>setExpanded(!expanded)}>{expanded ? "Réduire le studio" : "Agrandir le studio"}</button>
         <div className="min-w-0 basis-full lg:basis-auto lg:min-w-[200px] lg:flex-1">
           <p className="kicker text-brand">{MONTAGE_STATUS_LABELS[m.status]}{saving ? " · enregistrement…" : ""}</p>
+          <p role="status" aria-live="polite" className={`text-xs ${syncState.status === "conflit" || syncState.status === "erreur" ? "text-red-700" : "text-mut"}`}>
+            {syncState.status === "enregistrement" ? "Enregistrement en arrière-plan…" : syncState.status === "erreur" ? <>Non enregistré : {syncState.error} <button type="button" className="underline" onClick={() => sync.current?.retry()}>Réessayer</button></> : syncState.status === "conflit" ? <>Modifié ailleurs : tes derniers changements ne sont pas enregistrés. <button type="button" className="underline" onClick={() => { editHistory.current.clear(); undoOrder.current = []; redoOrder.current = []; sync.current?.reset(""); void load(true); }}>Recharger la version du serveur</button></> : "Tout est enregistré"}
+          </p>
           <h2 className="truncate font-display text-xl">{m.title}</h2>
           <p className="text-xs text-mut">Durée montée : {sec(m.keptMs)} sur {sec(m.durationMs)} de {breaks.length ? `${breaks.length + 1} prises` : "prise"}.</p>
         </div>
-        <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={saving || animationBusy || frozen || (!m.canUndo && !draftUndo.current.length)} onClick={() => {
-          const previous = draftUndo.current.pop();
-          if (previous) { draftRedo.current.push(draft); setDraft(previous); } else if (!unsaved) void act(() => montage.undo(m.id));
-        }} title="Annuler la dernière modification">↶ Annuler</button>
-        <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={saving || animationBusy || frozen || (!m.canRedo && !draftRedo.current.length)} onClick={() => {
-          const next = draftRedo.current.pop();
-          if (next) { draftUndo.current.push(draft); setDraft(next); } else if (!unsaved) void act(() => montage.redo(m.id));
-        }} title="Refaire la modification annulée">↷ Refaire</button>
+        <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={saving || animationBusy || frozen || (!m.canUndo && !undoOrder.current.length)} onClick={undo} title="Annuler la dernière modification (Ctrl+Z)">↶ Annuler</button>
+        <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={saving || animationBusy || frozen || (!m.canRedo && !redoOrder.current.length)} onClick={redo} title="Refaire la modification annulée (Ctrl+Maj+Z)">↷ Refaire</button>
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={!ready} onClick={() => setPanel("coupe")}>✂ Coupe auto</button>
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={!m.edit || saving || animationBusy || frozen || transcribing || m.status === "transcribing" || unsaved} onClick={autoAll} title="Préparer une proposition de coupe et d’animations à tester avant validation">⚡ Tout auto</button>
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={!m.edit} onClick={() => setPanel("planche")}>Prévisualiser</button>
@@ -650,7 +720,7 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
             {panel === "sous-titres" && (ready && m.edit ? (
               <StudioCaptions key={m.updatedAt} edit={m.edit} words={m.captions} selectedWord={selection ? Math.min(selection.from, selection.to) : null} disabled={saving || animationBusy || frozen || (unsaved&&proposal?.source!=="captions")} onPreview={patch=>manualPreview({...m.edit!,...patch},"captions")}
                 onSave={async (patch) => { if (m.edit) {if(await save({ ...m.edit, ...patch }))setProposal(null);} }}
-                onFixWord={async (i, text) => { await act(() => montage.fixWords(m.id, [{ i, text }])); }} />
+                onFixWord={async (i, text) => { fixWord(i, text); }} />
             ) : <p className="text-sm text-mut">Transcrivez d&apos;abord la prise.</p>)}
             {panel === "retours" && (ready ? (
               <StudioFeedback montageId={m.id} disabled={saving || animationBusy || frozen || (!proposal && unsaved)} proposal={proposal} onProposal={setProposal}
