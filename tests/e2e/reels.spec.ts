@@ -24,7 +24,7 @@ test("navigation : Scripts → Studio → Bibliothèque → Calendrier", async (
   await nav().getByRole("link", { name: "Scripts" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Scripts" })).toBeVisible();
   await expect(page.getByRole("link", { name: /J'ai déjà mes prises/ })).toHaveAttribute("href", "/reels/tournage");
-  await expect(page.getByRole("link", { name: /Nouveau script avec l'IA/ })).toHaveAttribute("href", "/reels/nouveau/ia");
+  await expect(page.getByRole("link", { name: /Nouveau script/ }).first()).toHaveAttribute("href", "/scripts/nouveau");
   await nav().getByRole("link", { name: "Bibliothèque" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Bibliothèque" })).toBeVisible();
   await nav().getByRole("link", { name: "Calendrier" }).click();
@@ -108,4 +108,38 @@ test("long rush : segments proposés depuis les annonces, corrigés, plan export
   expect(plan.rush).toMatchObject({ fileName: "session.mp4", size });
   expect(plan.segments.map((s: { n: number; sourceFromMs: number }) => [s.n, s.sourceFromMs])).toEqual([[1, 2600], [2, 10500]]);
   expect(statSync(rush).size).toBe(size);
+});
+
+test("éditeur de script : du hook au call to action, contrôles, prompteur, brouillon conservé", async ({ page }) => {
+  await page.goto("/scripts");
+  await page.getByRole("link", { name: /Nouveau script/ }).first().click();
+  await expect(page).toHaveURL(/\/scripts\/nouveau$/);
+  const blocks = page.locator('ol[aria-label="Blocs du script"] > li');
+  await expect(blocks).toHaveCount(4);
+  await expect(blocks.first()).toContainText("Hook · accroche");
+  await expect(blocks.last()).toContainText("Call to action");
+  await page.getByLabel("Titre").fill("Après la reco");
+  const fill = async (i: number, voice: string, screen: string) => {
+    await blocks.nth(i).getByLabel("Texte à dire").fill(voice);
+    if (screen) await blocks.nth(i).getByLabel(/Texte à l'écran/).fill(screen);
+  };
+  await fill(0, "Tu recommandes un pro, et après ?", "Et après ?");
+  await fill(1, "Une mise en relation réussie crée de la confiance entre trois personnes, et cette confiance se cultive chaque semaine.", "La confiance se cultive");
+  await fill(2, "Chez BeeRecos, chaque recommandation est enregistrée et suivie, pour que personne ne l'oublie en chemin.", "Chaque reco suivie");
+  await fill(3, "Envie de voir comment ça se passe ? Commente club.", "");
+  await expect(blocks.last()).toContainText("prononce le mot-clé CLUB en majuscules");
+  await expect(page.getByRole("button", { name: "Enregistrer" })).toBeDisabled();
+  await fill(3, "Envie de voir comment ça se passe ? Commente CLUB et je t'envoie les informations pour visiter un club.", "");
+  await expect(page.getByRole("button", { name: "Enregistrer" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /Faire en réel IA/ })).toBeDisabled();
+  await page.getByRole("button", { name: /Body 2/ }).click();
+  await expect(blocks).toHaveCount(5);
+  await expect(blocks.nth(3)).toContainText("Body 2");
+  await page.getByRole("button", { name: "Prompteur" }).first().click();
+  await expect(page.getByRole("dialog", { name: "Prompteur" })).toContainText("Tu recommandes un pro, et après ?");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByLabel("Titre")).toHaveValue("Après la reco");
+  await expect(page.getByText("brouillon sur cet appareil, non enregistré")).toBeVisible();
 });

@@ -30,7 +30,8 @@ référence et garde son studio jusqu'à vérification. Base Supabase et Edge Fu
 
 | Route | Rôle |
 |---|---|
-| `/scripts` | Les 72 scripts (prompteur, texte, validation) : « Envoyer la prise filmée » → réel filmé ; « Faire en réel IA » → scènes reprises mot pour mot ; nouveau script avec l'IA ; « J'ai déjà mes prises » |
+| `/scripts/nouveau` · `/scripts/[id]` | **Éditeur de script** : blocs HOOK → LEAD → BODY 1 → (OPEN LOOP → BODY 2 → OPEN LOOP → BODY 3) → CTA, texte à dire et texte à l'écran, durée estimée (cible 35–60 s), contrôles (mot-clé prononcé, 7 mots à l'écran, aucun montant ni promesse, orthographe BeeRecos), proposition IA, prompteur ; brouillon sur l'appareil, enregistrement serveur (studio_assets « motion », révisions) → réel IA ou réel filmé |
+| `/scripts` | Mes scripts ; les 72 scripts (prompteur, texte, validation) : « Envoyer la prise filmée » → réel filmé ; « Faire en réel IA » → scènes reprises mot pour mot ; nouveau script avec l'IA ; « J'ai déjà mes prises » |
 | `/` | **Studio** (« Mes réels ») : projets, statut réel, prochaine action ; créer un réel filmé ou IA |
 | `/reels/tournage` | Import des prises déjà tournées (un projet par fichier, associé à son script) ; plan de découpe d'un long rush |
 | `/reels/[id]` | Studio d'un réel (`?panel=post` ouvre « Post et export ») |
@@ -86,8 +87,8 @@ puis date, légende, CTA et mot-clé (`update`). Aucune publication ni programma
 
 ### Vérifications (2026-11-02)
 
-`npm run lint` ✅ · `npm run typecheck` ✅ · `npm test` ✅ 519 tests (63 fichiers) + 11 tests `automation/` ·
-`npm run build` (mode démo) ✅ · `npm run test:e2e` ✅ 31 réussis, 3 limités à un format. E2E en mode démo, sans
+`npm run lint` ✅ · `npm run typecheck` ✅ · `npm test` ✅ 523 tests (64 fichiers) + 11 tests `automation/` ·
+`npm run build` (mode démo) ✅ · `npm run test:e2e` ✅ 33 réussis, 3 limités à un format. E2E en mode démo, sans
 serveur de montage ni rendu réel : ils ne prouvent ni un MP4 généré ni une transcription réelle.
 
 ## Périmètre inventorié
