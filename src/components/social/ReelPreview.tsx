@@ -2,7 +2,7 @@
 import { createElement, forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 /** Commandes exposées par l'aperçu : sauter à un instant, lire, mettre en pause, rejouer depuis le début. */
-export type ReelPreviewHandle = { seek: (seconds: number) => void; play: () => void; pause: () => void; restart: () => void; listen: () => void; bounds: (index: number) => { x: number; y: number; width: number; height: number } | null };
+export type ReelPreviewHandle = { seek: (seconds: number) => void; play: () => void; pause: () => void; paused?: () => boolean; restart: () => void; listen: () => void; bounds: (index: number) => { x: number; y: number; width: number; height: number } | null };
 
 type PlayerElement = HTMLElement & { seek?: (t: number) => void; play?: () => void; pause?: () => void; currentTime?: number; paused?: boolean; muted?: boolean; iframeElement?: HTMLIFrameElement };
 
@@ -71,6 +71,7 @@ const ReelPreview = forwardRef<ReelPreviewHandle, { html: string; title: string;
     },
     play: () => player.current?.play?.(),
     pause: () => player.current?.pause?.(),
+    paused: () => player.current?.paused ?? true,
     restart: () => { player.current?.seek?.(0); player.current?.play?.(); },
     listen: () => { if (player.current) { player.current.muted = false; player.current.play?.(); } },
     bounds: (index: number) => {

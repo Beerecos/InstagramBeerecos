@@ -33,3 +33,24 @@ describe("timeline : opérations non destructives", () => {
     expect(timecode(62_900)).toBe("1:02.27");
   });
 });
+
+import { cutOutputZone, stepMs } from "@/domain/studio/timeline";
+describe("zone I / O", () => {
+  const ranges = [{ fromMs: 0, toMs: 4000 }, { fromMs: 5000, toMs: 9000 }]; // montage : 0–4000 puis 4000–8000
+  it("coupe une zone qui traverse deux morceaux, en temps du montage", () => {
+    expect(cutOutputZone(ranges, 3000, 5000)).toEqual([{ fromMs: 0, toMs: 3000 }, { fromMs: 6000, toMs: 9000 }]);
+  });
+  it("coupe au milieu d'un morceau et accepte des repères inversés", () => {
+    expect(cutOutputZone(ranges, 2000, 1000)).toEqual([{ fromMs: 0, toMs: 1000 }, { fromMs: 2000, toMs: 4000 }, { fromMs: 5000, toMs: 9000 }]);
+  });
+  it("refuse une zone qui ne laisse rien ou trop courte", () => {
+    expect(cutOutputZone(ranges, 0, 8000)).toBeNull();
+    expect(cutOutputZone(ranges, 1000, 1010)).toBeNull();
+  });
+  it("pas d'une image ou d'une seconde", () => {
+    expect(Math.round(stepMs(false) * 30)).toBe(1000);
+    expect(stepMs(true)).toBe(1000);
+  });
+});
+import { timecode as tcf } from "@/domain/studio/timeline";
+describe("timecode", () => { it("compte les images entières", () => { expect(tcf(33)).toBe("0:00.01"); expect(tcf(1033)).toBe("0:01.01"); expect(tcf(999)).toBe("0:01.00"); }); });

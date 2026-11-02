@@ -37,6 +37,7 @@ import ReelBrandCharter from "@/components/social/ReelBrandCharter";
 import MontagePublish from "@/components/social/MontagePublish";
 import AiEditor from "@/components/reels/ai-editor";
 import { useWaveform } from "@/components/reels/use-waveform";
+import { cutOutputZone, stepMs } from "@/domain/studio/timeline";
 import { EditSync, History, type SyncState } from "@/domain/studio/edit-sync";
 import PostPanel from "@/components/reels/post-panel";
 import type { CustomAnimation } from "@/domain/social/montage/suggest";
@@ -359,6 +360,8 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
   const draftUndo = useRef<CustomAnimation[][]>([]);
   const draftRedo = useRef<CustomAnimation[][]>([]);
   const [playOut, setPlayOut] = useState<number | null>(null);
+  /** Repères I / O en temps du montage (zone à couper avec X). */
+  const [zone, setZone] = useState<{ in: number | null; out: number | null }>({ in: null, out: null });
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   /** Prompteur du Reel lié (lot S7) : texte chargé à l'ouverture. */
@@ -381,13 +384,18 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
   const redoOrder = useRef<("draft" | "edit")[]>([]);
   const [syncState, setSyncState] = useState<SyncState>({ status: "enregistré", pending: 0 });
   const hydrateRef = useRef<(r: MontageData, resetDraft?: boolean) => void>(() => {});
-  const shortcuts = useRef({ undo: () => {}, redo: () => {} });
+  const shortcuts = useRef<{ undo: () => void; redo: () => void; key: (e: KeyboardEvent) => boolean }>({ undo: () => {}, redo: () => {}, key: () => false });
   useEffect(() => {
     // Ctrl/Cmd+Z, Ctrl/Cmd+Maj+Z ou Ctrl+Y, hors des champs de saisie (leur annulation native reste disponible).
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName))) return;
-      if (!(e.ctrlKey || e.metaKey)) return;
+      if (!(e.ctrlKey || e.metaKey)) {
+        // Raccourcis de monteur, hors du transcript (qui a ses propres touches) et des actions déjà traitées.
+        if (e.defaultPrevented || e.altKey || t?.closest('[aria-label="Mots de la prise"], [role="dialog"]')) return;
+        if (shortcuts.current.key(e)) e.preventDefault();
+        return;
+      }
       const k = e.key.toLowerCase();
       if (k === "z" && !e.shiftKey) { e.preventDefault(); shortcuts.current.undo(); }
       else if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); shortcuts.current.redo(); }
@@ -541,7 +549,45 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
     if (kind === "edit" && m.edit) { const next = editHistory.current.redo(m.edit); if (next) { applyLocal(next); sync.current?.pushEdit(next); undoOrder.current.push("edit"); } return; }
     if (!unsaved) void act(() => montage.redo(m.id));
   };
-  shortcuts.current = { undo: () => { if (!saving && !animationBusy && !frozen) undo(); }, redo: () => { if (!saving && !animationBusy && !frozen) redo(); } };
+  const totalOut = segments.reduce((n, sg) => n + sg.toMs - sg.fromMs, 0);
+  const seekOutput = (ms: number) => {
+    const v = Math.max(0, Math.min(totalOut, Math.round(ms)));
+    setMonitorView("edit");
+    manualSeek.current = { ms: v, at: Date.now(), last: null };
+    setPlayOut(v);
+    if (player.current) player.current.seek(v / 1000); else pendingSeek.current = v / 1000;
+  };
+  const cutZone = () => {
+    if (!m.edit || zone.in === null || zone.out === null || frozen || proposal) return;
+    const next = cutOutputZone(m.edit.ranges, zone.in, zone.out);
+    if (!next) { setError("Zone trop courte, ou elle retirerait tout le montage."); return; }
+    setZone({ in: null, out: null });
+    void save({ ...m.edit, ranges: next });
+    seekOutput(Math.min(zone.in, zone.out));
+  };
+  const editable = !saving && !animationBusy && !frozen;
+  shortcuts.current = {
+    undo: () => { if (editable) undo(); },
+    redo: () => { if (editable) redo(); },
+    key: (e) => {
+      const pos = playOut ?? 0;
+      switch (e.key) {
+        case " ": if (player.current?.paused?.() ?? true) player.current?.play(); else player.current?.pause(); return true;
+        case "k": case "K": player.current?.pause(); return true;
+        case "l": case "L": player.current?.play(); return true;
+        case "j": case "J": player.current?.pause(); seekOutput(pos - 1000); return true;
+        case "ArrowLeft": player.current?.pause(); seekOutput(pos - stepMs(e.shiftKey)); return true;
+        case "ArrowRight": player.current?.pause(); seekOutput(pos + stepMs(e.shiftKey)); return true;
+        case "Home": seekOutput(0); return true;
+        case "End": seekOutput(totalOut); return true;
+        case "i": case "I": setZone((z) => ({ ...z, in: pos })); return true;
+        case "o": case "O": setZone((z) => ({ ...z, out: pos })); return true;
+        case "x": case "X": if (editable) cutZone(); return true;
+        case "Escape": if (zone.in !== null || zone.out !== null) { setZone({ in: null, out: null }); return true; } return false;
+        default: return false;
+      }
+    },
+  };
   const transcribe = async () => {
     setTranscribing(true); setError(null);
     try { await settle(); await montage.transcribe(m.id); } catch (e) { setError(e instanceof Error ? e.message : "Transcription impossible."); } finally { setTranscribing(false); load(); }
@@ -804,7 +850,7 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
       </section>:null}
       {m.edit && m.durationMs ? (
         <StudioTimeline onDeleteScene={deleteScene} deleteDisabled={unsaved} onOpenSounds={()=>{setLibraryTab("sounds");setLibraryOpen(true);}} onOpenLibrary={()=>{setLibraryTab("animations");setLibraryOpen(true);}} scenes={scenes} selectedScene={activeScene?.index} onSelectScene={selectScene} onDropScene={(name,scene,fromIndex)=>animations.current?.place(name,scene,fromIndex)} durationMs={m.durationMs} ranges={proposal?.edit.ranges ?? m.edit.ranges} captions={m.captions} custom={proposal?.edit.custom ?? draft} sounds={proposal?.edit.sounds ?? m.edit.sounds} outroMs={(proposal?.edit??m.edit).outro?.durationMs} onSeekOutro={()=>{setMonitorView("edit");player.current?.seek(segments.reduce((n,s)=>n+s.toMs-s.fromMs,0)/1000);}} playheadMs={playSource}
-          onSeek={seekSource} selected={selectedAnim} onSelectAnimation={(i) => { setSelectedId(draft[i]?.id ?? null); const scene=scenes.find(s=>draft[i].fromMs>=s.startMs&&draft[i].fromMs<s.endMs); if(scene)setSelectedSceneIndex(scene.index); setPanel("animations"); }} takeBreaks={breaks} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChangeAnimation={(_i,a) => changeAnimation(a)} onChangeRanges={proposal ? undefined : (r) => { if (m.edit) void save({ ...m.edit, ranges: r }); }} waveform={wave} waveformNote={waveNote} />
+          onSeek={seekSource} selected={selectedAnim} onSelectAnimation={(i) => { setSelectedId(draft[i]?.id ?? null); const scene=scenes.find(s=>draft[i].fromMs>=s.startMs&&draft[i].fromMs<s.endMs); if(scene)setSelectedSceneIndex(scene.index); setPanel("animations"); }} takeBreaks={breaks} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChangeAnimation={(_i,a) => changeAnimation(a)} onChangeRanges={proposal ? undefined : (r) => { if (m.edit) void save({ ...m.edit, ranges: r }); }} waveform={wave} waveformNote={waveNote} zone={zone} onCutZone={cutZone} onClearZone={() => setZone({ in: null, out: null })} />
       ) : null}
       <p role="status" className="text-xs text-mut">{unsaved ? "Modifications locales non enregistrées : appliquez ou annulez la proposition et enregistrez les animations avant le transfert." : "Montage enregistré sur le serveur."}</p>
       <StudioTransfer sourceType="montage" sourceId={m.id} expectedSourceVersion={m.updatedAt} disabled={!m.edit || saving || animationBusy || unsaved || transcribing} />
