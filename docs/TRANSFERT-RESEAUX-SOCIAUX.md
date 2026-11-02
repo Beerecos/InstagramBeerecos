@@ -38,9 +38,10 @@ Source : `bee-marketing-agent` au commit `6ab3914` (`main`).
 | Phase | Contenu | Statut |
 |---|---|---|
 | 1 | Moteur métier pur → `src/domain/social/` ; tests → `tests/unit/social/` ; fixtures `content/reels-72/` ; assets manquants de `public/hyperframes/` | ✅ 41 fichiers de test, 354 tests verts (identique à la source) |
-| 2 | Schéma : migrations `social_*`, `montages*`, `studio_*`, `reel_*` adaptées au modèle `organizations` / `memberships` d'InstagramBeerecos, RLS + tests `tests/rls/` | 🟡 attend la décision ci-dessous |
-| 3 | Serveur : Edge Functions → routes `src/app/api/social/*` et server actions (auth via `src/server/auth/dal.ts`), webhook Meta fusionné avec `api/webhooks/instagram` | |
-| 4 | Clients API → appels server actions / `fetch` relatif ; rendu Reel (`reel-render-*`) | |
+| 2 | Schéma : **aucune migration** — base BeeMarketing partagée (décision du 2026-11-02), tables sociales réutilisées telles quelles | ✅ décidé |
+| 3 | Serveur : les 13 Edge Functions sociales restent celles déjà déployées sur le projet BeeMarketing (une seule implémentation qui écrit dans les tables) ; InstagramBeerecos les appelle avec le jeton de session | ✅ |
+| 4 | Clients API → `src/lib/social/` (`NEXT_PUBLIC_BEE_API_URL`, jeton via `@supabase/ssr`), sous-ensemble social de `api.ts`, rendu Reel en ligne ; tests → `tests/unit/social/lib/` | ✅ 28 tests de plus, suite complète 450 verts |
+| 4 bis | Connexion : `src/server/auth/dal.ts` lit `profiles` / `memberships`, absents de la base BeeMarketing → lire `bee_user_profiles` / `user_roles` avec une table de correspondance des rôles | 🟡 correspondance à valider |
 | 5 | Interface : `src/components/social/` → composants client Next.js (`react-router-dom` → `next/navigation`), pages `/studio`, `/video`, `/calendar` existantes branchées | |
 | 6 | Vérifications complètes (lint, typecheck, tests, e2e), puis décision de retrait côté BeeMarketing | |
 
@@ -77,3 +78,25 @@ Source : `bee-marketing-agent` au commit `6ab3914` (`main`).
    (BeeMarketing) couvrent le même besoin. À fusionner en phase 5, pas avant.
 3. La copie `supabase/functions/_shared/montage` de BeeMarketing est générée (`npm run montage:sync`) ; elle
    ne sera pas portée : les routes Next.js importeront directement `src/domain/social/montage`.
+
+## Adaptations faites en phase 4
+
+- `VITE_*` → `NEXT_PUBLIC_*` (lues littéralement, seule forme injectée par Next.js).
+- Rendu Reel : pas de mode « local » implicite en développement (le serveur de rendu same-origin de BeeMarketing,
+  `server/reel-render.ts`, n'est pas porté) ; le local reste possible avec `NEXT_PUBLIC_REEL_RENDER_URL`.
+- `specFingerprint` : une seule implémentation (`src/domain/social/spec-fingerprint.ts`), réexportée par le client.
+- Non portés (restent dans BeeMarketing avec les Edge Functions) : tests d'endpoints qui simulent `supabase/functions/_shared`
+  (`social-publications-endpoint`, `deliverables-endpoint`, `studio-transfer`), et `reel-render-local` (serveur de rendu local).
+
+## Correspondance des rôles proposée (à valider)
+
+| Rôle BeeMarketing (`user_roles.role_key`) | Rôle InstagramBeerecos |
+|---|---|
+| SUPER_ADMIN, DIRECTION | admin |
+| MARKETING | content_manager |
+| REGIONAL_MANAGER, ANIMATOR, SUPER_ANIMATOR | club_manager |
+| SALES, TELEPROSPECTOR, AMBASSADOR, SUPER_AMBASSADOR | sales |
+| MEMBER, SYSTEM_AGENT, aucun rôle | viewer |
+
+Plusieurs rôles : le plus élevé l'emporte. Les Edge Functions continuent d'appliquer leurs propres règles
+(`_shared/permissions.ts`) : cette correspondance ne règle que l'affichage et les actions propres à InstagramBeerecos.
