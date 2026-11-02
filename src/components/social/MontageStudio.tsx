@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BriefSchema, StoryboardSchema } from "@/domain/social/montage/ideation";
 import { MOTION_STYLE_LABEL, motionPlan, PILLAR_LABEL, SEQUENCES, SEQUENCE_LABEL, type MotionSpec, type StorySpec } from "@/domain/social/reel-story";
 import { useSearchParams } from "@/components/social/router";
-import { AiVideoSource } from "@/components/social/ReelsStudio";
-import MotionStyleSource from "@/components/social/MotionStyleSource";
 import StudioTransfer from "@/components/social/studio/StudioTransfer";
 import StudioCutPlan from "@/components/social/studio/StudioCutPlan";
 import StudioTrim from "@/components/social/studio/StudioTrim";
@@ -37,6 +35,8 @@ import { studioSequences } from "@/domain/social/montage/studio-sequences";
 import type { Scene } from "@/domain/social/montage/scenes";
 import ReelBrandCharter from "@/components/social/ReelBrandCharter";
 import MontagePublish from "@/components/social/MontagePublish";
+import AiEditor from "@/components/reels/ai-editor";
+import PostPanel from "@/components/reels/post-panel";
 import type { CustomAnimation } from "@/domain/social/montage/suggest";
 import { stampMotionVersions } from "@/domain/social/montage/beemotion";
 import { isMontageConfigured, montage, reels, type MontageDetail, type MontageSummary } from "@/lib/social/montage-api";
@@ -317,10 +317,10 @@ function MattesCard({ m, onChange }: { m: MontageDetail; onChange: () => void })
   );
 }
 
-type Panel = "ideation" | "coupe" | "animations" | "medias" | "sous-titres" | "retours" | "planche" | "rendu";
+type Panel = "ideation" | "coupe" | "animations" | "medias" | "sous-titres" | "retours" | "planche" | "rendu" | "post";
 const PANELS: { key: Panel; label: string }[] = [
   { key: "animations", label: "Titre et animations" }, { key: "ideation", label: "Idéation" }, { key: "coupe", label: "Coupe auto" }, { key: "medias", label: "Médias" }, { key: "sous-titres", label: "Sous-titres" },
-  { key: "retours", label: "Retours" }, { key: "planche", label: "Planche" }, { key: "rendu", label: "Rendu" },
+  { key: "retours", label: "Retours" }, { key: "planche", label: "Planche" }, { key: "rendu", label: "Rendu" }, { key: "post", label: "Post et export" },
 ];
 
 /** Bibliothèque de médias (lot S3), partagée par l'accueil et le Studio. */
@@ -658,6 +658,7 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
               <StudioContactSheet edit={m.edit} words={m.captions} videoUrl={data.videoUrl} takeUrls={data.takeUrls} library={lib.library ?? []} storyboardApproved={m.storyboardStatus === "approved"} briefKeyword={m.brief?.motCle ?? null} approved={Boolean(m.previewApproved)} approvedAt={m.previewApprovedAt}
                 unsaved={unsaved} disabled={saving || animationBusy || frozen} onApprove={async () => { await montage.approvePreview(m.id, m.updatedAt); load(); }} />
             ) : <p className="text-sm text-mut">Envoyez d&apos;abord la prise.</p>)}
+            {panel === "post" && <PostPanel m={m} />}
             {panel === "rendu" && (m.edit ? <MontagePublish m={m} disabled={unsaved || saving} showTransfer={false} showVideo={false} onChange={load} onOpenPlanche={() => setPanel("planche")} /> : <p className="text-sm text-mut">Envoyez d&apos;abord la prise.</p>)}
           </section>
           <details className="card p-3"><summary className="cursor-pointer py-2 text-sm font-semibold">Logo BeeRecos · bas à droite</summary>
@@ -775,9 +776,6 @@ export default function MontageStudio({ source = "reel", montageId, onOpenMontag
   const refresh = useCallback(() => { montage.list().then((r) => setList(r.montages)).catch((e) => setError(e.message)); }, []);
   useEffect(() => { if (isMontageConfigured) refresh(); }, [refresh]);
 
-  // Style of the AI source: « Recommandation » template or « Motion BeeRecos - Dynamique » (kept per browser).
-  const [aiStyle, chooseAiStyle] = useState<"recommandation" | "motion">(() => { try { return localStorage.getItem("bee.ai.style") === "motion" ? "motion" : "recommandation"; } catch { return "recommandation"; } });
-  const setAiStyle = (v: "recommandation" | "motion") => { chooseAiStyle(v); try { localStorage.setItem("bee.ai.style", v); } catch { /* facultatif */ } };
   // A generated MP4 becomes a private take; it then uses the same edit/render/version pipeline.
   const importAi = (file: File, title: string, spec: StorySpec, transfer:StudioSourceTransfer) => importSource(file, title,
     BriefSchema.parse({ sujet: title, angle: spec.hook.text, motCle: spec.cta.keyword }),
@@ -807,13 +805,7 @@ export default function MontageStudio({ source = "reel", montageId, onOpenMontag
     <div className={open ? "space-y-4" : "mt-5 space-y-4"}>
       {open ? <Editor key={open} id={open} onBack={() => { setOpen(null); refresh(); }} onOpenSource={openSource} /> : <>
         {source === "ai" || sourceRef ? <>
-          <div className="flex rounded-full bg-black/[0.05] p-1 text-sm font-medium" role="radiogroup" aria-label="Style de la vidéo IA">
-            {([["recommandation", "Recommandation"], ["motion", MOTION_STYLE_LABEL]] as const).map(([v, l]) => (
-              <button key={v} type="button" role="radio" aria-checked={(sourceRef ? sourceRef.kind==="motion"?"motion":"recommandation" : aiStyle) === v} onClick={() => {setAiStyle(v);setSearchParams(prev=>{const next=new URLSearchParams(prev);["studioAsset","studioKind","studioRevision"].forEach(k=>next.delete(k));return next;},{replace:true});}}
-                className={`min-h-[40px] flex-1 rounded-full px-3 transition ${aiStyle === v ? "bg-white text-fg shadow-sm" : "text-mut hover:text-fg"}`}>{l}</button>
-            ))}
-          </div>
-          {(sourceRef ? sourceRef.kind==="motion" : aiStyle === "motion") ? <MotionStyleSource sourceRef={sourceRef} onUseVideo={isMontageConfigured ? importMotion : undefined} /> : <AiVideoSource sourceRef={sourceRef} onUseVideo={isMontageConfigured ? importAi : undefined} />}
+          <AiEditor sourceRef={sourceRef} onUseMotion={isMontageConfigured ? importMotion : undefined} onUseStory={isMontageConfigured ? importAi : undefined} />
         </> : isMontageConfigured ? <Uploader onDone={setOpen} /> : <p role="status">Le serveur de montage n’est pas configuré.</p>}
         {isMontageConfigured && !compact ? <>
           <details className="card p-4"><summary className="cursor-pointer font-medium">Reprendre un montage</summary>

@@ -62,8 +62,9 @@ function loadDraft(): MotionSpec {
   return raw ? parseMotionSpec(raw).spec : DEMO_MOTION;
 }
 
-export default function MotionStyleSource({ onUseVideo, sourceRef }: { sourceRef?: StudioSourceRef; onUseVideo?: (file: File, spec: MotionSpec, transfer: StudioSourceTransfer) => Promise<void> }) {
-  const [spec, setSpec] = useState<MotionSpec>(loadDraft);
+export default function MotionStyleSource({ onUseVideo, sourceRef, initialSpec }: { sourceRef?: StudioSourceRef; initialSpec?: MotionSpec; onUseVideo?: (file: File, spec: MotionSpec, transfer: StudioSourceTransfer) => Promise<void> }) {
+  // Instagram BeeRecos : `initialSpec` = scènes reprises d'un modèle ou d'un contenu hérité (aucune recopie manuelle).
+  const [spec, setSpec] = useState<MotionSpec>(() => initialSpec ?? loadDraft());
   const [previewSpec, setPreviewSpec] = useState(spec);
   const [last, setLast] = useState<Video | null>(() => read<Video | null>(LAST_KEY, null));
   const [job, setJob] = useState<RenderJob | null>(() => read<RenderJob | null>(JOB_KEY, null));
@@ -129,7 +130,7 @@ export default function MotionStyleSource({ onUseVideo, sourceRef }: { sourceRef
     if (!job || !running) return;
     const t = setTimeout(async () => {
       try {
-        const next = await getRender(job.id);
+        const next = await getRender(job.id, undefined, job);
         setJob(next);
         if (next.state === "done" && next.url) {
           const v: Video = { sourceRender: renderedSource.current ? { ...renderedSource.current, jobId: next.serverJobId, renderId: next.renderId } : undefined, fingerprint: renderedFp.current, url: next.url, downloadUrl: next.downloadUrl ?? next.url, file: next.file ?? "video.mp4", probe: next.probe, warnings: next.warnings, noMusicUrl: next.extras?.noMusicUrl, srtUrl: next.extras?.srtUrl };

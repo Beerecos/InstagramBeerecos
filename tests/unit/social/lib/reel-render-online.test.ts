@@ -116,3 +116,40 @@ describe("choix du mode de rendu", () => {
     expect(renderMode({ DEV: false, NEXT_PUBLIC_REEL_RENDER_MODE: "local" })).toBe("local");
   });
 });
+
+describe("reprise d'un rendu après rechargement (Instagram BeeRecos)", () => {
+  const saved = (over: Record<string, unknown>) => ({ id: "en-ligne-1-1", state: "running" as const, step: "Rendu", progress: 30, voice: {}, warnings: [], ...over });
+
+  it("reprend le suivi avec les identifiants serveur, sans voix ni envoi ni nouvelle soumission", async () => {
+    const { deps, calls } = harness();
+    const fresh = createOnlineRenderer(deps); // nouvel onglet : la mémoire précédente est perdue
+    const job = await until(() => fresh.get("en-ligne-1-1", saved({ serverJobId: "job-1", renderId: "render-1" })));
+    expect(job.state).toBe("done");
+    expect(calls.map((c) => c.action).filter((a) => a !== "status")).toEqual([]);
+    expect(calls.every((c) => c.action !== "submit" || c.jobId === "job-1")).toBe(true);
+  });
+
+  it("réconcilie un envoi incertain par une soumission idempotente du même jobId", async () => {
+    const { deps, calls } = harness();
+    const tab = createOnlineRenderer(deps);
+    const job = await until(() => tab.get("en-ligne-1-1", saved({ serverJobId: "job-1" })));
+    expect(job.state).toBe("done");
+    expect(calls.filter((c) => c.action === "submit")).toEqual([{ action: "submit", jobId: "job-1" }]);
+    expect(calls.some((c) => c.action === "tts" || c.action === "upload-url")).toBe(false);
+  });
+
+  it("n'invente pas un rendu interrompu avant l'envoi au serveur", async () => {
+    const { deps, calls } = harness();
+    const job = await createOnlineRenderer(deps).get("en-ligne-1-1", saved({}));
+    expect(job.state).toBe("error");
+    expect(job.error).toMatch(/interrompue avant l'envoi/);
+    expect(calls).toEqual([]);
+  });
+
+  it("garde l'état et explique l'échec si la réconciliation échoue", async () => {
+    const { deps } = harness({ api: async () => { throw new Error("Le projet n'est pas arrivé dans le stockage : relancez la génération."); } });
+    const job = await createOnlineRenderer(deps).get("en-ligne-1-1", saved({ serverJobId: "job-1" }));
+    expect(job.state).toBe("error");
+    expect(job.error).toMatch(/Reprise du rendu impossible/);
+  });
+});

@@ -136,7 +136,7 @@ export function AiVideoSource({ onUseVideo, sourceRef }: { sourceRef?: StudioSou
     if (!job || !running) return;
     const t = setTimeout(async () => {
       try {
-        const next = await getRender(job.id);
+        const next = await getRender(job.id, undefined, job);
         setJob(next);
         if (next.state === "done" && next.url) {
           const v: Video = { sourceRender: renderedSource.current ? { ...renderedSource.current, jobId: next.serverJobId, renderId: next.renderId } : undefined, fingerprint: renderedFp.current, url: next.url, downloadUrl: next.downloadUrl ?? next.url, file: next.file ?? "reel.mp4", probe: next.probe, size: next.size, warnings: next.warnings };

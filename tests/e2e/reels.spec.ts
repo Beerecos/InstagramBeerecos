@@ -53,3 +53,11 @@ test("autres formats : les carrousels restent accessibles", async ({ page }) => 
   await page.goto("/formats");
   await expect(page.getByRole("heading", { name: "Éditeur de visuels" })).toBeVisible();
 });
+
+test("vidéo IA : un seul éditeur, le modèle Recommandation devient des scènes modifiables", async ({ page }) => {
+  await page.goto("/reels/nouveau/ia");
+  await expect(page.getByRole("radiogroup", { name: "Style de la vidéo IA" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Modèle « Recommandation »" }).click();
+  await expect(page.locator("textarea").filter({ hasText: "Tu recommandes un pro." }).first()).toBeVisible();
+  await expect(page.locator("textarea").filter({ hasText: "Commente CLUB pour recevoir le lien de visite." }).first()).toBeVisible();
+});

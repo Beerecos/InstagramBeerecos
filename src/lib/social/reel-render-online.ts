@@ -170,8 +170,33 @@ export function createOnlineRenderer(deps: OnlineDeps) {
     return { id };
   }
 
-  async function get(id: string): Promise<RenderJob> {
-    const r = jobs.get(id);
+  /**
+   * Reprise après rechargement (Instagram BeeRecos) : le suivi repart de l'état enregistré du rendu (identifiants
+   * serveur `serverJobId` / `renderId`), jamais d'une nouvelle génération. Sans `renderId`, l'envoi est réconcilié
+   * avec le serveur : `submit` sur le même jobId est idempotent (preuve stockée, clé `studio-<jobId>` côté HeyGen) ;
+   * si le projet n'est jamais arrivé, le serveur refuse et rien n'est facturé.
+   */
+  async function resume(saved: RenderJob): Promise<Running | null> {
+    if (!saved.serverJobId) return null;
+    const r: Running = { job: { ...saved, warnings: [...(saved.warnings ?? [])] }, jobId: saved.serverJobId, renderId: saved.renderId, lastPoll: 0 };
+    if (!r.renderId) {
+      const sub = await deps.api({ action: "submit", jobId: r.jobId });
+      r.renderId = String(sub.renderId);
+      r.job.renderId = r.renderId;
+    }
+    r.job.state = "running";
+    r.job.step = "Rendu de la vidéo (en ligne) — suivi repris";
+    jobs.set(saved.id, r);
+    return r;
+  }
+
+  async function get(id: string, saved?: RenderJob): Promise<RenderJob> {
+    let r = jobs.get(id);
+    if (!r && saved && saved.id === id) {
+      try { r = (await resume(saved)) ?? undefined; }
+      catch (e) { return { ...saved, state: "error", error: `Reprise du rendu impossible : ${e instanceof Error ? e.message : "serveur indisponible"}.` }; }
+      if (!r) return { ...saved, state: "error", error: "La génération a été interrompue avant l'envoi du projet au serveur : rien n'a été rendu. Relance la génération." };
+    }
     if (!r) throw new Error("Rendu introuvable (la page a été rechargée ?) : relancez la génération.");
     const job = r.job;
     if (job.state !== "running" || !r.renderId || deps.now() - r.lastPoll < POLL_MS) return { ...job };

@@ -104,8 +104,9 @@ async function call<T>(path: string, init?: RequestInit, fetcher: typeof fetch =
 export const startRender = async (spec: StorySpec | MotionSpec, fetcher?: typeof fetch): Promise<{ id: string }> =>
   RENDER_MODE === "online" && !fetcher ? onlineRenderer().start(spec) : call<{ id: string }>("/api/reels/render", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ spec }) }, fetcher);
 
-export async function getRender(id: string, fetcher?: typeof fetch): Promise<RenderJob> {
-  if (isOnlineId(id)) return onlineRenderer().get(id);
+/** `saved` : dernier état enregistré du rendu (reprise après rechargement, sans relancer de génération). */
+export async function getRender(id: string, fetcher?: typeof fetch, saved?: RenderJob): Promise<RenderJob> {
+  if (isOnlineId(id)) return onlineRenderer().get(id, saved);
   const job = await call<RenderJob>(`/api/reels/render/${encodeURIComponent(id)}`, undefined, fetcher);
   // Les adresses renvoyées sont relatives au serveur de rendu.
   const abs = (u?: string) => (u && u.startsWith("/") ? `${RENDER_BASE}${u}` : u);
