@@ -1,5 +1,13 @@
 # Pipeline vidéo
 
+> **Mise à jour du 2026-11-02 — chemin réellement utilisé par Instagram BeeRecos.** Le studio des réels (`/`,
+> `/reels/[id]`) s'appuie sur la fonction serveur `montage` et `studio-render` du projet Supabase BeeMarketing
+> (base partagée) : rendu HeyGen HyperFrames en ligne, **1080×1920, 30 i/s, MP4 H.264 + AAC**. Le modèle canonique
+> des vidéos IA est `MotionSpec` (`src/domain/social/reel-story/`). Les sections ci-dessous décrivent la
+> conception initiale ; la composition `buildReelComposition` à 60 i/s (`src/domain/video/reel.ts`, CLI
+> `npm run reel:render`) reste un outil hérité, hors du studio. Le rendu en ligne ne produit ni normalisation
+> −14 LUFS ni version sans musique. Détail et état : `docs/TRANSFERT-RESEAUX-SOCIAUX.md`.
+
 | Mode | Étapes |
 |---|---|
 | A — IA | idée → script → storyboard → choix moteur par scène (capability matrix, coût, budget) → génération (Veo/Runway) → montage déterministe → sous-titres → CTA → légende/couverture → quality gate → validation |

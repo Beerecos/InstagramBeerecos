@@ -4,7 +4,7 @@ campaign:
 agent: développement
 created_at: 2026-11-02
 updated_at: 2026-11-02
-version: 1
+version: 2
 status: review
 objective: Porter la partie réseaux sociaux de BeeMarketing (bee-marketing-agent, Vite) dans InstagramBeerecos (Next.js 16)
 audience: Cédric Picard
@@ -19,6 +19,69 @@ Décision de Cédric (2026-11-02) : **copier, puis adapter à Next.js**. BeeMark
 le portage n'est pas vérifié. Branche cible : `claude/motion-design-skills`.
 
 Source : `bee-marketing-agent` au commit `6ab3914` (`main`).
+
+## Instagram BeeRecos — outil de préparation des réels (état du 2026-11-02, branche `claude/motion-design-skills`)
+
+Décision de Cédric : Instagram BeeRecos devient l'outil principal de préparation des réels ; BeeMarketing reste la
+référence et garde son studio jusqu'à vérification. Base Supabase et Edge Functions BeeMarketing partagées
+(aucune migration appliquée, aucune écriture distante, aucun déploiement).
+
+### Parcours et routes
+
+| Route | Rôle |
+|---|---|
+| `/` | **Mes réels** : projets réels (`montage list`) + brouillons IA non rendus, miniature, source, statut, prochaine action |
+| `/reels/nouveau/video` · `/reels/nouveau/ia` | « Créer un réel » : Importer ma vidéo / Créer avec l'IA → même studio |
+| `/reels/[id]` | Studio d'un projet (MontageStudio) : séquences, aperçu vertical, réglages, timeline ; panneau **Post et export** |
+| `/reels/tournage` | Découper un tournage : fichiers séparés → un projet par fichier ; long rush → plan de segments |
+| `/library` | 72 scripts (catalogue, prompteur, import du dépôt), médias (sons, images, licences) |
+| `/settings` | Capacités réelles du serveur (`settings-get`), charte, préférences du studio |
+| `/formats` | Accès secondaire aux carrousels / visuels |
+| `/publication?vue=…`, `/studio`, `/video` | Redirections (identifiants `montage`, `studioAsset` conservés) |
+
+### État réel
+
+| Fonction | État |
+|---|---|
+| Montage filmé (import multi-prises, transcription, clic sur un mot, correction du texte sans toucher l'audio, coupes et rétablissement, annuler/refaire, cadrage/zoom, sous-titres, animations par séquence, sons, médias, retours, planche contact, rendu) | ✅ code BeeMarketing raccordé ; exécution réelle = fonction `montage` (non testée ici contre la production) |
+| Invalidation des rendus et validations après modification | ✅ côté serveur (`STALE`, empreinte de planche) — logique BeeMarketing, non modifiée |
+| Post et export : couverture prise dans le MP4, légende/CTA/mot-clé/destination/hashtags liés à la version, MP4, PNG, TXT, SRT recalculé sur les coupes | ✅ sans Meta, DM ni calendrier ; légende sur l'appareil, ou sur le serveur pour un des 72 réels (`reel-caption-save`) |
+| Éditeur IA unique (MotionSpec) : brief, scènes, voix, visuels, aperçu, rendu ; « Recommandation » = modèle converti en scènes ; contenus hérités lisibles et repris en scènes | ✅ |
+| Reprise d'un rendu IA après rechargement (identifiants serveur, réconciliation idempotente `submit` du même jobId) | ✅ même navigateur |
+| 72 réels : recherche, filtres, prompteur, import idempotent depuis le dépôt, association aux prises | ✅ (catalogue BeeMarketing) |
+| Tournage en fichiers séparés → projets associés | ✅ (limites serveur : 500 Mo, 10 min par prise) |
+| Long rush : segments depuis les annonces « V12 + titre », correction des bornes et associations, plan JSON, script FFmpeg | ✅ sur le poste ; ⚠️ voir blocages |
+| Shell sans missions (TopBar, Queen Bee, WatchdogPulse retirés) | ✅ ; pages héritées `/missions`, `/approvals`… joignables par adresse seulement |
+
+### Blocages et services à configurer
+
+1. **Long rush en ligne** : envoi reprenable > 500 Mo, transcription asynchrone > 10 min, extraits FFmpeg côté serveur
+   et projets portant la référence au rush et à ses bornes → **évolution de la fonction `montage` (BeeMarketing)**,
+   non faite : nécessite un traitement hors Edge Function (FFmpeg) et l'accord de Cédric pour déployer.
+2. **Légende et rendus IA durables multi-appareils** : la fonction `montage` n'a pas de champ « post » par projet, et
+   `studio-render` ne liste pas les rendus d'un utilisateur. Aujourd'hui : légende sur l'appareil (sauf 72 réels),
+   suivi de rendu IA dans le navigateur qui l'a lancé. Changement serveur limité à préparer (colonne additive
+   `montages.post jsonb` + action `post-save` ; action `jobs` de `studio-render`).
+3. **Variables d'InstagramBeerecos** (Vercel) : `NEXT_PUBLIC_BEE_API_URL=https://wekbmkjvieagmghjanjb.functions.supabase.co`,
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` et `SUPABASE_SECRET_KEY` du projet BeeMarketing
+   (secret côté serveur uniquement). Domaine d'InstagramBeerecos à ajouter aux URL de redirection Supabase Auth.
+4. Services côté Supabase (déjà gérés par BeeMarketing) : ElevenLabs (transcription), Claude (propositions),
+   HeyGen (`HEYGEN_API_KEY` : voix Audrey et rendu). Génération de plans vidéo par un fournisseur externe : non raccordée.
+5. Clips d'illustration et overlays animés (vidéo/transparence) : non pris en charge par la bibliothèque actuelle
+   (sons et images) — lot à part (`docs/studio/REFERENCE_VIDEO_20261102.md` de BeeMarketing).
+
+### Points à arbitrer
+
+- **Baseline** : la branche `claude/keen-noether-vhcqgq` (non fusionnée) passe #MonReseauCestTonReseau en Poppins ;
+  la demande du 2026-11-02 exige une écriture manuscrite (Caveat). Le studio garde Caveat.
+- Composants portés non utilisés par le parcours réels (tableau `SocialWorkspace`, `Calendar`, `InstagramPilot`,
+  `PostPreview`) : conservés, non routés. `src/domain/video/reel.ts` reste le modèle hérité des missions.
+
+### Vérifications (2026-11-02)
+
+`npm run lint` ✅ · `npm run typecheck` ✅ · `npm test` ✅ 514 tests (63 fichiers) + 11 tests `automation/` ·
+`npm run build` (mode démo) ✅ · `npm run test:e2e` ✅ 31 réussis, 3 limités à un format. E2E en mode démo, sans
+serveur de montage ni rendu réel : ils ne prouvent ni un MP4 généré ni une transcription réelle.
 
 ## Périmètre inventorié
 
@@ -43,7 +106,7 @@ Source : `bee-marketing-agent` au commit `6ab3914` (`main`).
 | 4 | Clients API → `src/lib/social/` (`NEXT_PUBLIC_BEE_API_URL`, jeton via `@supabase/ssr`), sous-ensemble social de `api.ts`, rendu Reel en ligne ; tests → `tests/unit/social/lib/` | ✅ 28 tests de plus, suite complète 450 verts |
 | 4 bis | Connexion : `src/server/auth/dal.ts` lit `profiles` / `memberships`, absents de la base BeeMarketing → lire `bee_user_profiles` / `user_roles` → lecture serveur de `user_roles` / `organizations` (RLS fermée côté session) ; SUPER_ADMIN ou DIRECTION = admin, sinon lecteur (un seul utilisateur : Cédric, 2026-11-02) | ✅ |
 | 5 | Interface : 45 fichiers → `src/components/social/` (composants client, pont `router.tsx` react-router → next/navigation), page `/publication` (« Réseaux sociaux » dans le menu) : parcours, calendrier, pilote Instagram, montage, Reels IA, carrousels ; e2e `tests/e2e/social.spec.ts` | ✅ partiel |
-| 5 bis | Vues restantes de `/publication` : préparer le post (`PublishWizard`), studio visuel, comptes, automatisation, campagnes à partager, autres validations, La Ruche — un message renvoie vers BeeMarketing | 🟡 |
+| 5 bis | Recentrage produit : `/publication` devient une redirection ; préparation du post intégrée au studio (pas de `PublishWizard`) ; automatisation, campagnes, validations commerciales, La Ruche restent dans BeeMarketing | ✅ (voir ci-dessous) |
 | 6 | Vérifications complètes (lint, typecheck, tests, e2e), puis décision de retrait côté BeeMarketing | |
 
 ## Adaptations faites en phase 1
