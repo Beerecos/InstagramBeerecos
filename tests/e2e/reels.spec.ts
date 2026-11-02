@@ -61,3 +61,45 @@ test("vidéo IA : un seul éditeur, le modèle Recommandation devient des scène
   await expect(page.locator("textarea").filter({ hasText: "Tu recommandes un pro." }).first()).toBeVisible();
   await expect(page.locator("textarea").filter({ hasText: "Commente CLUB pour recevoir le lien de visite." }).first()).toBeVisible();
 });
+
+test("tournage : fichiers séparés et long rush, blocage serveur explicite", async ({ page }) => {
+  await page.goto("/reels/tournage");
+  await expect(page.getByRole("heading", { level: 1, name: "Découper un tournage" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Fichiers déjà séparés (une prise par réel)" })).toBeVisible();
+  await expect(page.getByRole("note")).toContainText("production des extraits (FFmpeg) côté serveur");
+  await expect(page.getByRole("button", { name: "Proposer les segments" })).toBeDisabled();
+});
+
+test("long rush : segments proposés depuis les annonces, corrigés, plan exporté sans toucher au rush", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "tableau large : vérifié sur ordinateur");
+  const { execFileSync } = await import("node:child_process");
+  const { mkdtempSync, writeFileSync, readFileSync, statSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const dir = mkdtempSync(join(tmpdir(), "rush-"));
+  const rush = join(dir, "session.mp4");
+  execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "color=black:s=108x192:d=20:r=10", "-f", "lavfi", "-i", "sine=d=20", "-c:v", "libx264", "-c:a", "aac", "-shortest", rush]);
+  const size = statSync(rush).size;
+  const w = (text: string, s: number) => ({ text, start: s, end: s + 0.3 });
+  writeFileSync(join(dir, "transcript.json"), JSON.stringify({ words: [
+    w("V1,", 0), w("le", 0.3), w("réseau", 0.6), w("qui", 0.9), w("recommande.", 1.2),
+    w("Le", 3), w("réseau", 3.3), w("qui", 3.6), w("recommande,", 3.9), w("c'est", 4.2), w("BeeRecos.", 4.5),
+    w("V2", 9), w("formation.", 9.3), w("Formation", 11), w("continue.", 11.3),
+  ] }));
+  await page.goto("/reels/tournage");
+  await page.getByLabel("Rush (lu sur ce poste)").setInputFiles(rush);
+  await page.getByLabel(/Transcription horodatée/).setInputFiles(join(dir, "transcript.json"));
+  await expect(page.getByText(/15 mots transcrits/)).toBeVisible();
+  await page.getByRole("button", { name: "Proposer les segments" }).click();
+  await expect(page.getByRole("cell", { name: "V1", exact: true })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "V2", exact: true })).toBeVisible();
+  await expect(page.getByText(/Annonce introuvable pour : V3/)).toBeVisible();
+  const start = page.getByLabel("Début de V2");
+  await start.fill("0:00:10.5");
+  await start.blur();
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Télécharger le plan (JSON)" }).click()]);
+  const plan = JSON.parse(readFileSync(await download.path(), "utf8"));
+  expect(plan.rush).toMatchObject({ fileName: "session.mp4", size });
+  expect(plan.segments.map((s: { n: number; sourceFromMs: number }) => [s.n, s.sourceFromMs])).toEqual([[1, 2600], [2, 10500]]);
+  expect(statSync(rush).size).toBe(size);
+});

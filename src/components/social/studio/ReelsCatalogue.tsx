@@ -19,11 +19,13 @@ function ImportCard({ onDone, compact }: { onDone: () => void; compact?: boolean
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<ImportReport | null>(null);
   const [error, setError] = useState<{ message: string; errors: string[] } | null>(null);
-  const send = async (file: File | undefined) => {
-    if (!file) return;
+  const send = async (file: File | undefined, fromRepo = false) => {
+    if (!file && !fromRepo) return;
     setBusy(true); setError(null); setReport(null);
     try {
-      const r = await api.import(await file.text());
+      // Instagram BeeRecos : la structure versionnée dans le dépôt (content/reels-72) peut être importée directement.
+      const text = fromRepo ? await fetch("/api/reels-72").then((r) => { if (!r.ok) throw new Error(`Structure du dépôt illisible (HTTP ${r.status}).`); return r.text(); }) : await file!.text();
+      const r = await api.import(text);
       setReport(r.report);
       onDone();
     } catch (e) {
@@ -34,6 +36,7 @@ function ImportCard({ onDone, compact }: { onDone: () => void; compact?: boolean
     <section aria-label="Importer la structure des Reels" className={`card space-y-2 ${compact ? "p-3" : "p-5"}`}>
       {!compact ? <h3 className="font-display text-lg">Importer la structure des 72 Reels</h3> : null}
       <p className="text-xs text-mut">Fichier BeeRecos_72_Reels_Structure.json (schéma 1.0.0). Réimporter ne crée aucun doublon et n&apos;écrase jamais un Reel modifié dans le Studio.</p>
+      <button type="button" className="btn-red mr-2 min-h-[40px] text-sm" disabled={busy} onClick={() => send(undefined, true)}>{busy ? "Contrôle et import…" : "Importer la structure du dépôt"}</button>
       <label className="btn-ghost inline-flex min-h-[40px] cursor-pointer items-center text-sm">
         {busy ? "Contrôle et import…" : "Choisir le fichier JSON"}
         <input type="file" accept="application/json,.json" className="sr-only" disabled={busy} onChange={(e) => send(e.target.files?.[0])} aria-label="Fichier de structure des Reels" />
