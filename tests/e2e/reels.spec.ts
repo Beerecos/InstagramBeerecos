@@ -149,3 +149,13 @@ test("éditeur de script : du hook au call to action, contrôles, prompteur, bro
   await expect(page.getByLabel("Titre")).toHaveValue("Après la reco");
   await expect(page.getByText("brouillon sur cet appareil, non enregistré")).toBeVisible();
 });
+
+test("connexion : email et mot de passe, lien par email en secours", async ({ page }) => {
+  await page.goto("/login");
+  await expect(page.getByLabel("Adresse email")).toBeVisible();
+  await expect(page.getByLabel("Mot de passe")).toHaveAttribute("type", "password");
+  await expect(page.getByRole("button", { name: "Se connecter" })).toBeVisible();
+  await page.getByRole("button", { name: "Recevoir plutôt un lien par email" }).click();
+  await expect(page.getByRole("button", { name: "Recevoir mon lien de connexion" })).toBeVisible();
+  await expect(page.getByLabel("Mot de passe")).toHaveCount(0);
+});

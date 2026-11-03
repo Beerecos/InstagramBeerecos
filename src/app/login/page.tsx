@@ -27,7 +27,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <div className="mb-10 lg:hidden"><Logo width={180} /></div>
           <h1 className="text-2xl font-semibold tracking-tight">Connexion</h1>
-          <p className="mb-6 mt-1 text-sm text-ink-2">Un lien sécurisé t&apos;est envoyé par email. Aucun mot de passe.</p>
+          <p className="mb-6 mt-1 text-sm text-ink-2">Avec ton compte BeeRecos (le même que BeeMarketing), ou un lien reçu par email.</p>
           <Suspense fallback={<div className="h-40" />}>
             <LoginGate />
           </Suspense>
