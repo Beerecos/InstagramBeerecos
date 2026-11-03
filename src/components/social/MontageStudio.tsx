@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BriefSchema, StoryboardSchema } from "@/domain/social/montage/ideation";
 import { MOTION_STYLE_LABEL, motionPlan, PILLAR_LABEL, SEQUENCES, SEQUENCE_LABEL, type MotionSpec, type StorySpec } from "@/domain/social/reel-story";
 import { useSearchParams } from "@/components/social/router";
-import StudioTransfer from "@/components/social/studio/StudioTransfer";
 import StudioCutPlan from "@/components/social/studio/StudioCutPlan";
 import StudioTrim from "@/components/social/studio/StudioTrim";
 import ReelPreview, { prefersReducedMotion, type ReelPreviewHandle } from "@/components/social/ReelPreview";
@@ -337,7 +336,27 @@ function useLibrary() {
 
 type MontageData = Awaited<ReturnType<typeof montage.get>>;
 
-function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; onOpenSource:(source:StudioSourceRef)=>void }) {
+/** Choix du projet dans la barre du studio (Instagram BeeRecos) : passer d'un réel à l'autre sans quitter le studio. */
+function ProjectPicker({ id, title, onSwitch }: { id: string; title: string; onSwitch: (target: string) => void }) {
+  const [list, setList] = useState<MontageSummary[] | null>(null);
+  useEffect(() => { montage.list().then((r) => setList(r.montages)).catch(() => setList([])); }, []);
+  const projects = [...(list ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return (
+    <label className="studio-project flex min-w-0 items-center gap-2">
+      <span className="sr-only">Projet ouvert</span>
+      <select value={id} onChange={(e) => onSwitch(e.target.value)} className="min-h-[40px] min-w-0 max-w-[340px] truncate rounded-xl border border-line bg-white px-3 text-sm font-semibold">
+        {!projects.some((p) => p.id === id) ? <option value={id}>{title}</option> : null}
+        {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+        <option disabled>──────────</option>
+        <option value="__video">＋ Nouveau réel filmé</option>
+        <option value="__ia">＋ Nouveau réel IA</option>
+        <option value="__tous">Tous mes réels…</option>
+      </select>
+    </label>
+  );
+}
+
+function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: () => void; onOpenSource:(source:StudioSourceRef)=>void; onSwitch?: (target: string) => void }) {
   const [data, setData] = useState<MontageData | null>(null);
   /** Avertissements du dernier contrôle du storyboard (gardés quand le panneau Idéation se recharge). */
   const [ideationWarnings, setIdeationWarnings] = useState<string[]>([]);
@@ -350,7 +369,7 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
   const [panel, setPanel] = useState<Panel>(() => PANELS.some((p) => p.key === panelParams.get("panel")) ? panelParams.get("panel") as Panel : "animations");
   const [libraryOpen,setLibraryOpen]=useState(false);
   const [libraryTab,setLibraryTab]=useState<"animations"|"effects"|"sounds">("animations");
-  const [expanded,setExpanded]=useState(()=>typeof window!=="undefined"&&window.innerWidth>=1024);
+  const [expanded,setExpanded]=useState(()=>typeof window==="undefined"||window.innerWidth>=768);
   const [monitorView, setMonitorView] = useState<"edit"|"render">("edit");
   const renderedVideo = useRef<HTMLVideoElement>(null);
   const [selection, setSelection] = useState<WordSelection>(null);
@@ -674,15 +693,14 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
     <div className={expanded ? "social-studio studio-expanded space-y-3" : "space-y-4"}>
       {/* En-tête du studio (kit §7) : montages, annuler / refaire, coupe auto, rendu. */}
       <div className="card flex flex-wrap items-center gap-2 p-3" role="toolbar" aria-label="Outils du montage">
-        <button type="button" className="btn-ghost min-h-[44px] text-sm" onClick={onBack}>← Montages</button>
-        <button type="button" className="btn-ghost min-h-[44px] px-3 text-sm" onClick={()=>setExpanded(!expanded)}>{expanded ? "Réduire le studio" : "Agrandir le studio"}</button>
-        <div className="min-w-0 basis-full lg:basis-auto lg:min-w-[200px] lg:flex-1">
-          <p className="kicker text-brand">{MONTAGE_STATUS_LABELS[m.status]}{saving ? " · enregistrement…" : ""}</p>
+        <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" onClick={onBack} title="Quitter le studio : tous mes réels">←</button>
+        {onSwitch ? <ProjectPicker id={m.id} title={m.title} onSwitch={onSwitch} /> : null}
+        <div className="studio-title min-w-0 basis-full lg:basis-auto lg:min-w-[160px] lg:flex-1">
+          <p className="kicker text-brand">{MONTAGE_STATUS_LABELS[m.status]}{saving ? " · enregistrement…" : ""} · {sec(m.keptMs)} montées</p>
           <p role="status" aria-live="polite" className={`text-xs ${syncState.status === "conflit" || syncState.status === "erreur" ? "text-red-700" : "text-mut"}`}>
             {syncState.status === "enregistrement" ? "Enregistrement en arrière-plan…" : syncState.status === "erreur" ? <>Non enregistré : {syncState.error} <button type="button" className="underline" onClick={() => sync.current?.retry()}>Réessayer</button></> : syncState.status === "conflit" ? <>Modifié ailleurs : tes derniers changements ne sont pas enregistrés. <button type="button" className="underline" onClick={() => { editHistory.current.clear(); undoOrder.current = []; redoOrder.current = []; sync.current?.reset(""); void load(true); }}>Recharger la version du serveur</button></> : "Tout est enregistré"}
           </p>
-          <h2 className="truncate font-display text-xl">{m.title}</h2>
-          <p className="text-xs text-mut">Durée montée : {sec(m.keptMs)} sur {sec(m.durationMs)} de {breaks.length ? `${breaks.length + 1} prises` : "prise"}.</p>
+          <h2 className={onSwitch ? "sr-only" : "truncate font-display text-xl"}>{m.title}</h2>
         </div>
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={saving || animationBusy || frozen || (!m.canUndo && !undoOrder.current.length)} onClick={undo} title="Annuler la dernière modification (Ctrl+Z)">↶ Annuler</button>
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={saving || animationBusy || frozen || (!m.canRedo && !redoOrder.current.length)} onClick={redo} title="Refaire la modification annulée (Ctrl+Maj+Z)">↷ Refaire</button>
@@ -690,7 +708,8 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={!m.edit || saving || animationBusy || frozen || transcribing || m.status === "transcribing" || unsaved} onClick={autoAll} title="Préparer une proposition de coupe et d’animations à tester avant validation">⚡ Tout auto</button>
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={!m.edit} onClick={() => setPanel("planche")}>Prévisualiser</button>
         <button type="button" className="btn-ghost min-h-[44px] px-3 text-sm" disabled={!m.edit || !unsaved || Boolean(proposal) || saving || animationBusy || frozen} onClick={() => { void saveDraft().catch(() => {}); }}>Enregistrer le montage</button>
-        <button type="button" className="btn-red min-h-[44px] px-3 text-sm" disabled={!m.edit} onClick={() => {setPanel("rendu");setMonitorView("render");}}>Rendu</button>
+        <button type="button" className="btn-red min-h-[40px] px-3 text-sm" disabled={!m.edit} onClick={() => {setPanel("rendu");setMonitorView("render");}}>Rendu</button>
+        <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" onClick={()=>setExpanded(!expanded)} title={expanded ? "Afficher le menu de l'application" : "Studio plein écran"}>{expanded ? "⤡" : "⤢"}</button>
       </div>
       {m.aiSource ? <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><p>Source IA conservée · version {m.aiSource.source.revision}{m.aiSource.verified ? " · narration Audrey vérifiée" : " · narration à vérifier"}</p><button type="button" className="btn-ghost min-h-[44px]" disabled={unsaved||saving||animationBusy} onClick={()=>onOpenSource(m.aiSource!.source)}>Rouvrir la source IA</button></div> : null}
       {m.reel ? (
@@ -737,41 +756,8 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
         </section>
       </StudioLibraryDialog>
       <div className="studio-workspace" data-testid="studio-workspace">
-        <section ref={preview} aria-label="Moniteur du studio" className="studio-monitor rounded-2xl border border-line bg-[#eef0f5] p-3">
-          <div className="studio-monitor-frame">
-            {showRendered ? <video ref={renderedVideo} src={m.finalVideoUrl!} controls playsInline className="h-full max-w-full rounded-xl bg-black" aria-label={`MP4 rendu de « ${m.title} »`}/> : <>
-            <StudioCanvas animation={selectedAnimation} index={selectedAnim} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChange={changeAnimation} player={player} time={playOut}>
-            {html ? <ReelPreview ref={player} html={html} title={m.title} onTimeUpdate={onTime} onReady={()=>{if(pendingSeek.current!==null){player.current?.seek(pendingSeek.current);pendingSeek.current=null;}}} autoplay={false} preservePosition /> : <div className="grid aspect-[9/16] place-items-center rounded-2xl border border-dashed border-line p-4 text-center text-sm text-mut">La prise n&apos;est pas encore reçue.</div>}
-            </StudioCanvas></>}
-          </div>
-          <p className="text-xs text-mut">{showRendered ? "MP4 rendu de la version enregistrée : regardez et écoutez avant le transfert." : proposal ? "Aperçu de la modification (non enregistrée)." : "Aperçu en direct 1080×1920 : coupes, sous-titres karaoké et animations (brouillon compris)."}</p>
-        </section>
-        <aside aria-label="Outils et réglages" className="studio-inspector min-w-0 space-y-4">
-          <section aria-label="Lecture de l’aperçu" className="card space-y-2 p-3">
-          <div className="flex justify-center gap-2" role="group" aria-label="Vue du moniteur">
-            <button type="button" className="btn-ghost min-h-[44px]" aria-pressed={!showRendered} onClick={()=>setMonitorView("edit")}>Montage en direct</button>
-            <button type="button" className="btn-ghost min-h-[44px]" aria-pressed={showRendered} disabled={unsaved||m.renderStatus!=="done"||!m.finalVideoUrl} onClick={()=>setMonitorView("render")}>Voir le rendu MP4</button>
-          </div>
-          <div className="flex flex-wrap justify-center gap-2" role="group" aria-label="Lecture du montage">
-            <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered)void renderedVideo.current?.play().catch(()=>setError("Lecture impossible : réessayez dans le lecteur."));else player.current?.play();}}>Lire</button>
-            <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered)renderedVideo.current?.pause();else player.current?.pause();}}>Pause</button>
-            <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered&&renderedVideo.current){renderedVideo.current.currentTime=0;void renderedVideo.current.play().catch(()=>{});}else player.current?.restart();}}>Rejouer</button>
-            <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered&&renderedVideo.current){renderedVideo.current.muted=false;void renderedVideo.current.play().catch(()=>{});}else player.current?.listen();}}>Écouter avec le son</button>
-            <button type="button" className="btn-ghost min-h-[44px]" onClick={() => { const node=preview.current;if(document.fullscreenElement)void document.exitFullscreen();else void node?.requestFullscreen().catch(()=>setError("Le plein écran n’est pas disponible dans ce navigateur.")); }}>Plein écran</button>
-          </div>
-          </section>
-          {m.edit ? <section aria-label="Cadrage de la vidéo" className="card p-3">
-            <StudioFraming key={m.updatedAt} edit={proposal?.source==="framing"?proposal.edit:m.edit} disabled={saving||animationBusy||frozen||(unsaved&&proposal?.source!=="framing")} onPreview={framing=>manualPreview({...m.edit!,framing},"framing")}/>
-          </section>:null}
-          <section aria-label="Écran de fin" className="card space-y-2 p-3">
-            <h3 className="font-semibold">Logo de fin · +2 secondes</h3>
-            <p className="text-xs text-mut">Un écran ajouté après la dernière parole. La vidéo conserve toute sa durée.</p>
-            {(proposal?.edit??m.edit)?.outro ? <>
-              <button type="button" className="btn-ghost min-h-[44px]" onClick={()=>{setMonitorView("edit");player.current?.seek(segments.reduce((n,s)=>n+s.toMs-s.fromMs,0)/1000);player.current?.play();}}>Tester le logo de fin</button>
-              <button type="button" className="btn-ghost min-h-[44px]" disabled={saving||frozen||unsaved} onClick={()=>{if(m.edit)manualPreview({...m.edit,outro:undefined},"outro");}}>Retirer le logo de fin</button>
-            </>:<button type="button" className="btn-ghost min-h-[44px]" disabled={saving||animationBusy||frozen||unsaved} onClick={appendOutro}>Ajouter le logo de fin</button>}
-          </section>
-          <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Outils de création">
+        <aside aria-label="Outils du montage" className="studio-tools min-w-0 space-y-3">
+          <div className="studio-tabs flex flex-wrap gap-1.5" role="group" aria-label="Outils de création">
             {PANELS.map((p) => (
               <button key={p.key} type="button" aria-pressed={panel === p.key} onClick={() => setPanel(p.key)}
                 className={`min-h-[44px] shrink-0 rounded-xl px-3 py-2 text-xs ${panel === p.key ? "bg-brand text-white" : "bg-black/[0.04] text-mut hover:text-fg"}`}>{p.label}</button>
@@ -803,24 +789,6 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
             {panel === "post" && <PostPanel m={m} />}
             {panel === "rendu" && (m.edit ? <MontagePublish m={m} disabled={unsaved || saving} showTransfer={false} showVideo={false} onChange={load} onOpenPlanche={() => setPanel("planche")} /> : <p className="text-sm text-mut">Envoyez d&apos;abord la prise.</p>)}
           </section>
-          <details className="card p-3"><summary className="cursor-pointer py-2 text-sm font-semibold">Logo BeeRecos · bas à droite</summary>
-            <label className="flex min-h-[44px] items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(logo)} disabled={saving||frozen||Boolean(proposal)} onChange={e=>{setMonitorView("edit");setLogo(e.target.checked?{width:220,right:170,bottom:260,opacity:1}:undefined);}}/>Afficher mon logo sur la vidéo</label>
-            {logo?<div className="space-y-2">{([["width","Largeur du logo",150,360],["right","Marge à droite",40,300],["bottom","Marge en bas",80,600]] as const).map(([key,label,min,max])=><label key={key} className="block text-xs">{label} (px)<input className="mt-1 min-h-[44px] w-full rounded-xl border border-line px-3" type="number" min={min} max={max} value={logo[key]} disabled={saving||frozen||Boolean(proposal)} onChange={e=>{const n=e.target.valueAsNumber;if(Number.isFinite(n)){setMonitorView("edit");setLogo({...logo,[key]:Math.max(min,Math.min(max,Math.round(n)))});}}}/></label>)}</div>:null}
-            <p className="mt-2 text-xs text-mut">Logo officiel de votre charte, conservé à ses proportions. Testez sa position dans l’aperçu puis enregistrez le montage.</p>
-          </details>
-          {activeScene ? <section aria-label="Séquence sélectionnée" className="card space-y-2 p-3">
-            <h3 className="font-semibold">Séquence {activeScene.index+1} · {sec(toOutputMs(segments,activeScene.startMs))} → {sec(toOutputMs(segments,activeScene.endMs))}</h3>
-            <p className="text-xs text-mut">{activeScene.text || "Ajoutez vos textes et animations depuis la bibliothèque."}</p>
-            <button type="button" className="btn-ghost min-h-[44px]" onClick={()=>{seekSource(activeScene.startMs);player.current?.play();}}>Tester cette séquence</button>
-            <button type="button" className="btn-ghost min-h-[44px] text-red-700" disabled={saving||animationBusy||frozen||unsaved} onClick={deleteScene}>Supprimer cette séquence</button>
-            <button type="button" className="btn-ghost min-h-[44px]" disabled={saving||animationBusy||frozen||Boolean(proposal)||!m.edit||!matteAt(m.edit,activeScene.startMs)} onClick={()=>{setLibraryTab("animations");setLibraryOpen(true);animations.current?.place("titre-derriere",activeScene);}}>Ajouter un titre ou mot derrière le personnage</button>
-            {m.edit&&!matteAt(m.edit,activeScene.startMs)?<div className="space-y-1 text-xs text-mut"><p>Cette prise doit être détourée pour que le personnage passe devant les lettres. Importez sa vidéo transparente .webm ; le détourage automatique n’est pas encore disponible ici.</p><button type="button" className="btn-ghost min-h-[44px]" onClick={()=>{const card=document.getElementById("studio-mattes");card?.scrollIntoView({block:"center"});card?.focus({preventScroll:true});}}>Préparer le détourage</button></div>:null}
-            {unsaved&&!proposal?<p className="text-xs text-mut">Enregistrez vos animations avant de supprimer une séquence ou d’ajouter l’écran de fin.</p>:null}
-            <ul aria-label={`Animations de la séquence ${activeScene.index+1}`} className="space-y-1">{draft.map((a,i)=>({a,i})).filter(({a})=>a.fromMs>=activeScene.startMs&&a.fromMs<activeScene.endMs).map(({a,i})=><li key={a.id}>
-              <button type="button" draggable={!saving&&!frozen} onDragStart={e=>{e.dataTransfer.setData("application/x-beegrowth-motion",a.name);e.dataTransfer.setData("application/x-beegrowth-animation-index",String(i));e.dataTransfer.effectAllowed="move";}} aria-pressed={a.id===selectedId} className="btn-ghost min-h-[44px] w-full truncate text-left text-xs" onClick={()=>{setSelectedId(a.id??null);setPanel("animations");seekSource(a.fromMs);}}>⠿ {a.name} · {Object.values(a.props).map(v=>Array.isArray(v)?v.join(" · "):String(v)).join(" ")}</button>
-            </li>)}</ul>
-          </section> : null}
-          <ReelBrandCharter />
           {m.edit ? <StudioTrim key={m.updatedAt} edit={m.edit} durationMs={m.durationMs ?? 0} disabled={saving || animationBusy || frozen || unsaved} onSave={async e=>{await save(e);}} /> : null}
           {m.captions.length ? (
             <StudioTranscript words={m.captions} ranges={m.edit?.ranges ?? []} playheadMs={playSource} disabled={saving || animationBusy || frozen || unsaved} takeBreaks={breaks}
@@ -842,6 +810,59 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
             <button type="button" className="btn-ghost min-h-[36px] text-xs" onClick={transcribe} disabled={transcribing || animationBusy || frozen || m.status === "transcribing"}>{transcribing ? "Transcription en cours…" : "Transcrire à nouveau"}</button>
           ) : null}
         </aside>
+        <section ref={preview} aria-label="Moniteur du studio" className="studio-monitor rounded-2xl border border-line bg-[#eef0f5] p-3">
+          <div className="studio-monitor-frame">
+            {showRendered ? <video ref={renderedVideo} src={m.finalVideoUrl!} controls playsInline className="h-full max-w-full rounded-xl bg-black" aria-label={`MP4 rendu de « ${m.title} »`}/> : <>
+            <StudioCanvas animation={selectedAnimation} index={selectedAnim} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChange={changeAnimation} player={player} time={playOut}>
+            {html ? <ReelPreview ref={player} html={html} title={m.title} onTimeUpdate={onTime} onReady={()=>{if(pendingSeek.current!==null){player.current?.seek(pendingSeek.current);pendingSeek.current=null;}}} autoplay={false} preservePosition /> : <div className="grid aspect-[9/16] place-items-center rounded-2xl border border-dashed border-line p-4 text-center text-sm text-mut">La prise n&apos;est pas encore reçue.</div>}
+            </StudioCanvas></>}
+          </div>
+          <section aria-label="Lecture de l’aperçu" className="studio-transport flex flex-wrap items-center justify-center gap-2">
+          <div className="flex gap-2" role="group" aria-label="Vue du moniteur">
+            <button type="button" className="btn-ghost min-h-[44px]" aria-pressed={!showRendered} onClick={()=>setMonitorView("edit")}>Montage en direct</button>
+            <button type="button" className="btn-ghost min-h-[44px]" aria-pressed={showRendered} disabled={unsaved||m.renderStatus!=="done"||!m.finalVideoUrl} onClick={()=>setMonitorView("render")}>Voir le rendu MP4</button>
+          </div>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Lecture du montage">
+            <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered)void renderedVideo.current?.play().catch(()=>setError("Lecture impossible : réessayez dans le lecteur."));else player.current?.play();}}>Lire</button>
+            <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered)renderedVideo.current?.pause();else player.current?.pause();}}>Pause</button>
+            <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered&&renderedVideo.current){renderedVideo.current.currentTime=0;void renderedVideo.current.play().catch(()=>{});}else player.current?.restart();}}>Rejouer</button>
+            <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered&&renderedVideo.current){renderedVideo.current.muted=false;void renderedVideo.current.play().catch(()=>{});}else player.current?.listen();}}>Écouter avec le son</button>
+            <button type="button" className="btn-ghost min-h-[44px]" onClick={() => { const node=preview.current;if(document.fullscreenElement)void document.exitFullscreen();else void node?.requestFullscreen().catch(()=>setError("Le plein écran n’est pas disponible dans ce navigateur.")); }}>Plein écran</button>
+          </div>
+          </section>
+          <p className="text-xs text-mut">{showRendered ? "MP4 rendu de la version enregistrée : regardez et écoutez avant le transfert." : proposal ? "Aperçu de la modification (non enregistrée)." : "Aperçu en direct 1080×1920 : coupes, sous-titres karaoké et animations (brouillon compris)."}</p>
+        </section>
+        <aside aria-label="Réglages de la sélection" className="studio-inspector min-w-0 space-y-3">
+          {m.edit ? <section aria-label="Cadrage de la vidéo" className="card p-3">
+            <StudioFraming key={m.updatedAt} edit={proposal?.source==="framing"?proposal.edit:m.edit} disabled={saving||animationBusy||frozen||(unsaved&&proposal?.source!=="framing")} onPreview={framing=>manualPreview({...m.edit!,framing},"framing")}/>
+          </section>:null}
+          <section aria-label="Écran de fin" className="card space-y-2 p-3">
+            <h3 className="font-semibold">Logo de fin · +2 secondes</h3>
+            <p className="text-xs text-mut">Un écran ajouté après la dernière parole. La vidéo conserve toute sa durée.</p>
+            {(proposal?.edit??m.edit)?.outro ? <>
+              <button type="button" className="btn-ghost min-h-[44px]" onClick={()=>{setMonitorView("edit");player.current?.seek(segments.reduce((n,s)=>n+s.toMs-s.fromMs,0)/1000);player.current?.play();}}>Tester le logo de fin</button>
+              <button type="button" className="btn-ghost min-h-[44px]" disabled={saving||frozen||unsaved} onClick={()=>{if(m.edit)manualPreview({...m.edit,outro:undefined},"outro");}}>Retirer le logo de fin</button>
+            </>:<button type="button" className="btn-ghost min-h-[44px]" disabled={saving||animationBusy||frozen||unsaved} onClick={appendOutro}>Ajouter le logo de fin</button>}
+          </section>
+          <details className="card p-3"><summary className="cursor-pointer py-2 text-sm font-semibold">Logo BeeRecos · bas à droite</summary>
+            <label className="flex min-h-[44px] items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(logo)} disabled={saving||frozen||Boolean(proposal)} onChange={e=>{setMonitorView("edit");setLogo(e.target.checked?{width:220,right:170,bottom:260,opacity:1}:undefined);}}/>Afficher mon logo sur la vidéo</label>
+            {logo?<div className="space-y-2">{([["width","Largeur du logo",150,360],["right","Marge à droite",40,300],["bottom","Marge en bas",80,600]] as const).map(([key,label,min,max])=><label key={key} className="block text-xs">{label} (px)<input className="mt-1 min-h-[44px] w-full rounded-xl border border-line px-3" type="number" min={min} max={max} value={logo[key]} disabled={saving||frozen||Boolean(proposal)} onChange={e=>{const n=e.target.valueAsNumber;if(Number.isFinite(n)){setMonitorView("edit");setLogo({...logo,[key]:Math.max(min,Math.min(max,Math.round(n)))});}}}/></label>)}</div>:null}
+            <p className="mt-2 text-xs text-mut">Logo officiel de votre charte, conservé à ses proportions. Testez sa position dans l’aperçu puis enregistrez le montage.</p>
+          </details>
+          {activeScene ? <section aria-label="Séquence sélectionnée" className="card space-y-2 p-3">
+            <h3 className="font-semibold">Séquence {activeScene.index+1} · {sec(toOutputMs(segments,activeScene.startMs))} → {sec(toOutputMs(segments,activeScene.endMs))}</h3>
+            <p className="text-xs text-mut">{activeScene.text || "Ajoutez vos textes et animations depuis la bibliothèque."}</p>
+            <button type="button" className="btn-ghost min-h-[44px]" onClick={()=>{seekSource(activeScene.startMs);player.current?.play();}}>Tester cette séquence</button>
+            <button type="button" className="btn-ghost min-h-[44px] text-red-700" disabled={saving||animationBusy||frozen||unsaved} onClick={deleteScene}>Supprimer cette séquence</button>
+            <button type="button" className="btn-ghost min-h-[44px]" disabled={saving||animationBusy||frozen||Boolean(proposal)||!m.edit||!matteAt(m.edit,activeScene.startMs)} onClick={()=>{setLibraryTab("animations");setLibraryOpen(true);animations.current?.place("titre-derriere",activeScene);}}>Ajouter un titre ou mot derrière le personnage</button>
+            {m.edit&&!matteAt(m.edit,activeScene.startMs)?<div className="space-y-1 text-xs text-mut"><p>Cette prise doit être détourée pour que le personnage passe devant les lettres. Importez sa vidéo transparente .webm ; le détourage automatique n’est pas encore disponible ici.</p><button type="button" className="btn-ghost min-h-[44px]" onClick={()=>{const card=document.getElementById("studio-mattes");card?.scrollIntoView({block:"center"});card?.focus({preventScroll:true});}}>Préparer le détourage</button></div>:null}
+            {unsaved&&!proposal?<p className="text-xs text-mut">Enregistrez vos animations avant de supprimer une séquence ou d’ajouter l’écran de fin.</p>:null}
+            <ul aria-label={`Animations de la séquence ${activeScene.index+1}`} className="space-y-1">{draft.map((a,i)=>({a,i})).filter(({a})=>a.fromMs>=activeScene.startMs&&a.fromMs<activeScene.endMs).map(({a,i})=><li key={a.id}>
+              <button type="button" draggable={!saving&&!frozen} onDragStart={e=>{e.dataTransfer.setData("application/x-beegrowth-motion",a.name);e.dataTransfer.setData("application/x-beegrowth-animation-index",String(i));e.dataTransfer.effectAllowed="move";}} aria-pressed={a.id===selectedId} className="btn-ghost min-h-[44px] w-full truncate text-left text-xs" onClick={()=>{setSelectedId(a.id??null);setPanel("animations");seekSource(a.fromMs);}}>⠿ {a.name} · {Object.values(a.props).map(v=>Array.isArray(v)?v.join(" · "):String(v)).join(" ")}</button>
+            </li>)}</ul>
+          </section> : null}
+          <ReelBrandCharter />
+        </aside>
       </div>
       {proposal?.source ? <section aria-label="Modification à enregistrer" className="card space-y-2 border-brand p-3">
         <p role="status" className="text-sm">{proposal.source==="sequence"?"Séquence retirée de l’aperçu. Le fichier source reste intact.":"Modification visible dans l’aperçu, pas encore enregistrée."}</p>
@@ -853,7 +874,6 @@ function Editor({ id, onBack, onOpenSource }: { id: string; onBack: () => void; 
           onSeek={seekSource} selected={selectedAnim} onSelectAnimation={(i) => { setSelectedId(draft[i]?.id ?? null); const scene=scenes.find(s=>draft[i].fromMs>=s.startMs&&draft[i].fromMs<s.endMs); if(scene)setSelectedSceneIndex(scene.index); setPanel("animations"); }} takeBreaks={breaks} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChangeAnimation={(_i,a) => changeAnimation(a)} onChangeRanges={proposal ? undefined : (r) => { if (m.edit) void save({ ...m.edit, ranges: r }); }} waveform={wave} waveformNote={waveNote} broll={(proposal?.edit ?? m.edit).broll ?? []} zone={zone} onCutZone={cutZone} onClearZone={() => setZone({ in: null, out: null })} />
       ) : null}
       <p role="status" className="text-xs text-mut">{unsaved ? "Modifications locales non enregistrées : appliquez ou annulez la proposition et enregistrez les animations avant le transfert." : "Montage enregistré sur le serveur."}</p>
-      <StudioTransfer sourceType="montage" sourceId={m.id} expectedSourceVersion={m.updatedAt} disabled={!m.edit || saving || animationBusy || unsaved || transcribing} />
     </div>
   );
   return expanded ? createPortal(content,document.body) : content;
@@ -945,7 +965,7 @@ export default function MontageStudio({ source = "reel", montageId, onOpenMontag
     <h1 className={open ? "sr-only" : "font-display text-3xl"}>Montage vidéo</h1>
     <p className={open ? "sr-only" : "mt-1 text-sm text-mut"}>{source === "ai" ? "Source générée par IA" : "Import de vos vidéos personnelles"} · Montage → préparation du post → validation</p>
     <div className={open ? "space-y-4" : "mt-5 space-y-4"}>
-      {open ? <Editor key={open} id={open} onBack={() => { setOpen(null); refresh(); }} onOpenSource={openSource} /> : <>
+      {open ? <Editor key={open} id={open} onBack={() => { setOpen(null); refresh(); }} onOpenSource={openSource} onSwitch={onOpenMontage ? (target) => onOpenMontage(target) : undefined} /> : <>
         {source === "ai" || sourceRef ? <>
           <AiEditor sourceRef={sourceRef} scriptId={searchParams.get("script")} onUseMotion={isMontageConfigured ? importMotion : undefined} onUseStory={isMontageConfigured ? importAi : undefined} />
         </> : isMontageConfigured ? <Uploader onDone={setOpen} /> : <p role="status">Le serveur de montage n’est pas configuré.</p>}

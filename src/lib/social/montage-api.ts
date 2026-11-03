@@ -30,7 +30,7 @@ async function call<T>(body: Record<string, unknown>): Promise<T> {
 }
 
 export type RenderStatus = "rendering" | "done" | "failed" | null;
-export type MontageSummary = { id: string; title: string; status: MontageStatus; durationMs: number | null; keptMs: number | null; workspaceId: string | null; createdAt: string; updatedAt: string; renderStatus: RenderStatus; sentToReels: boolean; finalVideoUrl?: string | null };
+export type MontageSummary = { id: string; title: string; status: MontageStatus; durationMs: number | null; keptMs: number | null; workspaceId: string | null; createdAt: string; updatedAt: string; renderStatus: RenderStatus; sentToReels: boolean; finalVideoUrl?: string | null; archivedAt?: string | null };
 export type MontageDetail = MontageSummary & { aiSource?: { source: StudioSourceRef; verified: boolean } | null; edit: Edit | null; captions: CaptionWord[]; canUndo: boolean; canRedo?: boolean; previewApproved?: boolean; previewApprovedAt?: string | null;
   brief?: Brief | null; storyboard?: Storyboard | null; storyboardStatus?: StoryboardStatus | null; storyboardApprovedAt?: string | null; post?: MontagePost | null; reel?: { reelId: string; revision: number; keyword: string; approved: boolean } | null; seededRevision?: number | null; error: string | null; renderError: string | null; finalVideoUrl: string | null };
 
@@ -69,7 +69,10 @@ export const reels = {
 };
 
 export const montage = {
-  list: () => call<{ montages: MontageSummary[] }>({ action: "list" }),
+  list: (opts: { archived?: boolean } = {}) => call<{ montages: MontageSummary[] }>({ action: "list", ...(opts.archived ? { archived: true } : {}) }),
+  /** Corbeille (Instagram BeeRecos) : suppression récupérable, aucun fichier effacé. */
+  archive: (id: string) => call<{ archivedAt: string }>({ action: "archive", id }),
+  restore: (id: string) => call<{ restored: boolean }>({ action: "restore", id }),
   get: (id: string) => call<{ montage: MontageDetail; videoUrl: string | null; takeUrls?: Record<string, string>; mediaUrls?: Record<string, string>; matteUrls?: Record<string, string> }>({ action: "get", id }),
   create: (p: { title: string; fileName: string; size: number; reelId?: string; aiSource?: StudioSourceTransfer }) => call<{ id: string; uploadUrl: string }>({ action: "create", ...p }),
   uploaded: (id: string, p: { durationMs: number; islands: { fromMs: number; toMs: number }[] | null }) => call<{ ok: true }>({ action: "uploaded", id, ...p }),

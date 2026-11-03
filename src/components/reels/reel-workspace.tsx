@@ -7,7 +7,7 @@ export default function ReelWorkspace({ montageId, source = "reel", compact = fa
   const router = useRouter();
   return (
     <div className="social-studio -mx-4 min-h-full sm:-mx-8">
-      <MontageStudio source={source} montageId={montageId} compact={compact} onOpenMontage={(id) => router.push(id ? `/reels/${id}` : "/")} />
+      <MontageStudio source={source} montageId={montageId} compact={compact} onOpenMontage={(id) => { if (!id || id === "__tous") router.push("/reels"); else if (id === "__video") router.push("/reels/nouveau/video"); else if (id === "__ia") router.push("/reels/nouveau/ia"); else router.push(`/reels/${id}`); }} />
     </div>
   );
 }
