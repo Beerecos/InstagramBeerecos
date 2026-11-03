@@ -51,8 +51,8 @@ test("Post : un bouton Créer, trois choix, et le formulaire de post simple", as
   await expect(dialog.getByRole("link", { name: /Réel filmé/ })).toHaveAttribute("href", "/reels/nouveau/video");
   await dialog.getByRole("button", { name: /Post simple/ }).click();
 
-  const form = page.getByRole("dialog", { name: "Nouveau post" });
-  await form.getByLabel("Légende").fill("Viens découvrir un club BeeRecos.");
+  const form = page.getByRole("dialog", { name: /^(Nouveau post|Post)$/ });
+  await form.getByLabel("Légende").fill("Viens découvrir BeeRecos.");
   await expect(form.getByLabel("Message envoyé en DM")).toHaveCount(0);
   await form.getByLabel(/Mot-clé pour recevoir un DM/).fill("club");
   await expect(form.getByLabel(/Mot-clé pour recevoir un DM/)).toHaveValue("CLUB");

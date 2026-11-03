@@ -65,12 +65,12 @@ export default function PostForm({ initial, previews, connected, onClose, onSave
   const field = "mt-1 block w-full rounded-lg border border-line bg-white px-3";
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="post-titre" className="fixed inset-0 z-50 grid place-items-center bg-black/40 sm:p-4">
-      <div className="card flex h-full w-full max-w-lg flex-col overflow-hidden sm:h-auto sm:max-h-[92vh]">
+      <div className="card flex h-full w-full max-w-lg flex-col overflow-hidden sm:h-[min(92vh,820px)]">
         <header className="flex items-center justify-between border-b border-line p-4">
           <h2 id="post-titre" className="font-semibold">{current ? "Post" : "Nouveau post"}</h2>
           <button type="button" aria-label="Fermer" className="grid size-10 place-items-center rounded-lg hover:bg-black/[0.05]" onClick={onClose}><X aria-hidden size={18} /></button>
         </header>
-        <fieldset disabled={locked} className="flex-1 space-y-4 overflow-auto p-4 text-sm">
+        <fieldset disabled={locked} className="min-h-0 flex-1 space-y-4 overflow-auto p-4 text-sm">
           <div>
             <p className="font-medium">Photos <span className="font-normal text-mut">({photos.length}/{MEDIA_MAX} · plusieurs = carrousel)</span></p>
             <ul className="mt-2 grid grid-cols-4 gap-2">
