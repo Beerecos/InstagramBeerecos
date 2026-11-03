@@ -4,8 +4,7 @@ export type NavItem = { href: string; label: string; icon: string; mobile?: bool
 export const NAV_ITEMS: NavItem[] = [
   { href: "/scripts", label: "Scripts", icon: "script", mobile: true },
   { href: "/", label: "Studio", icon: "clapperboard", mobile: true },
-  { href: "/reels", label: "Mes réels", icon: "layers" },
-  { href: "/library", label: "Bibliothèque", icon: "library", mobile: true },
+  { href: "/post", label: "Post", icon: "send", mobile: true },
   { href: "/calendar", label: "Calendrier", icon: "calendar", mobile: true },
   { href: "/settings", label: "Paramètres", icon: "settings" },
 ];

@@ -1,4 +1,4 @@
-import { FileText, BadgeCheck, BarChart3, CalendarDays, CheckCheck, Clapperboard, Hexagon, Home, Layers, Library, Megaphone, Settings, ShieldCheck, Target, Users, UsersRound, type LucideIcon } from "lucide-react";
+import { FileText, BadgeCheck, BarChart3, CalendarDays, CheckCheck, Clapperboard, Hexagon, Home, Layers, Library, Megaphone, Send, Settings, ShieldCheck, Target, Users, UsersRound, type LucideIcon } from "lucide-react";
 
 const ICONS: Record<string, LucideIcon> = {
   home: Home,
@@ -7,6 +7,7 @@ const ICONS: Record<string, LucideIcon> = {
   team: UsersRound,
   layers: Layers,
   clapperboard: Clapperboard,
+  send: Send,
   calendar: CalendarDays,
   megaphone: Megaphone,
   users: Users,

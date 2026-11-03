@@ -1,7 +1,12 @@
 # Brancher Instagram (publication + DM automatiques)
 
-À faire une seule fois. Compter 30 à 45 minutes. Tout ce qui est secret va dans `.env`
-(local, jamais commité) et dans les variables d'environnement Vercel.
+À faire une seule fois. Compter 30 à 45 minutes.
+
+**Depuis l'app (2026-11-03)** : le jeton se colle dans **Paramètres → Instagram** (vérifié auprès d'Instagram,
+prolongé à 60 jours, gardé côté serveur dans `ig_connection`, renouvelé chaque jour par la tournée planifiée).
+On publie depuis l'onglet **Post** (confirmation obligatoire) ; un mot-clé devient une règle de DM après la
+publication. Restent sur Vercel : `IG_APP_SECRET` et `IG_VERIFY_TOKEN` (webhook des DM). Les sections ci-dessous
+décrivent aussi l'ancienne voie en ligne de commande (`automation/bin/ig.mjs`).
 
 ## 1. Compte Instagram professionnel
 Dans l'app Instagram : Paramètres → Type de compte → passer en **compte Professionnel**

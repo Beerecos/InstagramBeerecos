@@ -2,13 +2,16 @@
 /**
  * Post et export d'un réel, dans le même projet que le montage : couverture, légende, CTA, mot-clé, destination,
  * hashtags, puis fichiers livrés (MP4 rendu, couverture PNG, légende TXT, sous-titres SRT).
- * Indépendant de Meta, des mots-clés DM actifs et du calendrier : le transfert vers la file Reels reste une action
- * distincte (panneau Rendu).
+ * Publication : section « Publier sur Instagram » (confirmation explicite, suivi réel) ; le mot-clé devient une règle
+ * de DM seulement après une publication confirmée par Instagram.
  */
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { montage, reels, type MontageDetail } from "@/lib/social/montage-api";
 import { transferStudioMedia, updateDeliverable } from "@/lib/social/editorial-api";
+import PublishButton from "@/components/post/publish-dialog";
+import { instagram } from "@/lib/instagram/api";
+import type { Publication } from "@/domain/instagram/publication";
 import { composeCaption, durationWarning, emptyPost, fileSlug, montageSrt, parseHashtags, postWarnings, type ReelPost } from "@/domain/reels/post";
 
 const KEY = (id: string) => `ibr.post.${id}`;
@@ -41,6 +44,14 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
   const [error, setError] = useState<string | null>(null);
   const video = useRef<HTMLVideoElement>(null);
   const [duration, setDuration] = useState(0);
+  const [pub, setPub] = useState<Publication | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [dmText, setDmText] = useState("");
+  const [buttonTitle, setButtonTitle] = useState("");
+  useEffect(() => {
+    instagram.list().then((r) => { const p = r.items.find((x) => x.montageId === m.id) ?? null; setPub(p); if (p) { setDmText(p.dmText ?? ""); setButtonTitle(p.buttonTitle ?? ""); } }).catch(() => {});
+    instagram.connection().then((c) => setConnected(c.connected)).catch(() => {});
+  }, [m.id]);
 
   const update = (patch: Partial<ReelPost>) => { setPost((p) => ({ ...p, ...patch })); setSaved(null); };
   const final = useMemo(() => composeCaption(post), [post]);
@@ -141,9 +152,30 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
         </div>
       </section>
 
+      <section aria-labelledby="publier" className="space-y-2">
+        <h3 id="publier" className="font-semibold">Publier sur Instagram</h3>
+        {post.keyword ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="block sm:col-span-2">DM envoyé à qui commente {post.keyword}
+              <textarea rows={3} maxLength={900} value={dmText} onChange={(e) => setDmText(e.target.value)} disabled={pub?.status === "published" || pub?.status === "publishing"} placeholder="Merci ! Voici le lien promis :" className="mt-1 block w-full rounded-xl border border-line bg-white px-3 py-2" />
+            </label>
+            <label className="block">Bouton du DM (facultatif)<input maxLength={20} value={buttonTitle} onChange={(e) => setButtonTitle(e.target.value)} disabled={pub?.status === "published" || pub?.status === "publishing"} placeholder="Ouvrir" className="mt-1 block min-h-11 w-full rounded-lg border border-line bg-white px-3" /></label>
+            <p className="self-end text-xs text-mut">{/^https:\/\//.test(post.destination.trim()) ? `Lien du bouton : ${post.destination.trim()}` : "Pour un bouton, mets un lien https:// dans « Destination »."}</p>
+          </div>
+        ) : <p className="text-mut">Sans mot-clé, aucun DM automatique n&apos;est créé.</p>}
+        {!ready ? <p className="text-mut">Disponible quand le MP4 de cette version est rendu.</p> : null}
+        <PublishButton connected={connected} current={pub} videoUrl={ready ? m.finalVideoUrl : null} onChange={setPub} disabled={!ready || Boolean(busy)}
+          prepare={async () => {
+            const url = /^https:\/\//.test(post.destination.trim()) ? post.destination.trim() : "";
+            const { item } = await instagram.save({ id: pub?.id, kind: "reel", montageId: m.id, title: m.title, caption: final, keyword: post.keyword, dmText: post.keyword ? dmText : "", buttonTitle: post.keyword && url ? buttonTitle : "", buttonUrl: post.keyword && buttonTitle ? url : "" });
+            return item;
+          }} />
+        {!connected ? <p className="text-xs text-mut">Instagram n&apos;est pas connecté : <Link href="/settings#instagram" className="text-brand underline">Paramètres → Instagram</Link>.</p> : null}
+      </section>
+
       <section aria-labelledby="fichiers" className="space-y-2">
         <h3 id="fichiers" className="font-semibold">Fichiers livrés</h3>
-        <p className="text-mut">Exporter n&apos;est pas publier. Rien n&apos;est envoyé à Instagram depuis ce panneau.</p>
+        <p className="text-mut">Exporter n&apos;est pas publier : pour publier, utilise « Publier sur Instagram » ci-dessus.</p>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="btn-red min-h-11" disabled={!ready || Boolean(busy)} onClick={mp4}>{busy === "mp4" ? "Téléchargement…" : "MP4 (1080×1920)"}</button>
           <button type="button" className="btn-ghost min-h-11" disabled={!ready || Boolean(busy)} onClick={cover}>{busy === "cover" ? "Capture…" : "Couverture PNG"}</button>

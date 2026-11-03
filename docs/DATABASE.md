@@ -33,6 +33,17 @@ remplacé en phase 5.
 | approvals | Validations humaines | lecture membres ; décision admin / responsable contenu ; **chaque décision auditée** |
 | content_items | Contenus planifiés | lecture membres ; écriture admin / responsable contenu |
 
+## Publication Instagram (`20261103120000_instagram_publication.sql`, base partagée BeeMarketing)
+
+| Table | Rôle | RLS |
+|---|---|---|
+| ig_connection | Compte Instagram connecté (une ligne) : id, pseudo, **jeton**, expiration | activée, **aucune politique** : serveur uniquement |
+| ig_publications | Créations de l'onglet Post (réel du Studio ou post photo/carrousel), mot-clé + DM, état draft → publishing → published / error | lecture et brouillons par l'auteur ; « publié » écrit par le serveur seulement |
+| cta_campaigns / cta_replies | Règles « commente MOT → DM » (créées après publication confirmée) et journal des réponses | serveur uniquement |
+
+Bucket privé `ig-media` : photos des posts (JPEG préparé dans le navigateur, lien signé d'une heure pour Instagram).
+Tests : `tests/rls/instagram.test.ts`.
+
 ## Phases suivantes
 
 Voir `PLAN.md` § Modèle de données. Chaque nouvelle table : `organization_id`, `created_at`/`updated_at`, index sur les clés de filtre,

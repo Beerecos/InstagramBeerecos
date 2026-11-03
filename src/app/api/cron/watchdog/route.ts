@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { serverEnv } from "@/lib/env/server";
 import { runWatchdogAllOrganizations } from "@/server/missions/service";
+import { refreshIfNeeded } from "@/server/instagram/cron";
 
 /** Tournée planifiée du Chien de garde (Vercel Cron, voir vercel.json). Protégée par CRON_SECRET. */
 export async function GET(request: Request) {
@@ -11,5 +12,6 @@ export async function GET(request: Request) {
   const expected = Buffer.from(`Bearer ${secret}`);
   if (got.length !== expected.length || !timingSafeEqual(got, expected)) return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
   const organizations = await runWatchdogAllOrganizations();
-  return NextResponse.json({ ok: true, organizations });
+  const instagram = await refreshIfNeeded();
+  return NextResponse.json({ ok: true, organizations, instagram });
 }

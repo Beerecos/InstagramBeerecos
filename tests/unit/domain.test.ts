@@ -31,7 +31,7 @@ describe("pondérations", () => {
 
 describe("navigation", () => {
   it("suit la navigation de l'équipe marketing IA", () => {
-    expect(NAV_ITEMS.map((i) => i.label)).toEqual(["Scripts", "Studio", "Mes réels", "Bibliothèque", "Calendrier", "Paramètres"]);
+    expect(NAV_ITEMS.map((i) => i.label)).toEqual(["Scripts", "Studio", "Post", "Calendrier", "Paramètres"]);
   });
   it("détecte la page active", () => {
     expect(isActive("/", "/")).toBe(true);

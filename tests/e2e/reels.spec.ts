@@ -15,7 +15,7 @@ test("l'accueil ouvre directement le studio sur le dernier projet, avec le choix
   await expect(page).toHaveURL(/\/reels\/m0$/);
   // La page précédente reste en mémoire, masquée (navigation Next.js) : on vise le sélecteur visible.
   await page.getByLabel("Projet ouvert").filter({ visible: true }).selectOption("__tous");
-  await expect(page).toHaveURL(/\/reels$/);
+  await expect(page).toHaveURL(/\/post$/);
 });
 
 test("Mes réels : statut, prochaine action, corbeille récupérable", async ({ page }) => {
@@ -48,19 +48,19 @@ test("Mes réels : statut, prochaine action, corbeille récupérable", async ({ 
   expect(errors).toEqual([]);
 });
 
-test("navigation : Scripts → Studio → Bibliothèque → Calendrier", async ({ page, isMobile }) => {
+test("navigation : Scripts → Studio → Post → Calendrier", async ({ page, isMobile }) => {
   await page.goto("/");
   const nav = () => page.getByRole("navigation", { name: isMobile ? "Navigation mobile" : "Navigation principale" });
-  for (const label of ["Scripts", "Studio", "Bibliothèque", "Calendrier"]) await expect(nav().getByRole("link", { name: label })).toBeVisible();
+  for (const label of ["Scripts", "Studio", "Post", "Calendrier"]) await expect(nav().getByRole("link", { name: label })).toBeVisible();
   await nav().getByRole("link", { name: "Scripts" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Scripts" })).toBeVisible();
   await expect(page.getByRole("link", { name: /J'ai déjà mes prises/ })).toHaveAttribute("href", "/reels/tournage");
   await expect(page.getByRole("link", { name: /Nouveau script/ }).first()).toHaveAttribute("href", "/scripts/nouveau");
-  await nav().getByRole("link", { name: "Bibliothèque" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Bibliothèque" })).toBeVisible();
+  await nav().getByRole("link", { name: "Post" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Post" })).toBeVisible();
   await nav().getByRole("link", { name: "Calendrier" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Calendrier éditorial" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Ajouter un réel terminé" })).toHaveAttribute("href", "/library");
+  await expect(page.getByRole("link", { name: "Ajouter un réel terminé" })).toHaveAttribute("href", "/post");
   await page.goto("/settings");
   await expect(page.getByText("Serveur BeeMarketing (Edge Functions, base partagée)")).toBeVisible();
 });

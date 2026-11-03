@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from "react";
 import StudioSettingsPanel from "@/components/social/studio/StudioSettingsPanel";
+import InstagramSettings from "@/components/post/instagram-settings";
 import { apiUrl } from "@/lib/social/api-config";
 import { isMontageConfigured, montage } from "@/lib/social/montage-api";
 import { RENDER_MODE } from "@/lib/social/reel-render-client";
@@ -41,9 +42,9 @@ export default function Settings() {
           )) : null}
           <div className="flex justify-between gap-4"><dt>Narration et rendu des vidéos IA</dt><dd>{RENDER_MODE === "online" ? "en ligne (fonction studio-render, vérifiée au lancement)" : "serveur de rendu local (NEXT_PUBLIC_REEL_RENDER_URL)"}</dd></div>
           <div className="flex justify-between gap-4"><dt>Génération de plans vidéo par un fournisseur externe (Veo, Runway…)</dt><dd className="text-mut">non raccordée</dd></div>
-          <div className="flex justify-between gap-4"><dt>Publication Instagram et réponses en DM</dt><dd className="text-mut">hors du studio (étape distincte, gérée par BeeMarketing)</dd></div>
         </dl>
       </section>
+      <InstagramSettings />
       <section className="card p-4" aria-labelledby="marque">
         <h2 id="marque" className="font-semibold">Marque</h2>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
