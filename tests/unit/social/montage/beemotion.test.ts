@@ -51,7 +51,7 @@ describe("BeeMotion — recherche", () => {
 
   it("par catégorie, fonction de scène et durée disponible", () => {
     expect(searchMotions({ category: "cta" }).map((m) => m.id)).toEqual(["mot-cle"]);
-    expect(searchMotions({ intent: "HOOK", approvedOnly: false }).map((m) => m.id).sort()).toEqual(["titre", "titre-derriere"]);
+    expect(searchMotions({ intent: "HOOK", approvedOnly: false }).map((m) => m.id).sort()).toEqual(["cube-3d", "titre", "titre-derriere", "titre-profondeur"]);
     expect(searchMotions({ maxDurationMs: 2000, approvedOnly: false }).every((m) => m.durationMs <= 2000)).toBe(true);
     expect(searchMotions({ maxDurationMs: 2000, approvedOnly: false }).map((m) => m.id)).toEqual(["logo-fin"]);
   });
