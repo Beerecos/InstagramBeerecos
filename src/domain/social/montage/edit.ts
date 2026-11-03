@@ -127,7 +127,11 @@ export const EditSchema = z.strictObject({
   subtitles: z.boolean().default(true),
   captionStyle: CaptionStyleSchema.default({}),
   /** Gain de la voix (1 = inchangé, 3,98 = +12 dB au maximum). */
-  framing: z.strictObject({x:z.number().min(-540).max(540),y:z.number().min(-960).max(960),scale:z.number().min(1).max(2)}).optional(),
+  /**
+   * Cadrage : `focusX` / `focusY` (0 à 100 %, Instagram BeeRecos 2026-11-03) choisissent la partie gardée d'une prise
+   * plus large ou plus haute que le 9:16 (paysage : gauche → droite) ; x / y décalent l'image ; `scale` zoome.
+   */
+  framing: z.strictObject({x:z.number().min(-540).max(540),y:z.number().min(-960).max(960),scale:z.number().min(1).max(2),focusX:z.number().min(0).max(100).optional(),focusY:z.number().min(0).max(100).optional()}).optional(),
   outro: z.strictObject({durationMs:z.literal(2000),baseline:z.boolean().default(true)}).optional(),
   voiceGain: z.number().min(0).max(3.98).default(1),
   custom: z.array(CustomAnimationSchema).default([]),

@@ -136,3 +136,37 @@ test("pistes en plus : clip d'illustration au curseur, cadrage, musique baissée
   await expect.poll(() => saved.at(-1)!.sounds[0].duck).toEqual({ volume: 0.2 });
   await expect(page.locator("hyperframes-player")).toHaveAttribute("srcdoc", /id="sfx-0-0" src="https:\/\/bee-api\.test\/fichiers\/musique\.mp3"[^>]*data-volume="0\.2"[\s\S]*id="sfx-0-1"[^>]*data-volume="1"/);
 });
+
+test("prise paysage : je choisis moi-même la partie gardée en 9:16, appliquée et enregistrée", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "glisser à la souris : vérifié sur ordinateur");
+  const dir = mkdtempSync(join(tmpdir(), "paysage-"));
+  // WebM (VP9) : le Chromium de test ne décode pas toujours le H.264 ; un navigateur normal lit les deux.
+  const file = join(dir, "paysage.webm");
+  execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "testsrc=s=640x360:d=4:r=30", "-c:v", "libvpx-vp9", "-b:v", "200k", "-an", file]);
+  const video = readFileSync(file);
+  let version = 1;
+  let edit = initialEdit("prise.mp4", 4000);
+  const saved: typeof edit[] = [];
+  // Vidéo intégrée en données : le Chromium de test ne lit pas une vidéo servie par la simulation réseau.
+  const videoUrl = `data:video/webm;base64,${video.toString("base64")}`;
+  await mockBee(page, {
+    get: () => ({ montage: { id: "m5", title: "Prise paysage", status: "ready", durationMs: 4000, keptMs: 4000, workspaceId: null, createdAt: "t", updatedAt: `v${version}`, renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit, captions: WORDS.slice(0, 4), canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl }),
+    "save-edit": (body) => { edit = body.edit as typeof edit; saved.push(edit); version++; return {}; },
+  });
+  await page.goto("/reels/m5");
+  const win = page.getByTestId("framing-window").filter({ visible: true });
+  await expect(win).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/Prise en paysage : fais glisser la fenêtre/).filter({ visible: true })).toBeVisible();
+  const source = (await page.getByTestId("framing-source").filter({ visible: true }).boundingBox())!;
+  const w = (await win.boundingBox())!;
+  // Fenêtre 9:16 dans une image 16:9 : environ 32 % de la largeur.
+  expect(w.width / source.width).toBeGreaterThan(0.28);
+  expect(w.width / source.width).toBeLessThan(0.36);
+  await page.mouse.move(w.x + w.width / 2, w.y + w.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(source.x + source.width - 2, w.y + w.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await expect(page.locator("hyperframes-player").filter({ visible: true })).toHaveAttribute("srcdoc", /object-position: 100% 50%/);
+  await page.getByRole("button", { name: /Enregistrer la modification|Appliquer/ }).filter({ visible: true }).first().click();
+  await expect.poll(() => saved.at(-1)?.framing?.focusX).toBe(100);
+});

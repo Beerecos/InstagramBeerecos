@@ -128,7 +128,11 @@ export function buildEditComposition(input: unknown, words: CaptionWord[], opts:
   // Zoom alterné : plan large, plan serré, plan large… à chaque coupe (centré sur le visage, en haut du cadre).
   const frame = (i: number) => {
     const rhythmZoom = edit.rythme?.zoomCoupes && segments.length > 1 && i % 2 === 1 ? edit.rythme.zoom : 1;
-    if (edit.framing) return ` style="transform: translate(${edit.framing.x}px, ${edit.framing.y}px) scale(${edit.framing.scale * rhythmZoom}); transform-origin: 50% 50%"`;
+    if (edit.framing) {
+      // Partie gardée d'une prise paysage (ou plus haute que le 9:16) : position de l'image dans le recadrage « cover ».
+      const focus = edit.framing.focusX !== undefined || edit.framing.focusY !== undefined ? `; object-position: ${edit.framing.focusX ?? 50}% ${edit.framing.focusY ?? 50}%` : "";
+      return ` style="transform: translate(${edit.framing.x}px, ${edit.framing.y}px) scale(${edit.framing.scale * rhythmZoom}); transform-origin: 50% 50%${focus}"`;
+    }
     return rhythmZoom !== 1 ? ` style="transform: scale(${rhythmZoom}); transform-origin: 50% 32%"` : "";
   };
   segments.forEach((seg, i) => {
