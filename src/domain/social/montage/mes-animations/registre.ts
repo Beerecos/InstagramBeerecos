@@ -13,7 +13,13 @@ import cube3d from "./cube-3d";
 import carte3d from "./carte-retournee";
 import titre3d from "./titre-profondeur";
 import cascade3d from "./cascade-3d";
+import tour from "./tour-blocs";
+import orbite from "./icones-orbite";
+import puce from "./puce-lumineuse";
+import arbre from "./arbre-pousse";
+import fusee from "./fusee-decollage";
 export const USER_ANIMATIONS: Record<string, AnimationDef> = {
   "papier-dechire": papier, "bandeau-double": bandeau, "piliers-progressifs": piliers, "mot-impact": impact,
   "cube-3d": cube3d, "carte-retournee": carte3d, "titre-profondeur": titre3d, "cascade-3d": cascade3d,
+  "tour-blocs": tour, "icones-orbite": orbite, "puce-lumineuse": puce, "arbre-pousse": arbre, "fusee-decollage": fusee,
 };
