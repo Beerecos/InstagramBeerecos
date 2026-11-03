@@ -1,10 +1,13 @@
-.claude/
-rush/
-export/
-projets/
-assets/
-content/
-docs/
-supabase/
-automation/test/
-automation/bin/
+# Dossiers de la racine seulement (un motif sans « / » initial exclurait aussi src/lib/supabase).
+/.claude/
+/rush/
+/export/
+/projets/
+/assets/
+/docs/
+/supabase/
+/automation/test/
+/automation/bin/
+# content/ : seul le catalogue des 72 réels est utilisé par l'application (src/app/api/reels-72).
+/content/*
+!/content/reels-72/
