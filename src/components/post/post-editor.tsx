@@ -73,6 +73,8 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
   const story = format === "carrousel" && captionMode === "histoire";
   const [promptCopied, setPromptCopied] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [carouselBusy, setCarouselBusy] = useState(false);
+  const working = Boolean(busy) || carouselBusy;
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,11 +95,11 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
 
   useEffect(() => () => { previewUrls.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
   useEffect(() => {
-    if (!dirty && !busy) return;
+    if (!dirty && !working) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty, busy]);
+  }, [dirty, working]);
 
   const locked = current?.status === "publishing" || current?.status === "published";
   const kw = normalizeKeyword(keyword);
@@ -182,14 +184,14 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
   return (
     <div className="social-studio -mx-4 min-h-full px-4 py-2 sm:-mx-8 sm:px-8">
       <header className="flex flex-wrap items-center gap-3">
-        <Link href="/" onClick={(event) => { if ((dirty || busy) && !window.confirm("Quitter sans enregistrer les modifications du post ?")) event.preventDefault(); }} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-sm text-mut hover:bg-black/[0.05]"><ArrowLeft aria-hidden size={16} /> Post</Link>
+        <Link href="/" onClick={(event) => { if ((dirty || working) && !window.confirm("Quitter sans enregistrer les modifications du post ?")) event.preventDefault(); }} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-sm text-mut hover:bg-black/[0.05]"><ArrowLeft aria-hidden size={16} /> Post</Link>
         <h1 className="font-display text-2xl font-semibold">{current ? "Éditeur de post" : format === "carrousel" ? "Nouveau carrousel" : "Nouveau post"}</h1>
         {current ? <span className="pill bg-black/[0.05] text-mut">{STATUS_LABELS[current.status]}</span> : null}
       </header>
 
       {error && !current && id ? <p role="alert" className="mt-4 text-sm text-red-700">{error}</p> : (
         <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <fieldset disabled={locked || Boolean(busy)} className="min-w-0 space-y-5 text-sm">
+          <fieldset disabled={locked || working} className="min-w-0 space-y-5 text-sm">
             <div role="radiogroup" aria-label="Format" className="inline-flex rounded-xl bg-black/[0.05] p-1">
               {(["simple", "carrousel"] as const).map((f) => {
                 const blocked = f === "simple" && photos.length > 1;
@@ -202,7 +204,7 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
                 );
               })}
             </div>
-            {format === "carrousel" && !locked ? <CarouselBuilder subject={brief} facts={facts} onSubjectChange={setBrief} onFactsChange={setFacts} disabled={Boolean(busy)} onDone={(slides) => { setPhotos(slides); setDirty(true); }} existingPhotos={photos.length} /> : null}
+            {format === "carrousel" && !locked ? <CarouselBuilder onBusyChange={setCarouselBusy} subject={brief} facts={facts} onSubjectChange={setBrief} onFactsChange={setFacts} disabled={working} onDone={(slides) => { setPhotos(slides); setDirty(true); }} existingPhotos={photos.length} /> : null}
             <section aria-labelledby="photos-titre">
               <h2 id="photos-titre" className="font-medium">{format === "simple" ? "Photo" : "Photos"} <span className="font-normal text-mut">{format === "simple" ? "(une seule)" : `(${photos.length}/${photoLimit("carrousel")} · 2 au moins)`}</span></h2>
               <ul className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-5">
@@ -255,7 +257,7 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
                   <span>(InspiBEEz&apos;ness, version du {new Date(INSPIBEEZNESS_PROMPT_VERSION).toLocaleDateString("fr-FR")})</span>
                 </p>
               ) : null}
-              <button type="button" className="btn-red min-h-11" disabled={!brief.trim() || (story && !facts.trim()) || Boolean(busy)} onClick={propose}><Sparkles aria-hidden size={16} /> {busy === "ia" ? "Rédaction…" : caption.trim() ? "Proposer une nouvelle version" : "Proposer une légende"}</button>
+              <button type="button" className="btn-red min-h-11" disabled={!brief.trim() || (story && !facts.trim()) || working} onClick={propose}><Sparkles aria-hidden size={16} /> {busy === "ia" ? "Rédaction…" : caption.trim() ? "Proposer une nouvelle version" : "Proposer une légende"}</button>
               <p className="text-xs text-mut">L&apos;IA suit la charte BeeRecos et n&apos;invente ni chiffre ni témoignage. Relis toujours sa proposition.</p>
               {suggestion ? (
                 <div className="space-y-2 rounded-lg bg-white p-3">
@@ -304,11 +306,11 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
         {notice ? <p role="status" className="text-sm text-mut">{notice}</p> : null}
         {error && (current || !id) ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          {!locked ? <button type="button" className="btn-ghost min-h-11 text-red-700" disabled={Boolean(busy)} onClick={remove}><Trash2 aria-hidden size={16} /> {current ? "Supprimer" : "Annuler"}</button> : <span />}
+          {!locked ? <button type="button" className="btn-ghost min-h-11 text-red-700" disabled={working} onClick={remove}><Trash2 aria-hidden size={16} /> {current ? "Supprimer" : "Annuler"}</button> : <span />}
           <div className="flex flex-wrap items-center gap-2">
             {!locked ? <span className="text-xs text-mut">{dirty ? "Modifications non enregistrées" : current ? "Enregistré" : ""}</span> : null}
-            {!locked ? <button type="button" className="btn-ghost min-h-11" disabled={Boolean(busy)} onClick={saveDraft}>{busy === "save" ? "Enregistrement…" : "Enregistrer"}</button> : null}
-            <PublishButton prepare={save} current={current} connected={connected} onChange={setCurrent} disabled={Boolean(busy)} extraBlockers={formatBlockers(format, photos.length)} />
+            {!locked ? <button type="button" className="btn-ghost min-h-11" disabled={working} onClick={saveDraft}>{busy === "save" ? "Enregistrement…" : "Enregistrer"}</button> : null}
+            <PublishButton prepare={save} current={current} connected={connected} onChange={setCurrent} disabled={working} extraBlockers={formatBlockers(format, photos.length)} />
           </div>
         </div>
       </footer>

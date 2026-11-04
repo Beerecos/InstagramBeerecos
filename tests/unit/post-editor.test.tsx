@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import PostEditor from '@/components/post/post-editor';
-const api = vi.hoisted(() => ({ upload: vi.fn(), save: vi.fn(), push: vi.fn() }));
+const api = vi.hoisted(() => ({ upload: vi.fn(), save: vi.fn(), push: vi.fn(), carouselBusy: null as null | ((busy: boolean) => void) }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: api.push }) }));
 vi.mock('@/lib/instagram/api', () => ({ instagram: { connection: async () => ({ connected: false }), save: api.save }, uploadPhoto: api.upload }));
 vi.mock('@/lib/social/editorial-api', () => ({ generateEditorialText: vi.fn() }));
 vi.mock('@/components/post/publish-dialog', () => ({ default: () => null }));
-vi.mock('@/components/post/carousel-builder', () => ({ default: () => null }));
+vi.mock('@/components/post/carousel-builder', () => ({ default: ({ onBusyChange }: { onBusyChange: (busy: boolean) => void }) => { api.carouselBusy = onBusyChange; return null; } }));
 beforeEach(() => { vi.clearAllMocks(); vi.stubGlobal('confirm', vi.fn(() => false)); URL.createObjectURL = vi.fn(() => 'blob:prepared'); URL.revokeObjectURL = vi.fn(); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 it('keeps a successful photo dirty when the next upload fails, and previews the prepared JPEG', async () => {
@@ -42,4 +42,19 @@ it('freezes editing while saving so the response cannot hide newer unsaved text'
   resolve({ item: { id: 'saved', status: 'draft' } });
   await waitFor(() => expect(screen.getByText('Brouillon enregistré.')).toBeTruthy());
   expect(screen.getByLabelText('Légende').closest('fieldset')?.disabled).toBe(false);
+});
+
+it('blocks saving and warns before leaving during carousel generation, then releases the controls', async () => {
+  render(<PostEditor id={null} initialFormat="carrousel" />);
+  await act(async () => { api.carouselBusy?.(true); });
+  expect(screen.getByRole('button', { name: 'Enregistrer' })).toHaveProperty('disabled', true);
+  expect(screen.getByRole('button', { name: 'Annuler' })).toHaveProperty('disabled', true);
+  const event = new Event('beforeunload', { cancelable: true });
+  window.dispatchEvent(event);
+  expect(event.defaultPrevented).toBe(true);
+  await act(async () => { api.carouselBusy?.(false); });
+  expect(screen.getByRole('button', { name: 'Enregistrer' })).toHaveProperty('disabled', false);
+  const released = new Event('beforeunload', { cancelable: true });
+  window.dispatchEvent(released);
+  expect(released.defaultPrevented).toBe(false);
 });
