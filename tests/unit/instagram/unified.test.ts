@@ -89,3 +89,16 @@ it.each([
   await expect(connect(deps, user, token)).rejects.toThrow(diagnostic);
   expect(deps.store.conn).toBeNull();
 });
+
+it("accepte uniquement le compte configuré confirmé directement par Meta quand la liste est vide", async () => {
+  setup(); vi.stubEnv("IG_USERNAME", "beerecos");
+  const f = vi.fn(async (input: URL | string) => new Response(JSON.stringify(new URL(String(input)).pathname.endsWith("assigned_instagram_accounts") ? { data: [] } : { id: "1784", username: "beerecos" })));
+  await expect(me({ token, fetch: f as typeof fetch })).resolves.toEqual({userId:"1784",username:"beerecos"});
+  expect(f).toHaveBeenCalledTimes(2);
+});
+it.each([{id:"1784",username:"autre"},{id:"9999",username:"beerecos"},{}])("ne déduit jamais une identité de la configuration %j", async (account) => {
+  const deps = setup(); vi.stubEnv("IG_USERNAME", "beerecos");
+  deps.fetch = (async (input: URL | RequestInfo) => new Response(JSON.stringify(new URL(String(input)).pathname.endsWith("assigned_instagram_accounts") ? { data: [] } : account))) as typeof fetch;
+  await expect(connect(deps,user,token)).rejects.toThrow(/IG_ACCOUNT_MISMATCH/);
+  expect(deps.store.conn).toBeNull();
+});

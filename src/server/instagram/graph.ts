@@ -57,7 +57,24 @@ export async function me(cfg: Omit<GraphConfig, "userId">): Promise<{ userId: st
       const account = accounts.find(a => username ? a.username.toLowerCase() === username : a.id === id);
       if (account && /^\d+$/.test(String(account.id)) && account.username) return { userId: String(account.id), username: account.username };
       if (!result.paging?.next) {
-        if (accountCount === 0) throw new GraphError("Meta renvoie une liste vide : aucun compte Instagram assigné à ce jeton. Diagnostic IG_ASSIGNMENTS_EMPTY.", 400);
+        if (accountCount === 0) {
+          // Some integrations do not enumerate assigned assets. Reading the explicitly
+          // configured account still requires Meta authorization; never infer its identity.
+          if (id && /^\d+$/.test(id) && username) {
+            try {
+              const direct = await call<{ id?: string; username?: string }>({ ...cfg, userId: id }, "GET", id, { fields: "id,username" });
+              if (String(direct.id) === id && typeof direct.username === "string" && direct.username.toLowerCase() === username) {
+                return { userId: id, username: direct.username };
+              }
+              throw new GraphError("Le compte renvoyé par Meta ne correspond pas à BeeRecos. Diagnostic IG_ACCOUNT_MISMATCH.", 400);
+            } catch (e) {
+              if (e instanceof GraphError && e.message.includes("IG_ACCOUNT_MISMATCH")) throw e;
+              // Allowlisted diagnostics only: no token, URL, raw provider response or exception.
+              console.warn("instagram_account_access", { assignments: 0, directCode: e instanceof GraphError ? e.code ?? null : null, directStatus: e instanceof GraphError ? e.status : null });
+            }
+          }
+          throw new GraphError("Meta renvoie une liste vide et ne confirme pas l’accès au compte Instagram configuré. Diagnostic IG_ASSIGNMENTS_EMPTY.", 400);
+        }
         if (incompleteCount > 0) throw new GraphError(`Meta renvoie ${accountCount} compte(s), dont ${incompleteCount} sans identifiant ou nom exploitable. Diagnostic IG_ASSIGNMENTS_INCOMPLETE.`, 502);
         throw new GraphError(`Meta renvoie ${accountCount} compte(s), mais aucun ne correspond au compte attendu parmi les comptes accessibles. Diagnostic IG_ACCOUNT_MISMATCH.`, 400);
       }
