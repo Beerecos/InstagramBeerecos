@@ -223,6 +223,17 @@ test("Post : visuels du carrousel, plan proposé par l'IA aux couleurs BeeRecos,
   const photo = visuels.getByRole("img", { name: "Aperçu de la slide 1" }).getByTestId("slide-photo");
   await expect(photo).toHaveAttribute("style", /rotate\(-30deg\) scale\(1\.5\)/);
   await expect(photo).toHaveCSS("object-fit", "contain");
+  // Photo réaliste générée (OpenAI côté serveur, simulé ici) : posée sur la slide 2 en plein cadre.
+  const asked: Record<string, unknown>[] = [];
+  await page.route("**/api/instagram/image", async (route) => { asked.push(JSON.parse(route.request().postData() ?? "{}")); await route.fulfill({ json: { b64: png.toString("base64"), mime: "image/png", model: "gpt-image-1" } }); });
+  await visuels.getByRole("button", { name: "Slide 2" }).click();
+  const visuel2 = visuels.getByRole("group", { name: "Visuel de la slide 2" });
+  await visuel2.getByLabel("Décris l'image").fill("cahier ouvert surligné en jaune sur un bureau en bois, lumière du matin");
+  await visuel2.getByRole("button", { name: "Générer l'image" }).click();
+  await expect(visuel2.getByRole("combobox", { name: "Photo" })).toHaveValue("2");
+  await expect(visuel2.getByRole("combobox", { name: "Cadrage" })).toHaveValue("plein");
+  expect(asked[0]).toMatchObject({ mode: "scene", subject: "L'histoire du STABILO BOSS", description: expect.stringContaining("cahier ouvert") });
+  await expect(visuels.getByRole("img", { name: "Aperçu de la slide 2" }).getByTestId("slide-photo")).toBeVisible();
   await expect(visuels.getByRole("button", { name: "Créer les 4 images du carrousel" })).toBeEnabled();
   expect(errors).toEqual([]);
 });
