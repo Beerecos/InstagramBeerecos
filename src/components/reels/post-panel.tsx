@@ -14,9 +14,19 @@ import { instagram } from "@/lib/instagram/api";
 import type { Publication } from "@/domain/instagram/publication";
 import { composeCaption, durationWarning, emptyPost, fileSlug, montageSrt, parseHashtags, postWarnings, type ReelPost } from "@/domain/reels/post";
 
+const RECOVERY = (id: string) => `ibr.post.recovery.${id}`;
 const KEY = (id: string) => `ibr.post.${id}`;
 function readPost(id: string): ReelPost | null {
   try { const raw = localStorage.getItem(KEY(id)); return raw ? (JSON.parse(raw) as ReelPost) : null; } catch { return null; }
+}
+function readRecovery(id: string): ReelPost | null {
+  try {
+    const post = JSON.parse(localStorage.getItem(RECOVERY(id)) ?? "null");
+    if (!post || !["version", "caption", "cta", "keyword", "destination"].every((key) => typeof post[key] === "string") ||
+      !Array.isArray(post.hashtags) || !post.hashtags.every((tag: unknown) => typeof tag === "string") ||
+      !Number.isFinite(post.coverMs)) return null;
+    return post;
+  } catch { return null; }
 }
 function writePost(id: string, post: ReelPost): boolean {
   try { localStorage.setItem(KEY(id), JSON.stringify(post)); return true; } catch { return false; }
@@ -34,9 +44,9 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
   const keyword = m.reel?.keyword ?? m.brief?.motCle ?? "";
   // Panneau ouvert sur clic, toujours côté navigateur : lecture directe de la légende enregistrée sur cet appareil.
   // Source de vérité : le post enregistré sur le serveur avec le montage ; à défaut, la copie de cet appareil.
-  const [post, setPost] = useState<ReelPost>(() => (m.post ? { ...m.post } : readPost(m.id) ?? emptyPost(version, keyword)));
+  const [post, setPost] = useState<ReelPost>(() => (readRecovery(m.id) ?? (m.post ? { ...m.post } : readPost(m.id) ?? emptyPost(version, keyword))));
   const [tags, setTags] = useState(() => post.hashtags.join(" "));
-  const [saved, setSaved] = useState<"local" | "serveur" | null>(() => (m.post ? "serveur" : readPost(m.id) ? "local" : null));
+  const [saved, setSaved] = useState<"local" | "serveur" | null>(() => (readRecovery(m.id) ? "local" : m.post ? "serveur" : readPost(m.id) ? "local" : null));
   const [notice, setNotice] = useState<string | null>(null);
   const [when, setWhen] = useState("");
   const [planned, setPlanned] = useState<{ id: string; at: string | null } | null>(null);
@@ -53,7 +63,23 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
     instagram.connection().then((c) => setConnected(c.connected)).catch(() => {});
   }, [m.id]);
 
-  const update = (patch: Partial<ReelPost>) => { setPost((p) => ({ ...p, ...patch })); setSaved(null); };
+  const update = (patch: Partial<ReelPost>) => {
+    const next = { ...post, ...patch };
+    setPost(next);
+    try {
+      localStorage.setItem(RECOVERY(m.id), JSON.stringify(next));
+      setSaved("local");
+    } catch {
+      setSaved(null);
+      setError("La copie automatique est indisponible. Enregistre la légende avant de quitter.");
+    }
+  };
+  useEffect(() => {
+    if (saved !== null) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [saved]);
   const final = useMemo(() => composeCaption(post), [post]);
   const warnings = postWarnings(post, version);
   const dur = durationWarning(m.keptMs);
@@ -76,6 +102,7 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
       const r = await montage.savePost(m.id, { caption, cta, keyword, destination, hashtags, coverMs: Math.round(coverMs) }, version);
       setPost((p) => ({ ...p, version: r.post.version }));
       writePost(m.id, { ...post, version: r.post.version });
+      try { localStorage.removeItem(RECOVERY(m.id)); } catch { /* copie locale conservée */ }
       setSaved("serveur"); setNotice(null);
     } catch (e) {
       const message = e instanceof Error ? e.message : "";
@@ -119,7 +146,7 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
   });
 
   return (
-    <div className="space-y-4 text-sm">
+    <fieldset disabled={Boolean(busy)} className="min-w-0 space-y-4 text-sm">
       <section aria-labelledby="couverture" className="space-y-2">
         <h3 id="couverture" className="font-semibold">Couverture</h3>
         {ready ? <>
@@ -148,7 +175,7 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className="btn-ghost min-h-11" disabled={Boolean(busy)} onClick={save}>{busy === "save" ? "Enregistrement…" : "Enregistrer la légende"}</button>
           {m.reel ? <button type="button" className="btn-ghost min-h-11" disabled={Boolean(busy) || !final} onClick={saveOnReel}>{busy === "reel" ? "Enregistrement…" : `Reprendre sur le script ${m.reel.reelId}`}</button> : null}
-          <span role="status" className="text-xs text-mut">{saved === "serveur" ? "Enregistrée sur le serveur avec ce montage." : saved === "local" ? "Enregistrée sur cet appareil." : "Modifications non enregistrées."}</span>
+          <span role="status" className="text-xs text-mut">{saved === "serveur" ? "Enregistrée sur le serveur avec ce montage." : saved === "local" ? "Copie automatique sur cet appareil. Enregistre pour la retrouver ailleurs." : "Modifications non enregistrées."}</span>
         </div>
       </section>
 
@@ -197,6 +224,6 @@ export default function PostPanel({ m }: { m: MontageDetail }) {
       </section>
       {notice ? <p role="status" className="text-amber-800">{notice}</p> : null}
       {error ? <p role="alert" className="text-red-700">{error}</p> : null}
-    </div>
+    </fieldset>
   );
 }

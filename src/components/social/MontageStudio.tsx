@@ -120,9 +120,17 @@ export function Uploader({ onDone, reelId }: { onDone: (id: string) => void; ree
   const running = useRef(false);
   const locked = Boolean(step) || Boolean(receivedId);
   const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    if (!step) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [step]);
   const pick = (list: FileList | null) => {
     const videos = [...(list ?? [])].filter((f) => f.type.startsWith("video/") || /\.(mp4|mov|m4v|webm)$/i.test(f.name));
     if (list?.length && !videos.length) { setError("Ce fichier n'est pas une vidéo .mp4 ou .mov."); return; }
+    if (videos.length > MAX_TAKES) { setError(`${MAX_TAKES} prises au plus : sélectionne moins de vidéos.`); return; }
+    if (videos.some((file) => file.size > MAX_UPLOAD_BYTES)) { setError("Une prise dépasse 500 Mo : exporte-la plus légère."); return; }
     setError(null);
     setFiles(videos.sort((a, b) => a.name.localeCompare(b.name, "fr", { numeric: true })));
   };
@@ -206,13 +214,13 @@ export function Uploader({ onDone, reelId }: { onDone: (id: string) => void; ree
         <span className="text-xs text-mut">Verticale ou paysage (recadrage 9:16 dans le studio) · .mp4 ou .mov · 500 Mo au plus chacune · {MAX_TAKES} prises au plus · {MAX_STRIP_MS / 60_000} min en tout</span>
         <input disabled={locked} type="file" multiple aria-label="Prises filmées" accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.m4v,.webm" onChange={(e) => { pick(e.target.files); e.target.value = ""; }} className="sr-only" />
       </label>
-      {files.length === 1 ? <p className="flex items-center gap-2 rounded-lg bg-black/[0.03] px-3 py-2 text-sm"><Film aria-hidden size={16} className="text-brand" /><span className="min-w-0 flex-1 truncate">{files[0].name}</span><span className="text-xs text-mut">{Math.round(files[0].size / 1024 / 1024)} Mo</span></p> : null}
+      {files.length === 1 ? <p className="flex items-center gap-2 rounded-lg bg-black/[0.03] px-3 py-2 text-sm"><Film aria-hidden size={16} className="text-brand" /><span className="min-w-0 flex-1 truncate">{files[0].name}</span><span className="text-xs text-mut">{Math.round(files[0].size / 1024 / 1024)} Mo</span><button type="button" disabled={locked} className="btn-ghost" onClick={() => setFiles([])}>Retirer</button></p> : null}
       {files.length > 1 ? (
         <ol aria-label="Ordre des prises" className="space-y-1 text-sm">
           {files.map((f, i) => (
             <li key={`${f.name}-${i}`} className="flex items-center gap-2 rounded-lg bg-black/[0.03] px-2 py-1">
               <span className="w-16 shrink-0 font-medium">Prise {i + 1}</span>
-              <span className="min-w-0 flex-1 truncate text-mut">{f.name}</span>
+              <span className="min-w-0 flex-1 truncate text-mut">{f.name}</span><button type="button" disabled={locked} className="btn-ghost min-h-11 px-2 text-xs" aria-label={`Retirer ${f.name}`} onClick={() => setFiles((all) => all.filter((_, index) => index !== i))}>Retirer</button>
               <button type="button" className="btn-ghost min-h-[32px] px-2 text-xs" disabled={i === 0 || locked} onClick={() => move(i, -1)} aria-label={`Monter ${f.name}`}>↑</button>
               <button type="button" className="btn-ghost min-h-[32px] px-2 text-xs" disabled={i === files.length - 1 || locked} onClick={() => move(i, 1)} aria-label={`Descendre ${f.name}`}>↓</button>
             </li>

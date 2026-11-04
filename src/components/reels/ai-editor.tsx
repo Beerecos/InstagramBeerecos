@@ -23,6 +23,8 @@ type Props = {
 };
 
 export default function AiEditor({ sourceRef, scriptId, onUseMotion, onUseStory }: Props) {
+  const [loadedScript, setLoadedScript] = useState<string | null>(null);
+  const loadingScript = Boolean(scriptId && /^V\d{2}$/.test(scriptId) && loadedScript !== scriptId);
   const [initial, setInitial] = useState<MotionSpec | undefined>(undefined);
   const [key, setKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -36,9 +38,11 @@ export default function AiEditor({ sourceRef, scriptId, onUseMotion, onUseStory 
       const { spec, warnings } = reelToMotion(reel.data);
       setNotes([`Script ${reel.reelId} · révision ${reel.revision}${reel.editorial === "approved" ? " (texte validé)" : " (texte non validé)"} repris mot pour mot.`, ...warnings]);
       setInitial(spec); setKey((k) => k + 1);
-    }).catch((e: Error) => { if (alive) setError(`Script ${scriptId} illisible : ${e.message}`); });
+    }).catch((e: Error) => { if (alive) setError(`Script ${scriptId} illisible : ${e.message}`); }).finally(() => { if (alive) setLoadedScript(scriptId); });
     return () => { alive = false; };
   }, [scriptId]);
+
+  if (loadingScript) return <p role="status" className="card p-5">Chargement de ton script…</p>;
 
   if (sourceRef?.kind === "story" && !initial) {
     const convert = async () => {
@@ -65,7 +69,7 @@ export default function AiEditor({ sourceRef, scriptId, onUseMotion, onUseStory 
       {!sourceRef ? (
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-mut">Point de départ :</span>
-          <button type="button" className="btn-ghost min-h-10" onClick={() => start(storyToMotion(DEMO_STORY))}>Modèle « Recommandation »</button>
+          <button type="button" className="btn-ghost min-h-10" onClick={() => { if (window.confirm("Charger ce modèle remplace le travail affiché. Continuer ?")) start(storyToMotion(DEMO_STORY)); }}>Modèle « Recommandation »</button>
           <span className="text-xs text-mut">ou décris ton sujet ci-dessous pour une proposition de scènes.</span>
         </div>
       ) : null}
