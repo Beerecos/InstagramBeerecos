@@ -56,8 +56,13 @@ export async function uploadPhoto(file: File): Promise<{ path: string; cropped: 
   const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.9));
   if (!blob) throw new Error("Conversion de la photo impossible.");
   if (blob.size > 8 * 1024 * 1024) throw new Error(`« ${file.name} » dépasse 8 Mo une fois préparée.`);
+  return { path: await uploadJpeg(blob), cropped: c.cropped };
+}
+
+/** Envoi direct d'un JPEG déjà au bon format (ex. slide générée en 1080 × 1350) dans le bucket privé. */
+export async function uploadJpeg(blob: Blob): Promise<string> {
   const { path, token } = await call<{ path: string; token: string }>("/upload", { method: "POST" });
   const { error } = await createSupabaseBrowserClient().storage.from("ig-media").uploadToSignedUrl(path, token, blob, { contentType: "image/jpeg" });
-  if (error) throw new Error(`Envoi de la photo refusé : ${error.message}`);
-  return { path, cropped: c.cropped };
+  if (error) throw new Error(`Envoi de l'image refusé : ${error.message}`);
+  return path;
 }

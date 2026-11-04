@@ -184,6 +184,38 @@ test("Post : carrousel InspiBEEz'ness, le récit suit la consigne et finit par l
   await expect(page.getByRole("button", { name: "Copier le prompt carrousel" })).toBeVisible();
 });
 
+test("Post : visuels du carrousel, plan proposé par l'IA aux couleurs BeeRecos, invitation INSPI en dernier", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  const plan = { slides: [
+    { layout: "couverture", title: "Il a marqué nos cours.", accent: "marqué", photo: 4 },
+    { layout: "date", title: "Le BOSS débarque", number: "1971", text: "Selon STABILO, une forme inspirée d'un coup de main.", source: "SOURCE : STABILO" },
+    { layout: "chiffre-noir", title: "vendus", number: "3", prefix: "Plus de", text: "Milliards d'exemplaires, mai 2025.", source: "STABILO / MAI 2025" },
+  ] };
+  const ai = await mockBee(page, { "": () => ({ text: `Voici : ${JSON.stringify(plan)}` }) });
+  await mockInstagram(page, { connected: true, items: [] });
+  await page.goto("/post/nouveau?format=carrousel");
+  const visuels = page.getByRole("region", { name: "Créer les visuels avec l'IA" });
+  await expect(visuels.getByRole("button", { name: "Proposer les slides" })).toBeDisabled();
+  await visuels.getByRole("textbox", { name: "Sujet", exact: true }).fill("L'histoire du STABILO BOSS");
+  await visuels.getByLabel("Faits et sources").fill("1971 : lancement du STABILO BOSS (STABILO)\nMai 2025 : plus de trois milliards vendus");
+  await visuels.getByRole("button", { name: "Proposer les slides" }).click();
+  const strip = visuels.getByRole("list", { name: "Slides du carrousel" });
+  await expect(strip.getByRole("listitem")).toHaveCount(4);
+  const brief = String(ai.find((c) => c.channel === "instagram")?.brief);
+  expect(brief).toContain("PLAN DE CARROUSEL");
+  expect(brief).toContain("aucune photo fournie");
+  // La photo 4 n'existe pas : jamais inventée. L'invitation officielle ferme le carrousel.
+  await visuels.getByRole("button", { name: "Slide 4" }).click();
+  await expect(visuels.getByText("Invitation finale officielle")).toBeVisible();
+  await expect(strip.getByRole("listitem").last()).toContainText("« INSPI »");
+  await visuels.getByRole("button", { name: "Slide 1" }).click();
+  await visuels.getByRole("group", { name: "Réglages de la slide 1" }).getByRole("textbox", { name: "Titre", exact: true }).fill("Il a surligné nos cours.");
+  await expect(strip.getByRole("listitem").first()).toContainText("Il a surligné nos cours.");
+  await expect(visuels.getByRole("button", { name: "Créer les 4 images du carrousel" })).toBeEnabled();
+  expect(errors).toEqual([]);
+});
+
 test("Post : publier un brouillon demande une confirmation, puis suit Instagram jusqu'au lien public", async ({ page }) => {
   await mockBee(page);
   const calls = await mockInstagram(page, { connected: true, items: [draft] });

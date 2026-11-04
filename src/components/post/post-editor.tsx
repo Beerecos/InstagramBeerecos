@@ -14,6 +14,7 @@ import { INSPI_KEYWORD, storyBrief, storyLength, withInspiEnding } from "@/domai
 import { INSPIBEEZNESS_CAROUSEL_PROMPT, INSPIBEEZNESS_PROMPT_VERSION } from "@/domain/instagram/presets/inspibeezness";
 import { instagram, uploadPhoto } from "@/lib/instagram/api";
 import PublishButton from "./publish-dialog";
+import CarouselBuilder from "./carousel-builder";
 
 type Photo = { path: string; url: string };
 
@@ -168,7 +169,7 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
 
       {error && !current && id ? <p role="alert" className="mt-4 text-sm text-red-700">{error}</p> : (
         <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <fieldset disabled={locked} className="space-y-5 text-sm">
+          <fieldset disabled={locked} className="min-w-0 space-y-5 text-sm">
             <div role="radiogroup" aria-label="Format" className="inline-flex rounded-xl bg-black/[0.05] p-1">
               {(["simple", "carrousel"] as const).map((f) => {
                 const blocked = f === "simple" && photos.length > 1;
@@ -181,6 +182,7 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
                 );
               })}
             </div>
+            {format === "carrousel" && !locked ? <CarouselBuilder subject={brief} facts={facts} disabled={Boolean(busy)} onDone={(slides) => { setPhotos(slides); setDirty(true); }} /> : null}
             <section aria-labelledby="photos-titre">
               <h2 id="photos-titre" className="font-medium">{format === "simple" ? "Photo" : "Photos"} <span className="font-normal text-mut">{format === "simple" ? "(une seule)" : `(${photos.length}/${photoLimit("carrousel")} · 2 au moins)`}</span></h2>
               <ul className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-5">
