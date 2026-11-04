@@ -30,6 +30,11 @@ export const serverEnvSchema = clientEnvSchema.extend({
   ANTHROPIC_MODEL: optionalString,
   AI_GATEWAY_API_KEY: optionalString,
 
+  // Images réalistes des carrousels (OpenAI Images, serveur uniquement)
+  OPENAI_API_KEY: optionalString,
+  OPENAI_IMAGE_MODEL: optionalString,
+  OPENAI_IMAGE_QUALITY: z.enum(["low", "medium", "high"]).optional().or(z.literal("").transform(() => undefined)),
+
   // LinkedIn (API officielle) : profil membre (w_member_social) et page entreprise (Community Management API)
   LINKEDIN_CLIENT_ID: optionalString,
   LINKEDIN_CLIENT_SECRET: optionalString,

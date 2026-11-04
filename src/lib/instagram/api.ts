@@ -35,6 +35,8 @@ export const instagram = {
   remove: (id: string) => call<{ ok: true }>(`/posts/${id}`, { method: "DELETE" }),
   publish: (id: string, videoUrl?: string) => call<{ item: Publication }>(`/posts/${id}/publish`, { method: "POST", body: { confirm: true, videoUrl } }),
   linkedin: (id: string, o: { text: string; target: "profil" | "page"; videoUrl?: string }) => call<{ item: Publication }>(`/posts/${id}/linkedin`, { method: "POST", body: { confirm: true, ...o } }),
+  /** Photo réaliste générée par OpenAI (serveur) : renvoyée en base64, jamais stockée. */
+  image: (req: { description: string; subject: string; mode: "scene" | "produit" }) => call<{ b64: string; mime: string; model: string }>("/image", { method: "POST", body: req }),
   linkedinConnection: async (): Promise<LinkedInView> => {
     const res = await fetch("/api/linkedin/connection", { cache: "no-store" });
     const data = (await res.json().catch(() => ({}))) as { error?: string } & LinkedInView;

@@ -44,6 +44,10 @@ export const SlideSchema = z.object({
   label2: short(30),
   /** Pied de slide : source courte (« SOURCE : STABILO », « STABILO / MAI 2025 »). */
   source: short(40),
+  /** Photo réaliste à générer pour cette slide (description proposée par l'IA, modifiable ; jamais de texte ni de logo). */
+  visual: short(300),
+  /** scene : lieu ou personnes anonymes ; produit : objet détouré posé sur la slide. */
+  visualMode: z.enum(["scene", "produit"]).default("scene"),
   /** Réglages de la photo principale (Cédric les règle à la main ; l'IA ne les fixe pas). */
   photoZoom: z.number().min(0.4).max(2.5).default(1),
   photoX: z.number().int().min(-1080).max(1080).default(0),
@@ -61,11 +65,12 @@ export const PlanSchema = z.object({ slides: z.array(SlideSchema).min(1) });
 export const INVITATION: Slide = {
   layout: "invitation", title: "Tu veux, toi aussi, rencontrer des entrepreneurs inspirants ?", accent: "", text: "pour recevoir ton invitation à découvrir un club BeeRecos.",
   number: "INSPI", prefix: "Commente", photo: null, photo2: null, label: "", label2: "", source: "#MonReseauCestTonReseau",
+  visual: "chaleureuse rencontre d'entrepreneurs anonymes autour d'une table, en noir et blanc", visualMode: "scene",
   photoZoom: 1, photoX: 0, photoY: 0, photoTilt: 0, photoFit: "auto",
 };
 
 /** Réglages d'illustration conservés tels quels (ils ne touchent pas aux textes officiels). */
-const PHOTO_KEYS = ["photoZoom", "photoX", "photoY", "photoTilt", "photoFit"] as const;
+const PHOTO_KEYS = ["photoZoom", "photoX", "photoY", "photoTilt", "photoFit", "visual", "visualMode"] as const;
 
 /**
  * Plan final : au plus 8 slides, l'invitation officielle toujours en dernier (une seule), photos inexistantes retirées
@@ -105,9 +110,10 @@ Déroulé à adapter : 1 couverture qui intrigue ; 2 contexte ou besoin ; 3 déc
 Une seule idée par slide. Titre de 3 à 8 mots, une ou deux phrases courtes au plus. Une date ou un chiffre peut suffire. Varie les modèles (pas deux fois le même d'affilée).
 Utilise uniquement les faits fournis ; n'invente ni chiffre, ni date, ni scène. Attribue les anecdotes (« Selon STABILO, … »). Date les chiffres de vente. Mets la source courte en pied de slide (« SOURCE : … »).
 Photos : n'utilise que les photos listées, par leur numéro ; sinon laisse photo à null. Une photo actuelle n'est jamais présentée comme une archive.
+Visuel réaliste : pour chaque slide qui gagne à être illustrée (couverture, photo-bandeau, affiche, date, deux-photos), décris dans "visual" une photo réaliste à générer, une phrase concrète (objet, lieu, lumière, cadrage) sans texte, sans logo ni marque lisible, sans personne réelle identifiable ; "visualMode" vaut "produit" pour un objet seul détouré à poser sur la slide, "scene" pour un lieu ou des personnes anonymes. Laisse "visual" vide pour les pages chiffre-bleu et chiffre-noir.
 Modèles disponibles :
 ${layouts}
-Réponds UNIQUEMENT par un objet JSON : {"slides":[{"layout":"…","title":"…","accent":"mot du titre en bleu","text":"…","number":"","prefix":"","photo":1,"photo2":null,"label":"","label2":"","source":"SOURCE : …"}]}
+Réponds UNIQUEMENT par un objet JSON : {"slides":[{"layout":"…","title":"…","accent":"mot du titre en bleu","text":"…","number":"","prefix":"","photo":1,"photo2":null,"label":"","label2":"","source":"SOURCE : …","visual":"…","visualMode":"produit"}]}
 
 SUJET : ${subject.trim()}
 

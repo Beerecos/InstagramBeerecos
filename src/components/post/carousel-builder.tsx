@@ -6,14 +6,15 @@
  */
 import { useRef, useState, type PointerEvent } from "react";
 import { toJpeg } from "html-to-image";
-import { ImagePlus, Move, RotateCcw, Sparkles, X } from "lucide-react";
+import { ImagePlus, Move, RotateCcw, Sparkles, Wand2, X } from "lucide-react";
 import { LAYOUTS, normalizePlan, parsePlan, planBrief, SLIDE_H, SLIDE_W, type Layout, type Slide } from "@/domain/instagram/carousel";
 import { generateEditorialText } from "@/lib/social/editorial-api";
-import { uploadJpeg } from "@/lib/instagram/api";
+import { instagram, uploadJpeg } from "@/lib/instagram/api";
+import { IMAGE_MODES } from "@/domain/instagram/visual-prompt";
 import CarouselSlide from "./carousel-slide";
 
 /** Photo source : gardée dans le navigateur (seules les slides finales sont envoyées), PNG transparent intact. */
-type SourcePhoto = { id: string; url: string; label: string };
+type SourcePhoto = { id: string; url: string; label: string; ai?: boolean };
 type Props = { subject: string; facts: string; disabled?: boolean; onDone: (slides: { path: string; url: string }[]) => void };
 
 const PREVIEW = 0.3;
@@ -34,7 +35,12 @@ const FIELDS: { key: keyof Slide; label: string; layouts?: Layout[] }[] = [
 export default function CarouselBuilder({ subject: initialSubject, facts: initialFacts, disabled, onDone }: Props) {
   const [subject, setSubject] = useState(initialSubject);
   const [facts, setFacts] = useState(initialFacts);
-  const [photos, setPhotos] = useState<SourcePhoto[]>([]);
+  const [photos, setPhotosState] = useState<SourcePhoto[]>([]);
+  // Copie synchrone : les numéros de photo restent justes quand plusieurs images arrivent à la suite.
+  const photosRef = useRef<SourcePhoto[]>([]);
+  const setPhotos = (fn: (all: SourcePhoto[]) => SourcePhoto[]) => { photosRef.current = fn(photosRef.current); setPhotosState(photosRef.current); };
+  /** Ajoute des photos sources et renvoie le numéro (1, 2, …) de la première. */
+  const pushPhotos = (items: SourcePhoto[]) => { const first = photosRef.current.length + 1; setPhotos((all) => [...all, ...items]); return first; };
   const [slides, setSlides] = useState<Slide[]>([]);
   const [selected, setSelected] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
@@ -50,12 +56,10 @@ export default function CarouselBuilder({ subject: initialSubject, facts: initia
    * (transparence des PNG détourés conservée). Renvoie le numéro de la première photo ajoutée.
    */
   const add = (files: FileList | null): number | null => {
-    const images = Array.from(files ?? []).filter((f) => f.type.startsWith("image/")).slice(0, 20 - photos.length);
+    const images = Array.from(files ?? []).filter((f) => f.type.startsWith("image/")).slice(0, 30 - photosRef.current.length);
     setError(images.length || !files?.length ? null : "Choisis une image (JPEG, PNG ou WebP).");
     if (!images.length) return null;
-    const first = photos.length + 1;
-    setPhotos((all) => [...all, ...images.map((f) => ({ id: crypto.randomUUID(), url: URL.createObjectURL(f), label: f.name.replace(/\.[^.]+$/, "") }))]);
-    return first;
+    return pushPhotos(images.map((f) => ({ id: crypto.randomUUID(), url: URL.createObjectURL(f), label: f.name.replace(/\.[^.]+$/, "") })));
   };
   const propose = async () => {
     setBusy("plan"); setError(null); setNotice(null);
@@ -64,11 +68,35 @@ export default function CarouselBuilder({ subject: initialSubject, facts: initia
       setSlides(parsePlan(text, photos.length)); setSelected(0);
     } catch (e) { setError(e instanceof Error ? e.message : "La proposition n'a pas abouti."); } finally { setBusy(null); }
   };
-  const patch = (i: number, p: Partial<Slide>, count = photos.length) => setSlides((all) => normalizePlan(all.map((s, k) => (k === i ? { ...s, ...p } : s)), count));
+  const patch = (i: number, p: Partial<Slide>) => setSlides((all) => normalizePlan(all.map((s, k) => (k === i ? { ...s, ...p } : s)), photosRef.current.length));
+  /** Photo réaliste générée par OpenAI pour la slide i, posée aussitôt (objet : entier ; scène : plein cadre). */
+  const generateFor = async (i: number, sl: Slide) => {
+    const r = await instagram.image({ description: sl.visual, subject, mode: sl.visualMode });
+    const bytes = Uint8Array.from(atob(r.b64), (c) => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: r.mime }));
+    const n = pushPhotos([{ id: crypto.randomUUID(), url, label: `Image IA — ${sl.visual.slice(0, 70)}`, ai: true }]);
+    patch(i, { ...ADJUST_RESET, photo: n, photoFit: sl.visualMode === "produit" ? "entier" : "plein" });
+  };
+  const generateOne = async (i: number) => {
+    const sl = slides[i];
+    if (!sl?.visual.trim()) return;
+    setBusy(`image-${i}`); setError(null);
+    try { await generateFor(i, sl); } catch (e) { setError(e instanceof Error ? e.message : "Génération impossible."); } finally { setBusy(null); }
+  };
+  /** Toutes les slides qui ont une description de visuel et pas encore de photo, une par une. */
+  const generateAll = async () => {
+    const todo = slides.map((sl, i) => [sl, i] as const).filter(([sl]) => sl.visual.trim() && !sl.photo);
+    setBusy("images-ia"); setError(null); setNotice(null);
+    let done = 0;
+    try {
+      for (const [sl, i] of todo) { setNotice(`Image ${done + 1} sur ${todo.length} en cours…`); await generateFor(i, sl); done++; }
+      setNotice(`${done} image${done > 1 ? "s" : ""} réaliste${done > 1 ? "s" : ""} générée${done > 1 ? "s" : ""} : règle-les slide par slide, puis crée les images du carrousel.`);
+    } catch (e) { setError(`${done} sur ${todo.length} générées. ${e instanceof Error ? e.message : "Génération impossible."}`); } finally { setBusy(null); }
+  };
   /** Photo ajoutée directement depuis la slide : envoyée puis posée sur cette slide. */
   const addToSlide = (files: FileList | null, key: "photo" | "photo2") => {
     const n = add(files);
-    if (n) patch(selected, { [key]: n }, photos.length + 1);
+    if (n) patch(selected, { [key]: n });
   };
   const startDrag = (e: PointerEvent<HTMLDivElement>) => {
     const cur = slides[selected];
@@ -139,6 +167,11 @@ export default function CarouselBuilder({ subject: initialSubject, facts: initia
             </li>
           ))}
         </ol>
+        {slides.some((sl) => sl.visual.trim() && !sl.photo) ? (
+          <button type="button" className="btn-ghost min-h-11" disabled={disabled || Boolean(busy)} onClick={generateAll}>
+            <Wand2 aria-hidden size={16} /> {busy === "images-ia" ? "Génération des images…" : `Générer les images réalistes (${slides.filter((sl) => sl.visual.trim() && !sl.photo).length})`}
+          </button>
+        ) : null}
         {s ? (
           <div className="grid gap-3">
           <div className="space-y-2">
@@ -172,6 +205,21 @@ export default function CarouselBuilder({ subject: initialSubject, facts: initia
                 <ImagePlus aria-hidden size={16} /> Ajouter une photo ici
                 <input type="file" accept="image/*" className="sr-only" aria-label={`Ajouter une photo à la slide ${selected + 1}`} onChange={(e) => { addToSlide(e.target.files, "photo"); e.target.value = ""; }} />
               </label>
+            </div>
+            <div className="space-y-2 rounded-lg border border-brand/20 bg-brand-soft/30 p-2">
+              <p className="flex items-center gap-1 font-medium"><Wand2 aria-hidden size={14} className="text-brand" /> Photo réaliste générée par l&apos;IA</p>
+              <label className="block">Décris l&apos;image
+                <textarea rows={2} maxLength={300} value={s.visual} onChange={(e) => patch(selected, { visual: e.target.value })} className={`${field} py-2`} placeholder="Ex. étudiante qui surligne un cahier ouvert sur un bureau en bois, lumière du matin" />
+              </label>
+              <div role="radiogroup" aria-label="Type d'image" className="flex flex-wrap gap-2">
+                {(Object.keys(IMAGE_MODES) as (keyof typeof IMAGE_MODES)[]).map((m) => (
+                  <button key={m} type="button" role="radio" aria-checked={s.visualMode === m} onClick={() => patch(selected, { visualMode: m })} className={`min-h-9 rounded-lg border px-3 text-xs ${s.visualMode === m ? "border-brand bg-white text-brand" : "border-line bg-white text-mut"}`}>{IMAGE_MODES[m]}</button>
+                ))}
+              </div>
+              <button type="button" className="btn-red min-h-10" disabled={disabled || Boolean(busy) || s.visual.trim().length < 8} onClick={() => generateOne(selected)}>
+                <Wand2 aria-hidden size={16} /> {busy === `image-${selected}` ? "Génération… (jusqu'à 1 min)" : s.photo ? "Générer une autre image" : "Générer l'image"}
+              </button>
+              <p className="text-xs text-mut">Sans texte, logo ni marque, personnes anonymes : c&apos;est une illustration, jamais une photo d&apos;archive ni la photo réelle du produit. Pour le vrai produit, ajoute sa photo officielle.</p>
             </div>
             {s.photo ? <>
               <label className="block">Cadrage
