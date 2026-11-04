@@ -154,19 +154,34 @@ test("prise paysage : je choisis moi-même la partie gardée en 9:16, appliquée
     "save-edit": (body) => { edit = body.edit as typeof edit; saved.push(edit); version++; return {}; },
   });
   await page.goto("/reels/m5");
-  const win = page.getByTestId("framing-window").filter({ visible: true });
-  await expect(win).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText(/Prise en paysage : fais glisser la fenêtre/).filter({ visible: true })).toBeVisible();
-  const source = (await page.getByTestId("framing-source").filter({ visible: true }).boundingBox())!;
+  // Prise paysage pas encore cadrée : la fenêtre de cadrage s'ouvre d'elle-même.
+  const dialog = page.getByRole("dialog", { name: "Recadrer en 9:16" });
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
+  const win = dialog.getByTestId("framing-window");
+  const source = (await dialog.getByTestId("framing-source").boundingBox())!;
   const w = (await win.boundingBox())!;
-  // Fenêtre 9:16 dans une image 16:9 : environ 32 % de la largeur.
+  // Cadre 9:16 dans une image 16:9 : environ 32 % de la largeur, toute la hauteur.
   expect(w.width / source.width).toBeGreaterThan(0.28);
   expect(w.width / source.width).toBeLessThan(0.36);
   await page.mouse.move(w.x + w.width / 2, w.y + w.height / 2);
   await page.mouse.down();
-  await page.mouse.move(source.x + source.width - 2, w.y + w.height / 2, { steps: 6 });
+  await page.mouse.move(source.x + source.width + 40, w.y + w.height / 2, { steps: 6 });
   await page.mouse.up();
-  await expect(page.locator("hyperframes-player").filter({ visible: true })).toHaveAttribute("srcdoc", /object-position: 100% 50%/);
-  await page.getByRole("button", { name: /Enregistrer la modification|Appliquer/ }).filter({ visible: true }).first().click();
+  await expect(dialog.getByTestId("framing-result").locator("video")).toHaveAttribute("style", /object-position: 100% 50%/);
+  await dialog.getByRole("button", { name: "Appliquer le cadrage" }).click();
+  await expect(dialog).toBeHidden();
   await expect.poll(() => saved.at(-1)?.framing?.focusX).toBe(100);
+  await expect(page.locator("hyperframes-player").filter({ visible: true })).toHaveAttribute("srcdoc", /object-position: 100% 50%/);
+
+  // Zoom 200 % puis cadre tout en bas : le cadrage vertical est enregistré (il était ignoré avant).
+  await page.getByRole("button", { name: "Recadrer la vidéo" }).filter({ visible: true }).click();
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("Zoom").fill("2");
+  const w2 = (await win.boundingBox())!;
+  expect(w2.height / source.height).toBeCloseTo(0.5, 1);
+  await win.focus();
+  for (let i = 0; i < 12; i++) await page.keyboard.press("Shift+ArrowDown");
+  await dialog.getByRole("button", { name: "Appliquer le cadrage" }).click();
+  await expect.poll(() => saved.at(-1)?.framing?.scale).toBe(2);
+  expect(saved.at(-1)!.framing!.y).toBeLessThan(0);
 });

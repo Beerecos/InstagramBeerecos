@@ -851,7 +851,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
         </section>
         <aside aria-label="Réglages de la sélection" className="studio-inspector min-w-0 space-y-3">
           {m.edit ? <section aria-label="Cadrage de la vidéo" className="card p-3">
-            <StudioFraming key={m.updatedAt} edit={proposal?.source==="framing"?proposal.edit:m.edit} disabled={saving||animationBusy||frozen||(unsaved&&proposal?.source!=="framing")} videoUrl={data.videoUrl} onPreview={framing=>manualPreview({...m.edit!,framing},"framing")}/>
+            <StudioFraming edit={m.edit} disabled={saving||animationBusy||frozen||unsaved} videoUrl={data.videoUrl} onApply={framing=>{void save({...m.edit!,framing});}}/>
           </section>:null}
           <section aria-label="Écran de fin" className="card space-y-2 p-3">
             <h3 className="font-semibold">Logo de fin · +2 secondes</h3>
