@@ -19,7 +19,7 @@ export default function BrandPage() {
         <Card>
           <CardHeader title="Identité visuelle" description="Charte BeeRecos, octobre 2026. Logo officiel, jamais modifié." />
           <div className="flex flex-wrap items-center gap-8">
-            <Image src="/brand/beemarketing-logo.png" alt="Logo BeeMarketing" width={220} height={49} />
+            <Image src="/brand/beemarketing-logo-officiel.png" alt="Logo BeeMarketing" width={220} height={52} />
             <div className="flex flex-wrap gap-3">
               {COLORS.map(([n, hex]) => (
                 <div key={hex} className="text-xs text-ink-2">
