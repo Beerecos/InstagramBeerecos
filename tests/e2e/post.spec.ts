@@ -124,6 +124,28 @@ test("Post : carrousel et légende proposée par l'IA, jamais appliquée sans cl
   expect(errors).toEqual([]);
 });
 
+test("Post : carrousel InspiBEEz'ness, le récit suit la consigne et finit par l'invitation exacte", async ({ page }) => {
+  const ai = await mockBee(page, { "": () => ({ text: "Un récit qui commence.\n\nEt qui va jusqu'au résultat.\n\nCommente INSPI !\n#Inspi" }) });
+  await mockInstagram(page, { connected: true, items: [] });
+  await page.goto("/post/nouveau?format=carrousel");
+  await page.getByRole("radio", { name: /InspiBEEz'ness/ }).click();
+  await expect(page.getByLabel(/Mot-clé pour recevoir un DM/)).toHaveValue("INSPI");
+  await page.getByLabel("Sujet de l'histoire").fill("L'histoire du STABILO BOSS");
+  await expect(page.getByRole("button", { name: "Proposer une légende" })).toBeDisabled();
+  await page.getByLabel(/Texte des slides et sources/).fill("Slide 4 : 1971, le BOSS débarque. Source : STABILO.");
+  await page.getByRole("button", { name: "Proposer une légende" }).click();
+  await expect(page.getByText("Proposition de l'IA")).toBeVisible();
+  const brief = String(ai.find((c) => c.channel === "instagram")?.brief);
+  expect(brief).toContain("RACONTER TOUTE L'HISTOIRE");
+  expect(brief).toContain("Slide 4 : 1971");
+  await page.getByRole("button", { name: "Utiliser cette légende" }).click();
+  const caption = await page.getByLabel("Légende", { exact: true }).inputValue();
+  expect(caption).toContain("Et qui va jusqu'au résultat.");
+  expect(caption.endsWith("Tu veux, toi aussi, rencontrer des entrepreneurs inspirants ?\nCommente « INSPI » pour recevoir ton invitation à découvrir un club BeeRecos.\n\n#MonReseauCestTonReseau #BeeRecos #InspiBEEzness")).toBe(true);
+  expect(caption).not.toContain("#Inspi\n");
+  await expect(page.getByRole("button", { name: "Copier le prompt carrousel" })).toBeVisible();
+});
+
 test("Post : publier un brouillon demande une confirmation, puis suit Instagram jusqu'au lien public", async ({ page }) => {
   await mockBee(page);
   const calls = await mockInstagram(page, { connected: true, items: [draft] });

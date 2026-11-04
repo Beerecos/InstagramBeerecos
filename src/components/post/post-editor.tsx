@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight, ImagePlus, MessageCircle, Sparkles, Trash2, X } from "lucide-react";
 import { CAPTION_MAX, STATUS_LABELS, formatBlockers, formatOf, mentionsKeyword, normalizeKeyword, photoLimit, type PostFormat, type Publication } from "@/domain/instagram/publication";
 import { generateEditorialText } from "@/lib/social/editorial-api";
+import { INSPI_KEYWORD, storyBrief, storyLength, withInspiEnding } from "@/domain/instagram/story-caption";
+import { INSPIBEEZNESS_CAROUSEL_PROMPT, INSPIBEEZNESS_PROMPT_VERSION } from "@/domain/instagram/presets/inspibeezness";
 import { instagram, uploadPhoto } from "@/lib/instagram/api";
 import PublishButton from "./publish-dialog";
 
@@ -61,6 +63,11 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
   const [format, setFormat] = useState<PostFormat>(initialFormat);
   const [brief, setBrief] = useState("");
   const [suggestion, setSuggestion] = useState<string | null>(null);
+  // Carrousel : légende courte, ou InspiBEEz'ness « raconter toute l'histoire » à partir des faits fournis.
+  const [captionMode, setCaptionMode] = useState<"courte" | "histoire">("courte");
+  const [facts, setFacts] = useState("");
+  const story = format === "carrousel" && captionMode === "histoire";
+  const [promptCopied, setPromptCopied] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -112,6 +119,11 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
   const propose = async () => {
     setBusy("ia"); setError(null); setSuggestion(null);
     try {
+      if (story) {
+        const text = await generateEditorialText({ channel: "instagram", workspaceId: null, brief: storyBrief(brief, facts) });
+        setSuggestion(withInspiEnding(text));
+        return;
+      }
       const text = await generateEditorialText({
         channel: "instagram", workspaceId: null,
         brief: `${format === "carrousel" ? `Carrousel de ${photos.length || "plusieurs"} photos` : "Post photo"} Instagram BeeRecos. Sujet : ${brief.trim()}`,
@@ -195,15 +207,39 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
             </section>
             <section aria-labelledby="ia-titre" className="space-y-2 rounded-xl border border-brand/20 bg-brand-soft/40 p-3">
               <h2 id="ia-titre" className="flex items-center gap-2 font-medium"><Sparkles aria-hidden size={16} className="text-brand" /> Écrire la légende avec l&apos;IA</h2>
-              <label className="block text-sm">De quoi parle ce post ?
-                <textarea rows={2} maxLength={1000} value={brief} onChange={(e) => setBrief(e.target.value)} className={`${field} py-2`} placeholder="Ex. la réunion du club de Lyon ce matin, trois nouveaux membres présentés" />
+              {format === "carrousel" ? (
+                <div role="radiogroup" aria-label="Type de légende" className="grid gap-2 sm:grid-cols-2">
+                  {([["courte", "Courte", "Quelques lignes et un appel à l'action."], ["histoire", "InspiBEEz'ness", "Raconter toute l'histoire, de l'origine au résultat."]] as const).map(([key, label, hint]) => (
+                    <button key={key} type="button" role="radio" aria-checked={captionMode === key}
+                      onClick={() => { setCaptionMode(key); setSuggestion(null); if (key === "histoire" && !keyword) edit(setKeyword)(INSPI_KEYWORD); }}
+                      className={`rounded-xl border p-3 text-left text-sm transition ${captionMode === key ? "border-brand bg-white ring-2 ring-brand/30" : "border-line bg-white/60 hover:border-brand"}`}>
+                      <span className="block font-semibold">{label}</span><span className="text-xs text-mut">{hint}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <label className="block text-sm">{story ? "Sujet de l'histoire" : "De quoi parle ce post ?"}
+                <textarea rows={2} maxLength={1000} value={brief} onChange={(e) => setBrief(e.target.value)} className={`${field} py-2`} placeholder={story ? "Ex. l'histoire du STABILO BOSS" : "Ex. la réunion du club de Lyon ce matin, trois nouveaux membres présentés"} />
               </label>
-              <button type="button" className="btn-red min-h-11" disabled={!brief.trim() || Boolean(busy)} onClick={propose}><Sparkles aria-hidden size={16} /> {busy === "ia" ? "Rédaction…" : caption.trim() ? "Proposer une nouvelle version" : "Proposer une légende"}</button>
+              {story ? (
+                <label className="block text-sm">Texte des slides et sources <span className="text-mut">(l&apos;IA n&apos;utilise que ces faits)</span>
+                  <textarea rows={6} maxLength={9000} value={facts} onChange={(e) => setFacts(e.target.value)} className={`${field} py-2`} placeholder={"Slide 1 : …\nSlide 2 : …\nSources : STABILO, 170 ans (schwan-stabilo.com) : …"} />
+                  <span className="mt-1 block text-xs text-mut">Colle le texte de chaque slide et les faits vérifiés avec leur source. Le récit suit tes 9 étapes, 2 000 caractères au total ; l&apos;invitation « INSPI » et les hashtags sont ajoutés mot pour mot.</span>
+                </label>
+              ) : null}
+              {story ? (
+                <p className="flex flex-wrap items-center gap-2 text-xs text-mut">Créer les slides :
+                  <button type="button" className="btn-ghost min-h-9" onClick={() => { void navigator.clipboard?.writeText(INSPIBEEZNESS_CAROUSEL_PROMPT).then(() => setPromptCopied(true)).catch(() => setError("Copie impossible dans ce navigateur.")); }}>{promptCopied ? "Prompt copié" : "Copier le prompt carrousel"}</button>
+                  <span>(InspiBEEz&apos;ness, version du {new Date(INSPIBEEZNESS_PROMPT_VERSION).toLocaleDateString("fr-FR")})</span>
+                </p>
+              ) : null}
+              <button type="button" className="btn-red min-h-11" disabled={!brief.trim() || (story && !facts.trim()) || Boolean(busy)} onClick={propose}><Sparkles aria-hidden size={16} /> {busy === "ia" ? "Rédaction…" : caption.trim() ? "Proposer une nouvelle version" : "Proposer une légende"}</button>
               <p className="text-xs text-mut">L&apos;IA suit la charte BeeRecos et n&apos;invente ni chiffre ni témoignage. Relis toujours sa proposition.</p>
               {suggestion ? (
                 <div className="space-y-2 rounded-lg bg-white p-3">
                   <p className="text-xs font-medium uppercase tracking-wide text-mut">Proposition de l&apos;IA</p>
                   <p className="whitespace-pre-wrap">{suggestion}</p>
+                  {story ? (() => { const n = storyLength(suggestion); return <p className={`text-xs ${n.overBudget ? "text-amber-800" : "text-mut"}`}>{n.length} caractères{n.overBudget ? " : au-delà des 2 000 prévus, raccourcis avant de publier." : " (budget 2 000)."} Vérifie chaque date, nom et chiffre avec tes sources.</p>; })() : null}
                   <div className="flex flex-wrap gap-2">
                     <button type="button" className="btn-red min-h-10" onClick={() => { edit(setCaption)(suggestion.slice(0, CAPTION_MAX)); setSuggestion(null); }}>Utiliser cette légende</button>
                     <button type="button" className="btn-ghost min-h-10" onClick={() => setSuggestion(null)}>Ignorer</button>
