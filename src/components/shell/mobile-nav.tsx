@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { useState } from "react";
-import { NAV_ITEMS, isActive } from "@/lib/navigation";
+import { BEEMARKETING_URL, NAV_ITEMS, isActive } from "@/lib/navigation";
 import { cn } from "@/components/ui/cn";
 import { NavIcon } from "./nav-icon";
 
@@ -26,6 +26,7 @@ export function MobileNavView({ pathname }: { pathname: string }) {
                 <NavIcon name={item.icon} /> {item.label}
               </Link>
             ))}
+            <a href={BEEMARKETING_URL} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm">← BeeMarketing</a>
           </nav>
         </div>
       ) : null}

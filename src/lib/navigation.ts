@@ -7,6 +7,9 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/settings", label: "Paramètres", icon: "settings", mobile: true },
 ];
 
+/** Retour à BeeMarketing (cet espace est l'onglet « Réseaux sociaux » de beemarketing.pro, option A du 2026-11-04). */
+export const BEEMARKETING_URL = "https://beemarketing.pro";
+
 /** L'accueil est l'onglet Post : il reste actif dans l'éditeur de post, les scripts et le Studio d'un réel. */
 const HOME_SECTIONS = ["/post", "/reels", "/scripts"];
 

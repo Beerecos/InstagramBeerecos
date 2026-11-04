@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS, isActive } from "@/lib/navigation";
+import { BEEMARKETING_URL, NAV_ITEMS, isActive } from "@/lib/navigation";
 import { cn } from "@/components/ui/cn";
 import { Logo } from "./logo";
 import { NavIcon } from "./nav-icon";
@@ -38,6 +38,7 @@ export function SidebarView({ pathname, footer }: { pathname: string; footer?: R
           );
         })}
       </nav>
+      <a href={BEEMARKETING_URL} className="mb-2 flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-ink-2 hover:bg-surface-2 hover:text-ink-1">← BeeMarketing</a>
       {footer}
     </aside>
   );
