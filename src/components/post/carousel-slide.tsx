@@ -21,10 +21,13 @@ function Titled({ title, accent, color, accentColor, highlight }: { title: strin
   return <span style={{ color }}>{title.slice(0, i)}<span style={mark}>{title.slice(i, i + accent.length)}</span>{title.slice(i + accent.length)}</span>;
 }
 
-function Photo({ url, style, contain, gray }: { url?: string; style: CSSProperties; contain?: boolean; gray?: boolean }) {
+/** Photo d'une slide ; `adj` applique les réglages de Cédric (taille, position, inclinaison, entière ou recadrée). */
+function Photo({ url, style, contain, gray, adj }: { url?: string; style: CSSProperties; contain?: boolean; gray?: boolean; adj?: Slide }) {
   if (!url) return null;
+  const fit = adj?.photoFit === "entier" ? "contain" : adj?.photoFit === "plein" ? "cover" : contain ? "contain" : "cover";
+  const transform = adj ? `translate(${adj.photoX}px, ${adj.photoY}px) rotate(${adj.photoTilt}deg) scale(${adj.photoZoom})` : undefined;
   // eslint-disable-next-line @next/next/no-img-element -- rendu exporté en image : balise img nécessaire
-  return <img src={url} alt="" crossOrigin="anonymous" style={{ position: "absolute", objectFit: contain ? "contain" : "cover", filter: gray ? "grayscale(1)" : undefined, ...style }} />;
+  return <img src={url} alt="" crossOrigin="anonymous" data-testid="slide-photo" style={{ position: "absolute", objectFit: fit, filter: gray ? "grayscale(1)" : undefined, transform, transformOrigin: "center", ...style }} />;
 }
 
 type Props = { slide: Slide; index: number; total: number; photos: Record<number, string> };
@@ -35,7 +38,7 @@ const CarouselSlide = forwardRef<HTMLDivElement, Props>(function CarouselSlide({
   const bg = theme === "white" ? WHITE : theme === "blue" ? BLUE : BLACK;
   const p1 = s.photo ? photos[s.photo] : undefined, p2 = s.photo2 ? photos[s.photo2] : undefined;
   const page = `${String(index + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
-  const logo = theme === "white" && s.layout !== "photo-bandeau" ? "/brand/beerecos-logo-officiel-couleur.png" : "/brand/beerecos-logo-horizontal-white.svg";
+  const logo = theme === "white" && s.layout !== "photo-bandeau" ? "/brand/beerecos-logo-horizontal-couleur.svg" : "/brand/beerecos-logo-horizontal-white.svg";
   const footerRight = s.layout === "couverture" ? "Son histoire" : s.source;
   const footerColor = s.layout === "couverture" || s.layout === "invitation" ? BLUE : theme === "white" && s.layout !== "photo-bandeau" ? MUTED : "rgba(255,255,255,.85)";
   const abs = (style: CSSProperties, children: ReactNode, key?: string) => <div key={key} style={{ position: "absolute", ...style }}>{children}</div>;
@@ -46,7 +49,7 @@ const CarouselSlide = forwardRef<HTMLDivElement, Props>(function CarouselSlide({
     case "couverture": {
       const size = fitSize(s.title, 180, 22, 110);
       content = <>
-        <Photo url={p1} contain style={{ right: -40, bottom: 140, width: 700, height: 820 }} />
+        <Photo url={p1} adj={s} contain style={{ right: -40, bottom: 140, width: 700, height: 820 }} />
         {abs({ left: M, top: 160, right: M, fontSize: size, lineHeight: 1.02, fontWeight: 400 }, <Titled title={s.title} accent={s.accent} color={BLACK} accentColor={BLUE} />)}
         {s.text ? abs({ left: M, bottom: 250, width: 460, ...body }, s.text) : null}
       </>;
@@ -56,7 +59,7 @@ const CarouselSlide = forwardRef<HTMLDivElement, Props>(function CarouselSlide({
       // Sans photo : composition typographique (grand bandeau bleu), jamais de cadre vide.
       const top = p1 ? 830 : 400;
       content = <>
-        <Photo url={p1} style={{ left: 0, top: 140, width: SLIDE_W, height: 690 }} />
+        <Photo url={p1} adj={s} style={{ left: 0, top: 140, width: SLIDE_W, height: 690 }} />
         {abs({ left: 0, top, width: SLIDE_W, bottom: 0, background: BLUE }, null)}
         {abs({ left: M, right: M, top: top + 40, fontSize: fitSize(s.title, p1 ? 96 : 130, 24, 64), lineHeight: 1.12, color: WHITE }, <Titled title={s.title} accent={s.accent} color={WHITE} accentColor={WHITE} />)}
         {s.text ? abs({ left: M, right: M, top: p1 ? 1090 : 900, ...body, color: WHITE }, s.text) : null}
@@ -65,7 +68,7 @@ const CarouselSlide = forwardRef<HTMLDivElement, Props>(function CarouselSlide({
     }
     case "affiche":
       content = <>
-        <Photo url={p1} contain style={{ right: -60, top: 560, width: 560, height: 640 }} />
+        <Photo url={p1} adj={s} contain style={{ right: -60, top: 560, width: 560, height: 640 }} />
         {abs({ left: M, right: M, top: 160, fontSize: fitSize(s.title, 150, 16, 90), lineHeight: 1.18 }, <Titled title={s.title} accent={s.accent} color={BLACK} accentColor={BLUE} highlight />)}
         {s.text ? abs({ left: M, bottom: 250, width: 460, ...body }, s.text) : null}
       </>;
@@ -73,7 +76,7 @@ const CarouselSlide = forwardRef<HTMLDivElement, Props>(function CarouselSlide({
     case "date":
       content = <>
         {abs({ left: M - 10, right: M, top: 140, fontSize: fitSize(s.number, 440, 4, 220), lineHeight: 1, color: BLUE, letterSpacing: -8 }, s.number)}
-        <Photo url={p1} contain style={{ left: M, right: M, top: 620, height: 260, width: SLIDE_W - 2 * M }} />
+        <Photo url={p1} adj={s} contain style={{ left: M, right: M, top: 620, height: 260, width: SLIDE_W - 2 * M }} />
         {abs({ left: M, top: 920, width: 520, fontSize: fitSize(s.title, 96, 14, 64), lineHeight: 1.1 }, <Titled title={s.title} accent={s.accent} color={BLACK} accentColor={BLUE} />)}
         {s.text ? abs({ left: 620, top: 930, right: M, fontSize: 34, lineHeight: 1.35 }, s.text) : null}
       </>;
@@ -92,7 +95,7 @@ const CarouselSlide = forwardRef<HTMLDivElement, Props>(function CarouselSlide({
     case "deux-photos":
       content = <>
         {abs({ left: M, right: M, top: 150, fontSize: fitSize(s.title, 110, 20, 72), lineHeight: 1.12 }, <Titled title={s.title} accent={s.accent} color={BLACK} accentColor={BLUE} />)}
-        <Photo url={p1} style={{ left: 0, top: 480, width: 460, height: 640 }} />
+        <Photo url={p1} adj={s} style={{ left: 0, top: 480, width: 460, height: 640 }} />
         <Photo url={p2} contain style={{ left: 480, top: 450, width: 600, height: 700 }} />
         {p1 || p2 ? <>
           {s.label ? abs({ left: M, top: 1150, fontSize: 34, fontWeight: 500, color: BLUE, textTransform: "uppercase" }, s.label) : null}
@@ -106,7 +109,7 @@ const CarouselSlide = forwardRef<HTMLDivElement, Props>(function CarouselSlide({
       break;
     case "invitation":
       content = <>
-        <Photo url={p1} gray style={{ left: 0, top: 140, width: SLIDE_W, height: 340 }} />
+        <Photo url={p1} adj={s} gray style={{ left: 0, top: 140, width: SLIDE_W, height: 340 }} />
         {abs({ left: M, right: M, top: p1 ? 520 : 200, fontSize: 56, lineHeight: 1.25 }, s.title)}
         {abs({ left: M, top: p1 ? 790 : 470, fontSize: 44 }, s.prefix)}
         {abs({ left: M - 10, right: M, top: p1 ? 850 : 540, fontSize: fitSize(`« ${s.number} »`, 230, 9, 140), lineHeight: 1, color: BLUE, fontWeight: 400, whiteSpace: "nowrap", letterSpacing: -4 }, `« ${s.number} »`)}

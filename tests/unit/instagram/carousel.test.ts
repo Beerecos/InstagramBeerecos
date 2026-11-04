@@ -40,6 +40,13 @@ describe("visuels de carrousel", () => {
     expect(planBrief("x", "y", [])).toContain("compositions typographiques uniquement");
   });
 
+  it("garde les réglages de la photo, y compris sur l'invitation officielle", () => {
+    const inv = { ...normalizePlan([], 1)[0], photo: 1, photoZoom: 1.4, photoTilt: -30, title: "Texte modifié" };
+    const [last] = normalizePlan([inv], 1);
+    expect(last).toMatchObject({ photo: 1, photoZoom: 1.4, photoTilt: -30, title: INVITATION.title });
+    expect(slide({}).photoFit).toBe("auto");
+  });
+
   it("réduit le titre long au lieu de le couper", () => {
     expect(fitSize("Il a marqué", 150, 20, 80)).toBe(150);
     expect(fitSize("x".repeat(80), 150, 20, 80)).toBe(80);

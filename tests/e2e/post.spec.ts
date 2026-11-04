@@ -212,6 +212,17 @@ test("Post : visuels du carrousel, plan proposé par l'IA aux couleurs BeeRecos,
   await visuels.getByRole("button", { name: "Slide 1" }).click();
   await visuels.getByRole("group", { name: "Réglages de la slide 1" }).getByRole("textbox", { name: "Titre", exact: true }).fill("Il a surligné nos cours.");
   await expect(strip.getByRole("listitem").first()).toContainText("Il a surligné nos cours.");
+  // Illustrer : une photo ajoutée depuis la slide, puis inclinée et agrandie comme le produit de la référence.
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+  await visuels.getByLabel("Ajouter une photo à la slide 1").setInputFiles({ name: "surligneur.png", mimeType: "image/png", buffer: png });
+  const visuel = visuels.getByRole("group", { name: "Visuel de la slide 1" });
+  await expect(visuel.getByRole("combobox", { name: "Photo" })).toHaveValue("1");
+  await visuel.getByRole("combobox", { name: "Cadrage" }).selectOption("entier");
+  await visuel.getByRole("slider", { name: "Inclinaison" }).fill("-30");
+  await visuel.getByRole("slider", { name: "Taille" }).fill("1.5");
+  const photo = visuels.getByRole("img", { name: "Aperçu de la slide 1" }).getByTestId("slide-photo");
+  await expect(photo).toHaveAttribute("style", /rotate\(-30deg\) scale\(1\.5\)/);
+  await expect(photo).toHaveCSS("object-fit", "contain");
   await expect(visuels.getByRole("button", { name: "Créer les 4 images du carrousel" })).toBeEnabled();
   expect(errors).toEqual([]);
 });

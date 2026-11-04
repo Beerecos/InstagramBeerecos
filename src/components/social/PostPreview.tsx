@@ -54,7 +54,7 @@ export function LinkedInCard({ text, imageSrc }: { text: string; imageSrc: strin
   return (
     <div className="overflow-hidden rounded-xl bg-white text-neutral-900 shadow-sm">
       <div className="flex items-start gap-3 p-4">
-        <img src="/beerecos-logo.jpg" alt="BeeRecos" className="h-12 w-12 rounded-full bg-white object-contain ring-1 ring-neutral-200" />
+        <img src="/brand/beerecos-logo-couleur.svg" alt="BeeRecos" className="h-12 w-12 rounded-full bg-white object-contain ring-1 ring-neutral-200" />
         <div className="min-w-0 flex-1 leading-tight">
           <div className="font-semibold">BeeRecos</div>
           <div className="truncate text-xs text-neutral-500">Réseau d'affaires · #MonReseauCestTonReseau</div>
@@ -95,7 +95,7 @@ export function InstagramCard({ text, imageSrc }: { text: string; imageSrc: stri
   return (
     <div className="overflow-hidden rounded-xl bg-white text-neutral-900 shadow-sm">
       <div className="flex items-center gap-2 p-3">
-        <img src="/beerecos-logo.jpg" alt="BeeRecos" className="h-8 w-8 rounded-full bg-white object-contain ring-1 ring-neutral-200" />
+        <img src="/brand/beerecos-logo-couleur.svg" alt="BeeRecos" className="h-8 w-8 rounded-full bg-white object-contain ring-1 ring-neutral-200" />
         <span className="text-sm font-semibold lowercase">beerecos</span>
         <span className="ml-auto text-neutral-500">{Dots}</span>
       </div>

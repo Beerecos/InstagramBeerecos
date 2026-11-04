@@ -26,7 +26,8 @@ export const FONT_FILES = [
  */
 export const LOGOS = {
   verticalWhite: { file: "brand/beerecos-logo-white.svg", ratio: 188.106 / 176.152 },
-  verticalBlue: { file: "brand/beerecos-logo-blue.svg", ratio: 188.103 / 176.152 },
+  /** Version couleur officielle : pictogramme et « Recos » bleus, « Bee » noir (Cédric, 2026-11-04). */
+  verticalBlue: { file: "brand/beerecos-logo-couleur.svg", ratio: 188.103 / 176.152 },
   horizontalWhite: { file: "brand/beerecos-logo-horizontal-white.svg", ratio: 80.828 / 286.566 },
   /**
    * Logo de fin (signature des Reels, comme les vidéos montées) : version horizontale fournie par Cédric le 2026-10-22,

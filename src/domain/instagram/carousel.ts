@@ -44,6 +44,14 @@ export const SlideSchema = z.object({
   label2: short(30),
   /** Pied de slide : source courte (« SOURCE : STABILO », « STABILO / MAI 2025 »). */
   source: short(40),
+  /** Réglages de la photo principale (Cédric les règle à la main ; l'IA ne les fixe pas). */
+  photoZoom: z.number().min(0.4).max(2.5).default(1),
+  photoX: z.number().int().min(-1080).max(1080).default(0),
+  photoY: z.number().int().min(-1350).max(1350).default(0),
+  /** Inclinaison en degrés (produit posé en diagonale, comme le surligneur de la couverture STABILO). */
+  photoTilt: z.number().int().min(-45).max(45).default(0),
+  /** auto : choix du modèle ; entier : photo entière (idéal pour un produit détouré) ; plein : photo recadrée qui remplit le cadre. */
+  photoFit: z.enum(["auto", "entier", "plein"]).default("auto"),
 });
 export type Slide = z.output<typeof SlideSchema>;
 
@@ -53,7 +61,11 @@ export const PlanSchema = z.object({ slides: z.array(SlideSchema).min(1) });
 export const INVITATION: Slide = {
   layout: "invitation", title: "Tu veux, toi aussi, rencontrer des entrepreneurs inspirants ?", accent: "", text: "pour recevoir ton invitation à découvrir un club BeeRecos.",
   number: "INSPI", prefix: "Commente", photo: null, photo2: null, label: "", label2: "", source: "#MonReseauCestTonReseau",
+  photoZoom: 1, photoX: 0, photoY: 0, photoTilt: 0, photoFit: "auto",
 };
+
+/** Réglages d'illustration conservés tels quels (ils ne touchent pas aux textes officiels). */
+const PHOTO_KEYS = ["photoZoom", "photoX", "photoY", "photoTilt", "photoFit"] as const;
 
 /**
  * Plan final : au plus 8 slides, l'invitation officielle toujours en dernier (une seule), photos inexistantes retirées
@@ -67,8 +79,9 @@ export function normalizePlan(slides: Slide[], photoCount: number): Slide[] {
     photo2: photo(s.photo2),
     accent: s.accent && s.title.toLowerCase().includes(s.accent.toLowerCase()) ? s.accent : "",
   }));
-  const invitationPhoto = photo(slides.find((s) => s.layout === "invitation")?.photo ?? null);
-  return [...content, { ...INVITATION, photo: invitationPhoto }];
+  const given = slides.find((s) => s.layout === "invitation");
+  const adjust = given ? Object.fromEntries(PHOTO_KEYS.map((k) => [k, given[k]])) : {};
+  return [...content, { ...INVITATION, ...adjust, photo: photo(given?.photo ?? null) }];
 }
 
 /** Lit le plan renvoyé par l'IA (JSON, éventuellement entouré de texte) ; erreur lisible sinon. */
