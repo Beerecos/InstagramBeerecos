@@ -100,13 +100,14 @@ export async function generateEditorialText(input: {
   objective?: string; cta?: string; destinationUrl?: string; currentText?: string; subject?: string;
 }): Promise<string> {
   if (!apiUrl) throw new Error("Service de génération non configuré.");
+  // Sans session, la requête part quand même : le serveur la refuse (401) et l'on demande de se reconnecter.
   const token = await getAccessToken();
-  if (!token) throw new Error("Reconnecte-toi pour générer un brouillon.");
   const res = await fetch(`${apiUrl}/editorial-generate`, {
-    method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify(input),
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401) throw new Error("Reconnecte-toi pour générer un brouillon.");
   if (!res.ok || typeof data.text !== "string" || !data.text.trim()) {
     if (data.code === "AI_CONNECTION_REQUIRED" || data.error === "AI_CONNECTION_REQUIRED") throw new Error("CONNECTION_REQUIRED : connecte le service IA dans les paramètres. Ton texte existant est conservé.");
     throw new Error(data.reason ?? data.error ?? "La génération n’a pas abouti.");

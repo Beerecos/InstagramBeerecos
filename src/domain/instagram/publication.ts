@@ -131,3 +131,13 @@ export function photoCrop(width: number, height: number, maxWidth = 1440) {
   const scale = Math.min(1, maxWidth / sw);
   return { sx, sy, sw, sh, w: Math.round(sw * scale), h: Math.round(sh * scale), cropped: sw !== width || sh !== height };
 }
+
+/** Post simple = une seule photo ; carrousel = 2 à 10 photos. Un brouillon existant se relit d'après ses photos. */
+export type PostFormat = "simple" | "carrousel";
+export const formatOf = (mediaCount: number): PostFormat => (mediaCount > 1 ? "carrousel" : "simple");
+export const photoLimit = (format: PostFormat) => (format === "simple" ? 1 : MEDIA_MAX);
+export function formatBlockers(format: PostFormat, mediaCount: number): string[] {
+  if (format === "carrousel" && mediaCount === 1) return ["Un carrousel demande au moins 2 photos."];
+  if (format === "simple" && mediaCount > 1) return ["Un post simple n'a qu'une photo : passe en carrousel ou retire des photos."];
+  return [];
+}

@@ -7,7 +7,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Bot, FileText, Film, Image as ImageIcon, Plus, Search, Upload, X } from "lucide-react";
+import { ArrowRight, Bot, FileText, Film, GalleryHorizontal, Image as ImageIcon, Plus, Search, Upload, X } from "lucide-react";
 import { studioAssets } from "@/lib/social/studio-assets-api";
 import type { StudioAsset } from "@/domain/social/studio-assets";
 import { STAGES, STAGE_LABELS, countByStage, stageOf, type Stage } from "@/domain/instagram/dashboard";
@@ -24,14 +24,15 @@ type Choice = { href: string; title: string; text: string; points: string[]; ico
 const CHOICES: Choice[] = [
   { href: "/reels/nouveau/ia", title: "Réel IA", text: "Une vidéo créée à partir d'un script, sans tournage.", points: ["Script, voix et animations", "Ouvre le Studio"], icon: Bot, art: "bg-brand text-white" },
   { href: "/reels/nouveau/video", title: "Réel filmé", text: "Ta vidéo déjà tournée, montée dans le Studio.", points: ["Coupes, sous-titres, effets", "Ouvre le Studio"], icon: Upload, art: "bg-black text-white" },
-  { href: "/post/nouveau", title: "Post", text: "Une photo ou un carrousel, avec sa légende.", points: ["Jusqu'à 10 photos", "Aperçu Instagram en direct"], icon: ImageIcon, art: "bg-brand-soft text-brand" },
+  { href: "/post/nouveau?format=simple", title: "Post simple", text: "Une seule photo, avec sa légende.", points: ["Légende écrite avec l'IA", "Aperçu Instagram en direct"], icon: ImageIcon, art: "bg-brand-soft text-brand" },
+  { href: "/post/nouveau?format=carrousel", title: "Carrousel", text: "De 2 à 10 photos à faire défiler.", points: ["Légende écrite avec l'IA", "Ordre des photos au choix"], icon: GalleryHorizontal, art: "bg-white text-brand ring-1 ring-inset ring-line" },
 ];
 
 /** Fenêtre « Créer » : trois grandes cartes côte à côte, comme le choix d'un type de campagne. */
 function CreateDialog({ onClose }: { onClose: () => void }) {
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="creer-titre" className="fixed inset-0 z-50 grid place-items-center overflow-auto bg-black/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-4xl rounded-3xl bg-white p-6 shadow-xl sm:p-8" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-5xl rounded-3xl bg-white p-6 shadow-xl sm:p-8" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 id="creer-titre" className="font-display text-2xl font-semibold">Que veux-tu créer ?</h2>
@@ -39,7 +40,7 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
           </div>
           <button type="button" aria-label="Fermer" className="grid size-10 shrink-0 place-items-center rounded-lg hover:bg-black/[0.05]" onClick={onClose}><X aria-hidden size={20} /></button>
         </div>
-        <ul className="mt-6 grid gap-4 sm:grid-cols-3">
+        <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {CHOICES.map((c) => (
             <li key={c.href}>
               <Link href={c.href} className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line transition hover:-translate-y-0.5 hover:border-brand hover:shadow-lg focus-visible:border-brand">
@@ -89,7 +90,7 @@ function PostItem({ p, preview }: { p: Publication; preview?: string }) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{p.title || "Post sans légende"}</p>
-          <p className="mt-0.5 text-xs text-mut">{p.media.length > 1 ? `Carrousel · ${p.media.length} photos` : "Photo"} · {new Date(p.updatedAt).toLocaleDateString("fr-FR")}</p>
+          <p className="mt-0.5 text-xs text-mut">{p.media.length > 1 ? `Carrousel · ${p.media.length} photos` : "Post simple"} · {new Date(p.updatedAt).toLocaleDateString("fr-FR")}</p>
           <span className={`pill mt-2 ${PUB_TONE[p.status]}`}>{p.status === "draft" ? (stageOf({ kind: "post", pub: p }) === "pret" ? "Prêt à publier" : "À compléter") : STATUS_LABELS[p.status]}</span>
         </div>
       </Link>

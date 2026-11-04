@@ -1,13 +1,15 @@
 "use client";
 /**
- * Éditeur de post (photo ou carrousel), en pleine page : à gauche photos, légende, mot-clé et DM ; à droite l'aperçu
- * tel qu'il apparaîtra sur Instagram. Le Studio n'est pas utilisé ici (il ne s'ouvre que pour un réel).
+ * Éditeur de post, en pleine page : format (post simple = 1 photo, carrousel = 2 à 10, dans l'ordre choisi), légende
+ * (écrite à la main ou proposée par l'IA, jamais remplacée sans clic), mot-clé et DM ; à droite l'aperçu Instagram.
+ * Le Studio n'est pas utilisé ici (il ne s'ouvre que pour un réel).
  */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, ImagePlus, MessageCircle, Trash2, X } from "lucide-react";
-import { CAPTION_MAX, MEDIA_MAX, STATUS_LABELS, mentionsKeyword, normalizeKeyword, type Publication } from "@/domain/instagram/publication";
+import { ArrowLeft, ChevronLeft, ChevronRight, ImagePlus, MessageCircle, Sparkles, Trash2, X } from "lucide-react";
+import { CAPTION_MAX, STATUS_LABELS, formatBlockers, formatOf, mentionsKeyword, normalizeKeyword, photoLimit, type PostFormat, type Publication } from "@/domain/instagram/publication";
+import { generateEditorialText } from "@/lib/social/editorial-api";
 import { instagram, uploadPhoto } from "@/lib/instagram/api";
 import PublishButton from "./publish-dialog";
 
@@ -43,7 +45,7 @@ function Preview({ photos, caption, username, keyword }: { photos: Photo[]; capt
   );
 }
 
-export default function PostEditor({ id }: { id: string | null }) {
+export default function PostEditor({ id, initialFormat = "simple" }: { id: string | null; initialFormat?: PostFormat }) {
   const router = useRouter();
   const [loading, setLoading] = useState(Boolean(id));
   const [current, setCurrent] = useState<Publication | null>(null);
@@ -56,6 +58,9 @@ export default function PostEditor({ id }: { id: string | null }) {
   const [connected, setConnected] = useState(false);
   const [username, setUsername] = useState("beerecos");
   const [dirty, setDirty] = useState(false);
+  const [format, setFormat] = useState<PostFormat>(initialFormat);
+  const [brief, setBrief] = useState("");
+  const [suggestion, setSuggestion] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +72,7 @@ export default function PostEditor({ id }: { id: string | null }) {
     instagram.get(id).then(({ item, previews }) => {
       if (!alive) return;
       setCurrent(item);
+      setFormat(formatOf(item.media.length));
       setPhotos(item.media.map((m) => ({ path: m.path, url: previews[m.path] ?? "" })));
       setCaption(item.caption); setKeyword(item.keyword ?? ""); setDmText(item.dmText ?? "");
       setButtonTitle(item.buttonTitle ?? ""); setButtonUrl(item.buttonUrl ?? "");
@@ -80,8 +86,9 @@ export default function PostEditor({ id }: { id: string | null }) {
 
   const add = async (files: FileList | null) => {
     if (!files?.length) return;
-    const room = MEDIA_MAX - photos.length;
-    if (room <= 0) { setError(`${MEDIA_MAX} photos au plus.`); return; }
+    const limit = photoLimit(format);
+    const room = limit - photos.length;
+    if (room <= 0) { setError(format === "simple" ? "Un post simple n'a qu'une photo : passe en carrousel pour en ajouter." : `${limit} photos au plus.`); return; }
     setBusy("photos"); setError(null); setNotice(null);
     try {
       let cropped = false;
@@ -91,11 +98,29 @@ export default function PostEditor({ id }: { id: string | null }) {
         setPhotos((p) => [...p, { path: r.path, url: URL.createObjectURL(file) }]);
       }
       setDirty(true);
-      if (files.length > room) setNotice(`Seules ${room} photo(s) ajoutée(s) : ${MEDIA_MAX} au plus.`);
+      if (files.length > room) setNotice(`Seules ${room} photo(s) ajoutée(s) : ${limit} au plus pour ce format.`);
       else if (cropped) setNotice("Photo recadrée au centre pour le format Instagram (entre 4:5 et 1,91:1).");
     } catch (e) { setError(e instanceof Error ? e.message : "Envoi impossible."); } finally { setBusy(null); }
   };
 
+  const move = (from: number, to: number) => {
+    setPhotos((all) => { const next = [...all]; const [p] = next.splice(from, 1); next.splice(to, 0, p); return next; });
+    setDirty(true);
+  };
+  // Légende proposée par l'IA (fonction BeeMarketing editorial-generate : mémoire de marque et affirmations interdites).
+  // Une proposition ne remplace jamais la légende sans ton clic.
+  const propose = async () => {
+    setBusy("ia"); setError(null); setSuggestion(null);
+    try {
+      const text = await generateEditorialText({
+        channel: "instagram", workspaceId: null,
+        brief: `${format === "carrousel" ? `Carrousel de ${photos.length || "plusieurs"} photos` : "Post photo"} Instagram BeeRecos. Sujet : ${brief.trim()}`,
+        ...(kw ? { cta: `Commente ${kw} pour recevoir le lien en DM` } : {}),
+        ...(caption.trim() ? { currentText: caption } : {}),
+      });
+      setSuggestion(text.trim());
+    } catch (e) { setError(e instanceof Error ? e.message : "La génération n'a pas abouti. Ta légende est conservée."); } finally { setBusy(null); }
+  };
   const save = async (): Promise<Publication> => {
     const { item } = await instagram.save({
       id: current?.id, kind: "post", title: caption.split("\n")[0].slice(0, 80), caption,
@@ -125,24 +150,42 @@ export default function PostEditor({ id }: { id: string | null }) {
     <div className="social-studio -mx-4 min-h-full px-4 py-2 sm:-mx-8 sm:px-8">
       <header className="flex flex-wrap items-center gap-3">
         <Link href="/" className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-sm text-mut hover:bg-black/[0.05]"><ArrowLeft aria-hidden size={16} /> Post</Link>
-        <h1 className="font-display text-2xl font-semibold">{current ? "Éditeur de post" : "Nouveau post"}</h1>
+        <h1 className="font-display text-2xl font-semibold">{current ? "Éditeur de post" : format === "carrousel" ? "Nouveau carrousel" : "Nouveau post"}</h1>
         {current ? <span className="pill bg-black/[0.05] text-mut">{STATUS_LABELS[current.status]}</span> : null}
       </header>
 
       {error && !current && id ? <p role="alert" className="mt-4 text-sm text-red-700">{error}</p> : (
         <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <fieldset disabled={locked} className="space-y-5 text-sm">
+            <div role="radiogroup" aria-label="Format" className="inline-flex rounded-xl bg-black/[0.05] p-1">
+              {(["simple", "carrousel"] as const).map((f) => {
+                const blocked = f === "simple" && photos.length > 1;
+                return (
+                  <button key={f} type="button" role="radio" aria-checked={format === f} disabled={blocked} title={blocked ? "Retire des photos pour passer en post simple" : undefined}
+                    onClick={() => { setFormat(f); setDirty(true); }}
+                    className={`min-h-10 rounded-lg px-4 text-sm font-medium transition ${format === f ? "bg-white text-fg shadow-sm" : "text-mut hover:text-fg"} disabled:opacity-40`}>
+                    {f === "simple" ? "Post simple" : "Carrousel"}
+                  </button>
+                );
+              })}
+            </div>
             <section aria-labelledby="photos-titre">
-              <h2 id="photos-titre" className="font-medium">Photos <span className="font-normal text-mut">({photos.length}/{MEDIA_MAX} · plusieurs = carrousel)</span></h2>
+              <h2 id="photos-titre" className="font-medium">{format === "simple" ? "Photo" : "Photos"} <span className="font-normal text-mut">{format === "simple" ? "(une seule)" : `(${photos.length}/${photoLimit("carrousel")} · 2 au moins)`}</span></h2>
               <ul className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-5">
                 {photos.map((p, i) => (
                   <li key={p.path} className="relative aspect-[4/5] overflow-hidden rounded-lg bg-black/[0.06]">
                     {/* eslint-disable-next-line @next/next/no-img-element -- photo locale ou lien signé court */}
                     {p.url ? <img src={p.url} alt={`Photo ${i + 1}`} className="h-full w-full object-cover" /> : <span className="absolute inset-0 grid place-items-center text-xs text-mut">Photo {i + 1}</span>}
                     {!locked ? <button type="button" aria-label={`Retirer la photo ${i + 1}`} onClick={() => { setPhotos((all) => all.filter((x) => x.path !== p.path)); setDirty(true); }} className="absolute right-1 top-1 grid size-7 place-items-center rounded-md bg-white/90"><X aria-hidden size={14} /></button> : null}
+                    {!locked && photos.length > 1 ? (
+                      <span className="absolute inset-x-1 bottom-1 flex justify-between">
+                        <button type="button" aria-label={`Avancer la photo ${i + 1}`} disabled={i === 0} onClick={() => move(i, i - 1)} className="grid size-7 place-items-center rounded-md bg-white/90 disabled:invisible"><ChevronLeft aria-hidden size={14} /></button>
+                        <button type="button" aria-label={`Reculer la photo ${i + 1}`} disabled={i === photos.length - 1} onClick={() => move(i, i + 1)} className="grid size-7 place-items-center rounded-md bg-white/90 disabled:invisible"><ChevronRight aria-hidden size={14} /></button>
+                      </span>
+                    ) : null}
                   </li>
                 ))}
-                {photos.length < MEDIA_MAX && !locked ? (
+                {photos.length < photoLimit(format) && !locked ? (
                   <li><label className="grid aspect-[4/5] cursor-pointer place-items-center rounded-lg border-2 border-dashed border-line text-mut hover:border-brand hover:text-brand">
                     <span className="flex flex-col items-center gap-1 text-xs"><ImagePlus aria-hidden size={20} />{busy === "photos" ? "Envoi…" : "Ajouter"}</span>
                     <input type="file" accept="image/*" multiple className="sr-only" aria-label="Ajouter des photos" onChange={(e) => { void add(e.target.files); e.target.value = ""; }} />
@@ -150,8 +193,26 @@ export default function PostEditor({ id }: { id: string | null }) {
                 ) : null}
               </ul>
             </section>
+            <section aria-labelledby="ia-titre" className="space-y-2 rounded-xl border border-brand/20 bg-brand-soft/40 p-3">
+              <h2 id="ia-titre" className="flex items-center gap-2 font-medium"><Sparkles aria-hidden size={16} className="text-brand" /> Écrire la légende avec l&apos;IA</h2>
+              <label className="block text-sm">De quoi parle ce post ?
+                <textarea rows={2} maxLength={1000} value={brief} onChange={(e) => setBrief(e.target.value)} className={`${field} py-2`} placeholder="Ex. la réunion du club de Lyon ce matin, trois nouveaux membres présentés" />
+              </label>
+              <button type="button" className="btn-red min-h-11" disabled={!brief.trim() || Boolean(busy)} onClick={propose}><Sparkles aria-hidden size={16} /> {busy === "ia" ? "Rédaction…" : caption.trim() ? "Proposer une nouvelle version" : "Proposer une légende"}</button>
+              <p className="text-xs text-mut">L&apos;IA suit la charte BeeRecos et n&apos;invente ni chiffre ni témoignage. Relis toujours sa proposition.</p>
+              {suggestion ? (
+                <div className="space-y-2 rounded-lg bg-white p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-mut">Proposition de l&apos;IA</p>
+                  <p className="whitespace-pre-wrap">{suggestion}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" className="btn-red min-h-10" onClick={() => { edit(setCaption)(suggestion.slice(0, CAPTION_MAX)); setSuggestion(null); }}>Utiliser cette légende</button>
+                    <button type="button" className="btn-ghost min-h-10" onClick={() => setSuggestion(null)}>Ignorer</button>
+                  </div>
+                </div>
+              ) : null}
+            </section>
             <label className="block font-medium">Légende
-              <textarea rows={7} maxLength={CAPTION_MAX} value={caption} onChange={(e) => edit(setCaption)(e.target.value)} className={`${field} py-2`} placeholder="Ton texte, tes hashtags…" />
+              <textarea aria-label="Légende" rows={7} maxLength={CAPTION_MAX} value={caption} onChange={(e) => edit(setCaption)(e.target.value)} className={`${field} py-2`} placeholder="Ton texte, tes hashtags…" />
               <span className="mt-1 block text-right text-xs font-normal text-mut">{caption.length} / {CAPTION_MAX}</span>
             </label>
             <label className="block font-medium">Mot-clé pour recevoir un DM <span className="font-normal text-mut">(facultatif)</span>
@@ -188,7 +249,7 @@ export default function PostEditor({ id }: { id: string | null }) {
           <div className="flex flex-wrap items-center gap-2">
             {!locked ? <span className="text-xs text-mut">{dirty ? "Modifications non enregistrées" : current ? "Enregistré" : ""}</span> : null}
             {!locked ? <button type="button" className="btn-ghost min-h-11" disabled={Boolean(busy)} onClick={saveDraft}>{busy === "save" ? "Enregistrement…" : "Enregistrer"}</button> : null}
-            <PublishButton prepare={save} current={current} connected={connected} onChange={setCurrent} disabled={Boolean(busy)} />
+            <PublishButton prepare={save} current={current} connected={connected} onChange={setCurrent} disabled={Boolean(busy)} extraBlockers={formatBlockers(format, photos.length)} />
           </div>
         </div>
       </footer>

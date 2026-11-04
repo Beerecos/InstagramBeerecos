@@ -16,9 +16,11 @@ type Props = {
   videoUrl?: string | null;
   onChange: (p: Publication) => void;
   disabled?: boolean;
+  /** Conditions propres à l'écran (ex. format du post) ajoutées aux règles communes. */
+  extraBlockers?: string[];
 };
 
-export default function PublishButton({ prepare, current, connected, videoUrl, onChange, disabled }: Props) {
+export default function PublishButton({ prepare, current, connected, videoUrl, onChange, disabled, extraBlockers = [] }: Props) {
   const [open, setOpen] = useState(false);
   const [target, setTarget] = useState<Publication | null>(null);
   const [busy, setBusy] = useState(false);
@@ -45,7 +47,7 @@ export default function PublishButton({ prepare, current, connected, videoUrl, o
     try { const { item } = await instagram.publish(target.id, videoUrl ?? undefined); setTarget(item); onChange(item); } catch (e) { setError(e instanceof Error ? e.message : "Publication refusée."); } finally { setBusy(false); }
   };
 
-  const blockers = target ? publishBlockers(target, { connected, hasVideo: Boolean(videoUrl) }) : [];
+  const blockers = target ? [...extraBlockers, ...publishBlockers(target, { connected, hasVideo: Boolean(videoUrl) })] : [];
   if (live?.status === "published") {
     return (
       <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-acid-dim">

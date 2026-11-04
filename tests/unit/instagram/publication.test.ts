@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DraftSchema, canStartPublishing, photoCrop, containerKind, mentionsKeyword, normalizeKeyword, publishBlockers, tokenNeedsRefresh } from "@/domain/instagram/publication";
+import { DraftSchema, canStartPublishing, formatBlockers, formatOf, photoCrop, photoLimit, containerKind, mentionsKeyword, normalizeKeyword, publishBlockers, tokenNeedsRefresh } from "@/domain/instagram/publication";
 
 const base = { kind: "post" as const, caption: "Commente CLUB pour recevoir le lien", media: [{ path: "u/a.jpg", type: "image" as const }], keyword: "CLUB", dmText: "Voici le lien", buttonTitle: null, buttonUrl: null, status: "draft" as const };
 
@@ -54,5 +54,18 @@ describe("photos de post", () => {
     expect(photoCrop(1080, 1920)).toMatchObject({ sx: 0, sy: 285, sw: 1080, sh: 1350, cropped: true });
     expect(photoCrop(4000, 1000)).toMatchObject({ sw: 1910, sh: 1000, sx: 1045, w: 1440, cropped: true });
     expect(photoCrop(1080, 1080)).toMatchObject({ w: 1080, h: 1080, cropped: false });
+  });
+});
+
+describe("post simple ou carrousel", () => {
+  it("une photo pour un post simple, 2 à 10 pour un carrousel", () => {
+    expect(formatOf(1)).toBe("simple");
+    expect(formatOf(3)).toBe("carrousel");
+    expect(photoLimit("simple")).toBe(1);
+    expect(photoLimit("carrousel")).toBe(10);
+    expect(formatBlockers("carrousel", 1)[0]).toMatch(/au moins 2 photos/);
+    expect(formatBlockers("carrousel", 2)).toEqual([]);
+    expect(formatBlockers("simple", 2)[0]).toMatch(/qu'une photo/);
+    expect(formatBlockers("simple", 1)).toEqual([]);
   });
 });

@@ -73,18 +73,20 @@ test("Post : Créer ouvre trois grandes cartes, et le post s'écrit dans son éd
   await expect(dialog.getByRole("link", { name: /Réel IA/ })).toHaveAttribute("href", "/reels/nouveau/ia");
   await expect(dialog.getByRole("link", { name: /Réel filmé/ })).toHaveAttribute("href", "/reels/nouveau/video");
   await expect(dialog.getByRole("link", { name: "Écrire un script" })).toHaveAttribute("href", "/scripts/nouveau");
-  await dialog.getByRole("link", { name: /^Post/ }).click();
+  await expect(dialog.getByRole("link", { name: /Carrousel/ })).toHaveAttribute("href", "/post/nouveau?format=carrousel");
+  await dialog.getByRole("link", { name: /Post simple/ }).click();
 
-  await expect(page).toHaveURL(/\/post\/nouveau$/);
+  await expect(page).toHaveURL(/\/post\/nouveau\?format=simple$/);
+  await expect(page.getByRole("radio", { name: "Post simple" })).toHaveAttribute("aria-checked", "true");
   await expect(page.getByRole("heading", { level: 1, name: "Nouveau post" })).toBeVisible();
   const preview = page.getByRole("figure", { name: "Aperçu Instagram" });
-  await page.getByLabel("Légende").fill("Viens découvrir BeeRecos.");
+  await page.getByLabel("Légende", { exact: true }).fill("Viens découvrir BeeRecos.");
   await expect(preview).toContainText("Viens découvrir BeeRecos.");
   await expect(page.getByLabel("Message envoyé en DM")).toHaveCount(0);
   await page.getByLabel(/Mot-clé pour recevoir un DM/).fill("club");
   await expect(page.getByLabel(/Mot-clé pour recevoir un DM/)).toHaveValue("CLUB");
   await page.getByRole("button", { name: "Ajouter « Commente CLUB »" }).click();
-  await expect(page.getByLabel("Légende")).toHaveValue(/Commente CLUB/);
+  await expect(page.getByLabel("Légende", { exact: true })).toHaveValue(/Commente CLUB/);
   await expect(preview).toContainText("Qui commente « CLUB » reçoit ton DM");
   await page.getByLabel("Message envoyé en DM").fill("Voici le lien");
   await page.getByRole("button", { name: "Enregistrer" }).click();
@@ -97,6 +99,28 @@ test("Post : Créer ouvre trois grandes cartes, et le post s'écrit dans son éd
   await expect(confirm.getByText("Ajoute au moins une photo.")).toBeVisible();
   await expect(confirm.getByRole("button", { name: "Oui, publier" })).toBeDisabled();
   expect(calls.some((c) => c.path.endsWith("/publish"))).toBe(false);
+  expect(errors).toEqual([]);
+});
+
+test("Post : carrousel et légende proposée par l'IA, jamais appliquée sans clic", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  const ai = await mockBee(page, { "": () => ({ text: "Trois nouveaux membres ce matin au club. Commente CLUB pour visiter le tien." }) });
+  await mockInstagram(page, { connected: true, items: [] });
+  await page.goto("/post/nouveau?format=carrousel");
+  await expect(page.getByRole("heading", { level: 1, name: "Nouveau carrousel" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: "Carrousel" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("button", { name: "Proposer une légende" })).toBeDisabled();
+  await page.getByLabel(/Mot-clé pour recevoir un DM/).fill("club");
+  await page.getByLabel("De quoi parle ce post ?").fill("la réunion du club ce matin");
+  await page.getByRole("button", { name: "Proposer une légende" }).click();
+  await expect(page.getByText("Proposition de l'IA")).toBeVisible();
+  await expect(page.getByLabel("Légende", { exact: true })).toHaveValue("");
+  const request = ai.find((c) => c.channel === "instagram");
+  expect(request).toMatchObject({ channel: "instagram", cta: "Commente CLUB pour recevoir le lien en DM" });
+  expect(String(request?.brief)).toContain("Carrousel");
+  await page.getByRole("button", { name: "Utiliser cette légende" }).click();
+  await expect(page.getByLabel("Légende", { exact: true })).toHaveValue(/Commente CLUB pour visiter le tien/);
   expect(errors).toEqual([]);
 });
 
