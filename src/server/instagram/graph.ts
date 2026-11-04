@@ -37,10 +37,25 @@ async function call<T>(cfg: GraphConfig, method: "GET" | "POST", path: string, p
 export async function me(cfg: Omit<GraphConfig, "userId">): Promise<{ userId: string; username: string }> {
   if (unifiedLogin()) {
     const id = process.env.IG_USER_ID;
-    if (!id || !/^\d+$/.test(id)) throw new GraphError("Renseigner IG_USER_ID avec l’identifiant du compte Instagram dans la configuration serveur.", 503);
-    const account = await call<{ id?: string; username?: string }>({ ...cfg, userId: id }, "GET", id, { fields: "id,username" });
-    if (String(account.id) !== id || !account.username) throw new GraphError("Compte Instagram inaccessible avec ce jeton.", 400);
-    return { userId: id, username: account.username };
+    const username = process.env.IG_USERNAME?.replace(/^@/, "").toLowerCase();
+    if (!username && (!id || !/^\d+$/.test(id))) throw new GraphError("Renseigner IG_USER_ID ou IG_USERNAME dans la configuration serveur.", 503);
+    // Unified Login: discover assets assigned to this business integration token.
+    // https://developers.facebook.com/documentation/instagram-platform/instagram-api-with-unified-login/get-started
+    let after: string | undefined;
+    const seen = new Set<string>();
+    for (let page = 0; page < 20; page++) {
+      const result = await call<{ data?: { id: string; username: string }[]; paging?: { next?: string; cursors?: { after?: string } } }>(
+        { ...cfg, userId: "me" }, "GET", "me/assigned_instagram_accounts",
+        { fields: "id,username", limit: "100", ...(after ? { after } : {}) },
+      );
+      const account = result.data?.find(a => username ? a.username?.toLowerCase() === username : String(a.id) === id);
+      if (account && /^\d+$/.test(String(account.id)) && account.username) return { userId: String(account.id), username: account.username };
+      if (!result.paging?.next) throw new GraphError("Meta ne renvoie pas le compte Instagram attendu parmi les comptes accessibles à ce jeton. Vérifiez les éléments partagés avec BeeRecos Studio.", 400);
+      after = result.paging.cursors?.after;
+      if (!after || seen.has(after)) break;
+      seen.add(after);
+    }
+    throw new GraphError("Impossible de parcourir tous les comptes Instagram autorisés. Réessayez la connexion.", 502);
   }
   const d = await call<{ user_id?: string | number; id?: string; username?: string }>({ ...cfg, userId: "me" }, "GET", "me", { fields: "user_id,username" });
   const userId = String(d.user_id ?? d.id ?? "");
