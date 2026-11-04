@@ -1,6 +1,7 @@
 "use client";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Film, Upload } from "lucide-react";
 import { BriefSchema, StoryboardSchema } from "@/domain/social/montage/ideation";
 import { MOTION_STYLE_LABEL, motionPlan, PILLAR_LABEL, SEQUENCES, SEQUENCE_LABEL, type MotionSpec, type StorySpec } from "@/domain/social/reel-story";
 import { useSearchParams } from "@/components/social/router";
@@ -116,6 +117,13 @@ export function Uploader({ onDone, reelId }: { onDone: (id: string) => void; ree
   const [receivedId, setReceivedId] = useState<string | null>(null);
   const running = useRef(false);
   const locked = Boolean(step) || Boolean(receivedId);
+  const [dragging, setDragging] = useState(false);
+  const pick = (list: FileList | null) => {
+    const videos = [...(list ?? [])].filter((f) => f.type.startsWith("video/") || /\.(mp4|mov|m4v|webm)$/i.test(f.name));
+    if (list?.length && !videos.length) { setError("Ce fichier n'est pas une vidéo .mp4 ou .mov."); return; }
+    setError(null);
+    setFiles(videos.sort((a, b) => a.name.localeCompare(b.name, "fr", { numeric: true })));
+  };
 
   async function transcribeReceived(id: string) {
     setStep("Transcription et préparation des séquences…");
@@ -184,10 +192,19 @@ export function Uploader({ onDone, reelId }: { onDone: (id: string) => void; ree
         Titre
         <input disabled={locked} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} placeholder="Ex. Une recommandation, ça vaut combien ?" className="mt-1 block w-full rounded-xl border border-line bg-white px-3 py-2 text-sm" />
       </label>)}
-      <label className="block text-sm font-medium">
-        Prise(s) filmée(s) (verticale ou paysage — recadrage 9:16 dans le studio —, .mp4 ou .mov, 500 Mo au plus chacune, {MAX_TAKES} au plus, {MAX_STRIP_MS / 60_000} min en tout)
-        <input disabled={locked} type="file" multiple accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.m4v,.webm" onChange={(e) => setFiles([...(e.target.files ?? [])].sort((a, b) => a.name.localeCompare(b.name, "fr", { numeric: true })))} className="mt-1 block w-full text-sm" />
+      {/* Zone d'import bien visible (le bouton natif « Sélect. fichiers » passait pour du texte) : clic ou glisser-déposer. */}
+      <label
+        onDragOver={(e) => { if (!locked) { e.preventDefault(); setDragging(true); } }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => { e.preventDefault(); setDragging(false); if (!locked) pick(e.dataTransfer.files); }}
+        className={`flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed px-4 py-8 text-center transition ${dragging ? "border-brand bg-brand-soft" : "border-line hover:border-brand hover:bg-brand-soft/40"} ${locked ? "pointer-events-none opacity-60" : ""}`}>
+        <Upload aria-hidden size={32} className="text-brand" />
+        <span className="btn-red pointer-events-none min-h-11 px-5">{files.length ? "Changer de vidéo" : "Choisir mes vidéos"}</span>
+        <span className="text-sm text-mut">ou glisse-les ici</span>
+        <span className="text-xs text-mut">Verticale ou paysage (recadrage 9:16 dans le studio) · .mp4 ou .mov · 500 Mo au plus chacune · {MAX_TAKES} prises au plus · {MAX_STRIP_MS / 60_000} min en tout</span>
+        <input disabled={locked} type="file" multiple aria-label="Prises filmées" accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.m4v,.webm" onChange={(e) => { pick(e.target.files); e.target.value = ""; }} className="sr-only" />
       </label>
+      {files.length === 1 ? <p className="flex items-center gap-2 rounded-lg bg-black/[0.03] px-3 py-2 text-sm"><Film aria-hidden size={16} className="text-brand" /><span className="min-w-0 flex-1 truncate">{files[0].name}</span><span className="text-xs text-mut">{Math.round(files[0].size / 1024 / 1024)} Mo</span></p> : null}
       {files.length > 1 ? (
         <ol aria-label="Ordre des prises" className="space-y-1 text-sm">
           {files.map((f, i) => (
@@ -203,7 +220,7 @@ export function Uploader({ onDone, reelId }: { onDone: (id: string) => void; ree
       {files.length > 1 ? <p className="text-xs text-mut">Les prises sont montées bout à bout dans cet ordre. La coupe auto propose de garder la dernière version d&apos;une phrase redite d&apos;une prise à l&apos;autre.</p> : null}
       <p className="text-xs text-mut">La transcription démarre automatiquement après l’envoi de toutes les prises sélectionnées. Gardez cette page ouverte : le studio s’ouvrira avec vos séquences dès la fin du traitement.</p>
       {step ? <p role="status" className="text-sm text-brand">{step}</p> : null}
-      <button type="submit" className="btn-red min-h-[44px] w-full" disabled={!files.length || Boolean(step)} aria-busy={Boolean(step)}>
+      <button type="submit" className="btn-red min-h-[44px] w-full disabled:cursor-not-allowed disabled:opacity-40" disabled={!files.length || Boolean(step)} aria-busy={Boolean(step)}>
         {step ?? (receivedId ? "Relancer la transcription" : "Envoyer et commencer")}
       </button>
       {receivedId && !step ? <button type="button" className="btn-ghost min-h-[44px]" onClick={() => onDone(receivedId)}>Ouvrir le montage enregistré</button> : null}

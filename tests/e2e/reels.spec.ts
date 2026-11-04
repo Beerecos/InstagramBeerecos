@@ -184,3 +184,20 @@ test("connexion : email et mot de passe, lien par email en secours", async ({ pa
   await expect(page.getByRole("button", { name: "Recevoir mon lien de connexion" })).toBeVisible();
   await expect(page.getByLabel("Mot de passe")).toHaveCount(0);
 });
+
+test("Réel filmé : zone d'import visible, choix de la vidéo puis envoi", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  const calls = await mockBee(page, { create: () => ({ id: "m9", uploadUrl: "https://bee-api.test/upload/m9" }) });
+  await page.goto("/reels/nouveau/video");
+  const form = page.getByRole("form", { name: "Nouveau montage" }).filter({ visible: true });
+  await expect(form.getByText("Choisir mes vidéos")).toBeVisible();
+  await expect(form.getByText("ou glisse-les ici")).toBeVisible();
+  await expect(form.getByRole("button", { name: "Envoyer et commencer" })).toBeDisabled();
+  await form.getByLabel("Prises filmées").setInputFiles(`${process.cwd()}/tests/e2e/fixtures/paysage.mp4`);
+  await expect(form.getByText("paysage.mp4")).toBeVisible();
+  await expect(form.getByText("Changer de vidéo")).toBeVisible();
+  await form.getByRole("button", { name: "Envoyer et commencer" }).click();
+  await expect.poll(() => calls.some((c) => c.action === "create" && c.fileName === "paysage.mp4")).toBe(true);
+  expect(errors).toEqual([]);
+});
