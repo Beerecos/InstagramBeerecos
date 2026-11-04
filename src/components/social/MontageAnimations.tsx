@@ -26,6 +26,12 @@ const NAMES = Object.keys(ANIMATIONS).filter((n) => !MANUAL_ONLY.has(n));
 const FIELD_LABELS: Record<string, string> = {
   texte: "Texte", detail: "Ligne secondaire", mot: "Mot-clé à commenter", valeur: "Nombre (dit dans la vidéo)", decimales: "Décimales",
   avant: "Avant le nombre (ex. +)", apres: "Après le nombre (ex. %)", legende: "Légende", titre: "Titre", items: "Points", remplacement: "Bonne réponse",
+  position: "Position", couleur: "Couleur", entree: "Entrée",
+};
+/** Libellés des choix (valeurs techniques inchangées). */
+const CHOICE_LABELS: Record<string, string> = {
+  haut: "Derrière la tête", milieu: "Derrière les épaules", blanc: "Blanc", bleu: "Bleu BeeRecos", noir: "Noir",
+  flou: "Fondu flou", rebond: "Agrandissement avec rebond", verticale: "Entrée verticale", laterale: "Entrée latérale",
 };
 
 /** Valeurs du formulaire (texte brut) → réglages typés de l'animation. */
@@ -246,7 +252,12 @@ const MontageAnimations = forwardRef<MontageAnimationsHandle, Props>(function Mo
         {fieldsOf(ANIMATIONS[name]).map((f) => (
           <label key={f.key} className="block text-sm">
             {FIELD_LABELS[f.key] ?? f.key}{f.optional ? " (facultatif)" : ""}{f.kind === "list" ? " — un élément par ligne" : ""}
-            {f.kind === "list"
+            {f.kind === "choice"
+              ? <select value={values[f.key] ?? ""} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })} className="mt-1 block w-full rounded-xl border border-line bg-white px-3 py-2 text-sm">
+                  {f.optional ? <option value="">Par défaut</option> : null}
+                  {(f.options ?? []).map((o) => <option key={o} value={o}>{CHOICE_LABELS[o] ?? o}</option>)}
+                </select>
+              : f.kind === "list"
               ? <textarea rows={3} value={values[f.key] ?? ""} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })} className="mt-1 block w-full rounded-xl border border-line bg-white px-3 py-2 text-sm" />
               : <input type={f.kind === "number" ? "number" : "text"} value={values[f.key] ?? ""} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })} className="mt-1 block w-full rounded-xl border border-line bg-white px-3 py-2 text-sm" />}
           </label>

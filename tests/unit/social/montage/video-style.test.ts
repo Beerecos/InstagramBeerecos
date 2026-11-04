@@ -17,3 +17,16 @@ it('rend la police, la taille et les couleurs des sous-titres sans CSS arbitrair
  expect(parseEdit({...edit,captionStyle:{color:'red;position:fixed'}}).ok).toBe(false);
  expect(parseEdit({...edit,captionStyle:{fontFamily:'url(evil)'}}).ok).toBe(false);
 });
+it('grand mot derrière le personnage : noir possible, entrée avec rebond, expression en deux temps, sous-titres devant',()=>{
+ const edit={...initialEdit('prise.mp4',10000),mattes:{'prise.mp4':'prise.matte.webm'},custom:[{name:'titre-derriere',fromMs:1000,toMs:3000,props:{texte:'TON RÉSEAU DE CONFIANCE',couleur:'noir',entree:'rebond'}}]};
+ expect(parseEdit(edit).ok).toBe(true);
+ const html=buildEditComposition(edit,[{text:'Bonjour',startMs:0,endMs:2000}],{assetBase:'.'});
+ expect(html).toContain('color: #000000; text-shadow: none');
+ expect(html).toMatch(/scale: 0\.55, opacity: 0, duration: 0\.45, ease: "back\.out\(1\.6\)"[^;]*\}, 1\.05\)/);
+ expect(html).toMatch(/back\.out\(1\.6\)[^;]*\}, 1\.35\)/);
+ // Empilement : vidéo, grand mot (z 3), silhouette détourée (z 5), sous-titres (z 10).
+ expect(html).toContain('.anim-host.behind { z-index: 3; }');expect(html).toContain('.matte-wrap { position: absolute; inset: 0; z-index: 5;');expect(html).toMatch(/\.caption \{ position: absolute; z-index: 10;/);
+ // Montages déjà enregistrés (sans « entree ») : rendu inchangé, entrée floue.
+ const old=buildEditComposition({...edit,custom:[{name:'titre-derriere',fromMs:1000,toMs:3000,props:{texte:'RÉSEAU'}}]},[],{assetBase:'.'});
+ expect(old).not.toContain('back.out(1.6)');
+});

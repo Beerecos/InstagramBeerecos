@@ -334,7 +334,7 @@ export function seedAnimations(reel: Reel, words: CaptionWord[], ranges: Range[]
     if (s.overlay.preferred_mode === "behind_subject" && !behind) warnings.push(`${s.scene_id} : pas de détourage de la prise — « ${text} » passe en onglet.`);
     const mode: OverlayMode = behind ? "behind_subject" : "tab";
     const anim: CustomAnimation = behind
-      ? { name: "titre-derriere", fromMs: at.startMs, toMs: Math.min(at.startMs + OVERLAY_MS, limit), props: { texte: text, position: "haut", couleur: "blanc" }, label: s.scene_id }
+      ? { name: "titre-derriere", fromMs: at.startMs, toMs: Math.min(at.startMs + OVERLAY_MS, limit), props: { texte: text, position: "haut", couleur: "blanc", entree: "rebond" }, label: s.scene_id }
       : { name: "onglet", fromMs: at.startMs, toMs: Math.min(at.startMs + OVERLAY_MS, limit), props: { texte: text, variante: s.role === "hook" ? "bleu" : "blanc" }, label: s.scene_id };
     resolved[s.scene_id] = tryPlace(anim, `${s.scene_id} (« ${text} »)`) ? mode : null;
   });

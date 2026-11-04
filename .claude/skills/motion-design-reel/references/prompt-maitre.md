@@ -14,6 +14,14 @@ fond, cercles dessinés à la main, un même élément répété partout.
 Rendu en 60 images/seconde. Montre-moi une planche contact avant le rendu.
 ```
 
+**Règle BeeRecos du 2026-11-04 (Cédric, « grands mots derrière le personnage ») — prime sur le bloc ci-dessus :**
+le détourage est autorisé, uniquement pour faire passer un grand mot derrière la personne (animation
+`titre-derriere`) : 1 à 3 mots, Poppins Bold, bleu #2851FF, blanc ou noir selon le décor, aux moments forts,
+au moment où le mot est prononcé. Entrées validées : agrandissement rapide avec **léger rebond**, entrée
+verticale ou latérale courte, apparition en deux temps pour une expression, puis stabilisation. Empilement :
+vidéo d'origine → grand mot → silhouette détourée de la même image (mêmes zooms et recadrages) → sous-titres.
+Aucune modification du décor, de l'apparence de la personne ni de l'éclairage ; jamais de faux fond.
+
 Polices : si Didot / Avenir Next ne sont pas disponibles en local ou sous licence, utiliser
 des équivalents libres (Didot → « Playfair Display » ou « Bodoni Moda » ; Avenir Next →
 « Manrope » ou « Inter ») et le signaler.

@@ -47,21 +47,23 @@ export function checkTimeline(custom: CustomAnimation[]): string[] {
 }
 
 /** Nature d'un réglage, pour générer le formulaire : texte, nombre ou liste (une ligne par élément). */
-export type FieldKind = "text" | "number" | "list";
-type ZodDef = { type?: string; innerType?: ZodLike };
+export type FieldKind = "text" | "number" | "list" | "choice";
+type ZodDef = { type?: string; innerType?: ZodLike; entries?: Record<string, string> };
 type ZodLike = { def?: ZodDef; _zod?: { def?: ZodDef } };
-function kindOf(schema: ZodLike): { kind: FieldKind; optional: boolean } {
+function kindOf(schema: ZodLike): { kind: FieldKind; optional: boolean; options?: string[] } {
   let s: ZodLike | undefined = schema;
   let optional = false;
   for (let i = 0; i < 5 && s; i++) {
     const def: ZodDef | undefined = s.def ?? s._zod?.def;
     const t = def?.type;
     if (t === "optional" || t === "default") { optional = true; s = def?.innerType; continue; }
+    // Liste fermée (ex. couleur, entrée) : un menu de choix plutôt qu'un champ libre.
+    if (t === "enum" && def?.entries) return { kind: "choice", optional, options: Object.values(def.entries) };
     return { kind: t === "number" ? "number" : t === "array" ? "list" : "text", optional };
   }
   return { kind: "text", optional };
 }
-export function fieldsOf(def: AnimationDef): { key: string; kind: FieldKind; optional: boolean }[] {
+export function fieldsOf(def: AnimationDef): { key: string; kind: FieldKind; optional: boolean; options?: string[] }[] {
   const shape = (def.props as unknown as { shape?: Record<string, ZodLike> }).shape ?? {};
   return Object.entries(shape).map(([key, s]) => ({ key, ...kindOf(s) }));
 }

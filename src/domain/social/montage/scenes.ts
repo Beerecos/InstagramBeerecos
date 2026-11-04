@@ -119,7 +119,7 @@ const firstWords = (text: string, n: number) => text.replace(/[.!?…,;:]+/g, ""
 function prefill(id: string, scene: Scene, keyword: string | null): { values: Record<string, string>; note?: string } | null {
   const pivot = scene.pivotWords[0]?.word;
   switch (id) {
-    case "titre-derriere": return { values: { texte: (pivot ?? firstWords(scene.text, 3)).toUpperCase() } };
+    case "titre-derriere": return { values: { texte: (pivot ?? firstWords(scene.text, 3)).toUpperCase(), entree: "rebond" } };
     case "titre": return { values: { texte: firstWords(scene.text, 8) } };
     case "onglet": return { values: { texte: pivot ? pivot.toUpperCase() : firstWords(scene.text, 5) } };
     case "mot-cle": return keyword ? { values: { mot: keyword } } : { values: { mot: "" }, note: "Mot-clé à saisir : seulement un mot-clé déjà actif dans le moteur de DM." };

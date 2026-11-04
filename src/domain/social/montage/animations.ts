@@ -224,11 +224,19 @@ export const KIT_ANIMATIONS: Record<string, AnimationDef> = {
 
   "titre-derriere": defineAnimation({
     label: "Titre derrière le sujet",
-    description: "Très grand titre (1 à 4 mots de préférence, 48 signes au plus) posé DERRIÈRE la personne filmée (sa silhouette passe devant les lettres). Pour le titre d'une nouvelle idée prévue « derrière le sujet » au storyboard. Exige le détourage de la prise.",
+    description: "Grand mot (1 à 3 mots, Poppins Bold, bleu, blanc ou noir selon le décor) posé DERRIÈRE la personne filmée : sa silhouette passe devant les lettres, le décor reste intact. Apparaît au moment où le mot est prononcé, réservé aux moments forts (RÉSEAU, CONFIANCE, TON RÉSEAU). Exige le détourage de la prise.",
     lengthMs: 2500,
     behind: true,
-    props: z.strictObject({ texte: text(48), position: z.enum(["haut", "milieu"]).default("haut"), couleur: z.enum(["blanc", "bleu"]).default("blanc") }),
-    example: { texte: "Ton réseau" },
+    // Consigne de Cédric (2026-11-04, « grands mots derrière le personnage ») : 1 à 3 mots, Poppins Bold, bleu, blanc
+    // ou noir selon le décor, entrées validées (rebond, verticale, latérale, deux temps pour une expression) puis
+    // stabilisation. « flou » reste l'entrée par défaut pour que les montages déjà enregistrés se rejouent à l'identique.
+    props: z.strictObject({
+      texte: text(48),
+      position: z.enum(["haut", "milieu"]).default("haut"),
+      couleur: z.enum(["blanc", "bleu", "noir"]).default("blanc"),
+      entree: z.enum(["flou", "rebond", "verticale", "laterale"]).default("flou"),
+    }),
+    example: { texte: "Ton réseau", entree: "rebond" },
     css: `
       .anim-titre-derriere { position: absolute; left: ${SAFE.left}px; right: ${SAFE.left}px; display: flex; flex-direction: column; align-items: center; }
       .anim-titre-derriere p { margin: 0; font-weight: 700; line-height: 0.95; letter-spacing: -2px; text-align: center; text-transform: uppercase; white-space: nowrap; text-shadow: 0 6px 32px rgba(0, 0, 0, 0.35); }`,
@@ -238,10 +246,21 @@ export const KIT_ANIMATIONS: Record<string, AnimationDef> = {
       const size = Math.min(260, Math.floor((1080 - 2 * SAFE.left) / (0.68 * Math.max(...lines.map((l) => l.length)))));
       // « haut » : derrière le haut de la tête d'un plan face caméra vertical ; « milieu » : derrière les épaules.
       const top = p.position === "haut" ? 520 : 860;
-      const color = p.couleur === "bleu" ? ctx.accent : COLORS.white;
+      const color = p.couleur === "bleu" ? ctx.accent : p.couleur === "noir" ? COLORS.black : COLORS.white;
+      // Ombre portée seulement sous un texte clair : sur un mot noir, elle salirait le décor.
+      const shadow = p.couleur === "noir" ? "none" : "0 6px 32px rgba(0, 0, 0, 0.35)";
+      const line = (i: number) => `#${ctx.id}-l${i}`;
+      // Expression sur plusieurs lignes : apparition en deux temps (une ligne, puis la suivante), puis le mot reste stable.
+      const at = (i: number) => (ctx.start + 0.05 + i * (p.entree === "flou" ? 0.12 : 0.3)).toFixed(2);
+      const enter = (i: number) => {
+        if (p.entree === "rebond") return `tl.from("${line(i)}", { scale: 0.55, opacity: 0, duration: 0.45, ease: "back.out(1.6)", transformOrigin: "50% 60%" }, ${at(i)});`;
+        if (p.entree === "verticale") return `tl.from("${line(i)}", { y: 120, opacity: 0, duration: 0.4, ease: "power3.out" }, ${at(i)});`;
+        if (p.entree === "laterale") return `tl.from("${line(i)}", { x: i % 2 ? 160 : -160, opacity: 0, duration: 0.4, ease: "power3.out" }, ${at(i)});`;
+        return blurIn(`${ctx.id}-l${i}`, ctx.start + 0.05 + i * 0.12, { y: 80, blur: 14, duration: 0.7 });
+      };
       return {
-        html: `<div id="${ctx.id}" class="anim-titre-derriere" style="top: ${top}px">${lines.map((l, i) => `<p id="${ctx.id}-l${i}" style="font-size: ${size}px; color: ${color}">${escapeHtml(l)}</p>`).join("")}</div>`,
-        tweens: [...lines.map((_, i) => blurIn(`${ctx.id}-l${i}`, ctx.start + 0.05 + i * 0.12, { y: 80, blur: 14, duration: 0.7 })), fadeOut(ctx.id, ctx)],
+        html: `<div id="${ctx.id}" class="anim-titre-derriere" style="top: ${top}px">${lines.map((l, i) => `<p id="${ctx.id}-l${i}" style="font-size: ${size}px; color: ${color}${p.couleur === "noir" ? `; text-shadow: ${shadow}` : ""}">${escapeHtml(l)}</p>`).join("")}</div>`,
+        tweens: [...lines.map((_, i) => enter(i)), fadeOut(ctx.id, ctx)],
       };
     },
   }),
