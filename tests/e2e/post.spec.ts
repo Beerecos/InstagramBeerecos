@@ -67,6 +67,38 @@ test("Post : tableau de bord des posts en cours, rangés par étape", async ({ p
   expect(errors).toEqual([]);
 });
 
+test("Post : chaque carte dit son type et se supprime avec la croix, après confirmation", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  const m1 = reel("m1", "V12 · Filmé", false), m2 = reel("m2", "V20 · IA", false);
+  const bee = await mockBee(page, {
+    list: () => ({ montages: [m1, m2] }),
+    get: (b) => ({ montage: { ...(b.id === "m2" ? m2 : m1), aiSource: b.id === "m2" ? { source: { kind: "motion", id: "s1", revision: 1 }, verified: true } : null, edit: null, captions: [], canUndo: false, error: null, renderError: null }, videoUrl: null }),
+    archive: () => ({ archivedAt: "2026-11-04T10:00:00.000Z" }),
+  });
+  const calls = await mockInstagram(page, { connected: true, items: [draft, { ...draft, id: "p2", title: "Trois photos", media: [1, 2, 3].map((i) => ({ path: `u/${i}.jpg`, type: "image" })) }] });
+  await page.goto("/");
+  const card = (name: RegExp) => page.getByRole("listitem").filter({ has: page.getByRole("link", { name }) }).first();
+  await expect(card(/V12 · Filmé/)).toContainText("Réel filmé");
+  await expect(card(/V20 · IA/)).toContainText("Réel IA");
+  await expect(card(/Visite de club/)).toContainText("Post simple");
+  await expect(card(/Trois photos/)).toContainText("Carrousel");
+
+  await page.getByRole("button", { name: "Supprimer « V12 · Filmé »" }).first().click();
+  const confirm = page.getByRole("alertdialog", { name: /Supprimer « V12 · Filmé »/ });
+  await expect(confirm).toContainText("corbeille");
+  await confirm.getByRole("button", { name: "Mettre à la corbeille" }).click();
+  await expect(page.getByText(/est dans la corbeille/)).toBeVisible();
+  expect(bee.some((c) => c.action === "archive" && c.id === "m1")).toBe(true);
+  await expect(page.getByRole("link", { name: /V12 · Filmé/ })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Supprimer « Trois photos »" }).first().click();
+  await page.getByRole("alertdialog", { name: /Supprimer « Trois photos »/ }).getByRole("button", { name: "Supprimer" }).click();
+  await expect.poll(() => calls.some((c) => c.method === "DELETE" && c.path === "/posts/p2")).toBe(true);
+  await expect(page.getByRole("link", { name: /Trois photos/ })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test("Post : Créer ouvre trois grandes cartes, et le post s'écrit dans son éditeur avec aperçu", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));

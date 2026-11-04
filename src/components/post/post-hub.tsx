@@ -7,7 +7,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Bot, FileText, Film, Image as ImageIcon, Plus, Search, Upload, X } from "lucide-react";
+import { ArrowRight, Bot, FileText, Film, GalleryHorizontal, Image as ImageIcon, Plus, Search, Upload, X } from "lucide-react";
 import { studioAssets } from "@/lib/social/studio-assets-api";
 import type { StudioAsset } from "@/domain/social/studio-assets";
 import { STAGES, STAGE_LABELS, countByStage, stageOf, type Stage } from "@/domain/instagram/dashboard";
@@ -60,37 +60,74 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
-function ReelItem({ m, pub }: { m: MontageSummary; pub?: Publication }) {
-  const state = reelState(m);
-  const thumb = m.finalVideoUrl;
+type CardType = "reel" | "reel-ia" | "post" | "carrousel";
+const TYPE: Record<CardType, { label: string; icon: typeof Film; tone: string }> = {
+  reel: { label: "Réel filmé", icon: Film, tone: "bg-black text-white" },
+  "reel-ia": { label: "Réel IA", icon: Bot, tone: "bg-brand text-white" },
+  post: { label: "Post simple", icon: ImageIcon, tone: "bg-brand-soft text-brand" },
+  carrousel: { label: "Carrousel", icon: GalleryHorizontal, tone: "bg-brand-soft text-brand" },
+};
+function TypeBadge({ type }: { type: CardType | null }) {
+  if (!type) return <span className="pill bg-black/[0.05] text-mut">Réel</span>;
+  const t = TYPE[type];
+  return <span className={`pill inline-flex items-center gap-1 ${t.tone}`}><t.icon aria-hidden size={12} />{t.label}</span>;
+}
+export type Removal = { kind: "reel" | "post"; id: string; title: string };
+function DeleteButton({ title, disabled, reason, onClick }: { title: string; disabled?: boolean; reason?: string; onClick: () => void }) {
   return (
-    <li>
-      <Link href={`/reels/${m.id}?panel=post`} className="card flex gap-3 p-3 transition hover:border-brand/40">
+    <button type="button" aria-label={`Supprimer « ${title} »`} title={disabled ? reason : "Supprimer"} disabled={disabled} onClick={onClick}
+      className="absolute right-2 top-2 z-10 grid size-9 place-items-center rounded-lg text-mut hover:bg-red-50 hover:text-red-700 disabled:opacity-30"><X aria-hidden size={16} /></button>
+  );
+}
+
+function ReelItem({ m, pub, onDelete }: { m: MontageSummary; pub?: Publication; onDelete: (r: Removal) => void }) {
+  // Détail du montage : origine (IA ou filmé) et image de la prise pour la vignette.
+  const [detail, setDetail] = useState<{ ai: boolean; videoUrl: string | null } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    montage.get(m.id).then((d) => { if (alive) setDetail({ ai: Boolean(d.montage.aiSource), videoUrl: d.videoUrl }); }).catch(() => {});
+    return () => { alive = false; };
+  }, [m.id, m.updatedAt]);
+  const state = reelState(m);
+  const thumb = m.finalVideoUrl ?? detail?.videoUrl ?? null;
+  const published = pub?.status === "published" || pub?.status === "publishing";
+  return (
+    <li className="relative">
+      <DeleteButton title={m.title} disabled={m.renderStatus === "rendering" || published} reason={published ? "Déjà publié" : "Rendu en cours"} onClick={() => onDelete({ kind: "reel", id: m.id, title: m.title })} />
+      <Link href={`/reels/${m.id}?panel=post`} className="card flex gap-3 p-3 pr-12 transition hover:border-brand/40">
         <div className="relative aspect-[9/16] w-16 shrink-0 overflow-hidden rounded-lg bg-black/[0.06]">
           {thumb ? <video src={`${thumb}#t=0.5`} preload="metadata" muted playsInline aria-hidden className="h-full w-full object-cover" /> : <Film aria-hidden className="absolute inset-0 m-auto text-mut-2" size={20} />}
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{m.title}</p>
-          <p className="mt-0.5 text-xs text-mut">Réel · {new Date(m.updatedAt).toLocaleDateString("fr-FR")}</p>
-          <span className={`pill mt-2 ${pub ? PUB_TONE[pub.status] : "bg-black/[0.05] text-mut"}`}>{pub && pub.status !== "draft" ? STATUS_LABELS[pub.status] : state.label}</span>
+          <p className="mt-0.5 text-xs text-mut">{new Date(m.updatedAt).toLocaleDateString("fr-FR")}</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <TypeBadge type={detail ? (detail.ai ? "reel-ia" : "reel") : null} />
+            <span className={`pill ${pub ? PUB_TONE[pub.status] : "bg-black/[0.05] text-mut"}`}>{pub && pub.status !== "draft" ? STATUS_LABELS[pub.status] : state.label}</span>
+          </div>
         </div>
       </Link>
     </li>
   );
 }
 
-function PostItem({ p, preview }: { p: Publication; preview?: string }) {
+function PostItem({ p, preview, onDelete }: { p: Publication; preview?: string; onDelete: (r: Removal) => void }) {
+  const locked = p.status === "published" || p.status === "publishing" || p.linkedinStatus === "published" || p.linkedinStatus === "publishing";
   return (
-    <li>
-      <Link href={`/post/${p.id}`} className="card flex w-full gap-3 p-3 text-left transition hover:border-brand/40">
+    <li className="relative">
+      <DeleteButton title={p.title || "Post sans légende"} disabled={locked} reason="Déjà publié : il se retire depuis Instagram ou LinkedIn" onClick={() => onDelete({ kind: "post", id: p.id, title: p.title || "Post sans légende" })} />
+      <Link href={`/post/${p.id}`} className="card flex w-full gap-3 p-3 pr-12 text-left transition hover:border-brand/40">
         <div className="relative aspect-[4/5] w-16 shrink-0 overflow-hidden rounded-lg bg-black/[0.06]">
           {/* eslint-disable-next-line @next/next/no-img-element -- lien signé de 10 min, pas d'optimisation possible */}
           {preview ? <img src={preview} alt="" className="h-full w-full object-cover" /> : <ImageIcon aria-hidden className="absolute inset-0 m-auto text-mut-2" size={20} />}
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{p.title || "Post sans légende"}</p>
-          <p className="mt-0.5 text-xs text-mut">{p.media.length > 1 ? `Carrousel · ${p.media.length} photos` : "Post simple"} · {new Date(p.updatedAt).toLocaleDateString("fr-FR")}</p>
-          <span className={`pill mt-2 ${PUB_TONE[p.status]}`}>{p.status === "draft" ? (stageOf({ kind: "post", pub: p }) === "pret" ? "Prêt à publier" : "À compléter") : STATUS_LABELS[p.status]}</span>
+          <p className="mt-0.5 text-xs text-mut">{p.media.length > 1 ? `${p.media.length} photos · ` : ""}{new Date(p.updatedAt).toLocaleDateString("fr-FR")}</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <TypeBadge type={p.media.length > 1 ? "carrousel" : "post"} />
+            <span className={`pill ${PUB_TONE[p.status]}`}>{p.status === "draft" ? (stageOf({ kind: "post", pub: p }) === "pret" ? "Prêt à publier" : "À compléter") : STATUS_LABELS[p.status]}</span>
+          </div>
         </div>
       </Link>
     </li>
@@ -128,6 +165,24 @@ export default function PostHub() {
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(params.get("creer") === "1");
+  const [removing, setRemoving] = useState<Removal | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const confirmRemove = async () => {
+    const r = removing;
+    if (!r) return;
+    setRemoving(null); setNotice(null);
+    try {
+      if (r.kind === "reel") {
+        await montage.archive(r.id);
+        setReels((all) => (all ?? []).filter((x) => x.id !== r.id));
+        setNotice(`« ${r.title} » est dans la corbeille : tu peux le restaurer depuis « Corbeille des projets ».`);
+      } else {
+        await instagram.remove(r.id);
+        setPubs((all) => all.filter((x) => x.id !== r.id));
+        setNotice(`« ${r.title} » est supprimé.`);
+      }
+    } catch (e) { setError(e instanceof Error ? e.message : "Suppression impossible."); }
+  };
 
   const load = useCallback(() => {
     if (isMontageConfigured) {
@@ -143,9 +198,9 @@ export default function PostHub() {
     const byMontage = new Map(pubs.filter((p) => p.montageId).map((p) => [p.montageId!, p]));
     const r = (reels ?? []).map((m) => {
       const pub = byMontage.get(m.id);
-      return { key: `r${m.id}`, at: m.updatedAt, title: m.title, stage: stageOf({ kind: "reel", reel: m, pub }), node: <ReelItem key={`r${m.id}`} m={m} pub={pub} /> };
+      return { key: `r${m.id}`, at: m.updatedAt, title: m.title, stage: stageOf({ kind: "reel", reel: m, pub }), node: <ReelItem key={`r${m.id}`} m={m} pub={pub} onDelete={setRemoving} /> };
     });
-    const p = pubs.filter((x) => x.kind === "post").map((x) => ({ key: `p${x.id}`, at: x.updatedAt, title: `${x.title} ${x.caption}`, stage: stageOf({ kind: "post", pub: x }), node: <PostItem key={`p${x.id}`} p={x} preview={previews[x.media[0]?.path ?? ""]} /> }));
+    const p = pubs.filter((x) => x.kind === "post").map((x) => ({ key: `p${x.id}`, at: x.updatedAt, title: `${x.title} ${x.caption}`, stage: stageOf({ kind: "post", pub: x }), node: <PostItem key={`p${x.id}`} p={x} preview={previews[x.media[0]?.path ?? ""]} onDelete={setRemoving} /> }));
     return [...r, ...p].sort((a, b) => b.at.localeCompare(a.at));
   }, [reels, pubs, previews]);
   const counts = countByStage(entries.map((e) => e.stage));
@@ -170,6 +225,7 @@ export default function PostHub() {
         <p role="status" className="card mt-4 p-3 text-sm">Instagram n&apos;est pas encore connecté : tu peux tout préparer, la publication s&apos;active après <Link href="/settings#instagram" className="text-brand underline">Paramètres → Instagram</Link>.</p>
       ) : null}
       {error ? <p role="alert" className="mt-4 text-sm text-red-700">{error}</p> : null}
+      {notice ? <p role="status" className="mt-4 text-sm">{notice}</p> : null}
 
       <nav aria-label="Étapes" className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {STAGES.map((s) => (
@@ -234,6 +290,18 @@ export default function PostHub() {
       </p>
 
       {creating ? <CreateDialog onClose={() => setCreating(false)} /> : null}
+      {removing ? (
+        <div role="alertdialog" aria-modal="true" aria-labelledby="supprimer-titre" className="fixed inset-0 z-[70] grid place-items-center bg-black/40 p-4">
+          <div className="card w-full max-w-md space-y-3 p-5">
+            <h2 id="supprimer-titre" className="font-semibold">Supprimer « {removing.title} » ?</h2>
+            <p className="text-sm text-mut">{removing.kind === "reel" ? "Le réel part dans la corbeille : sa vidéo et son montage sont conservés, tu peux le restaurer." : "Le brouillon et ses réglages sont supprimés définitivement."}</p>
+            <div className="flex justify-end gap-2">
+              <button type="button" className="btn-ghost min-h-11" onClick={() => setRemoving(null)}>Annuler</button>
+              <button type="button" className="btn-red min-h-11" onClick={() => { void confirmRemove(); }}>{removing.kind === "reel" ? "Mettre à la corbeille" : "Supprimer"}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
