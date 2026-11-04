@@ -76,3 +76,16 @@ it("parcourt les pages sans suivre une URL contenant un jeton", async () => {
   await expect(me({ token, fetch: f as typeof fetch })).resolves.toEqual({ userId: "1784", username: "beerecos" });
   expect(f).toHaveBeenCalledTimes(2);
 });
+
+it.each([
+  [{ data: [] }, "IG_ASSIGNMENTS_EMPTY"],
+  [{ id: "1784" }, "IG_ASSIGNMENTS_FORMAT"],
+  [{ data: [{ id: "1784" }] }, "IG_ASSIGNMENTS_INCOMPLETE"],
+  [{ data: [null] }, "IG_ASSIGNMENTS_INCOMPLETE"],
+  [{ data: [{ id: "1785", username: "another" }] }, "IG_ACCOUNT_MISMATCH"],
+])("distingue les réponses Meta sans exposer leur contenu %j", async (response, diagnostic) => {
+  const deps = setup();
+  deps.fetch = (async () => new Response(JSON.stringify(response))) as typeof fetch;
+  await expect(connect(deps, user, token)).rejects.toThrow(diagnostic);
+  expect(deps.store.conn).toBeNull();
+});
