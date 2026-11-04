@@ -18,7 +18,7 @@
 /* Instagram BeeRecos : disposition de logiciel de montage — outils à gauche, téléphone au centre, réglages à droite,
    timeline en bas, sur un seul écran. */
 @media(min-width:1024px){
- .studio-workspace {grid-template-columns:300px minmax(0,1fr) 320px;height:max(620px,calc(100dvh - 380px));}
+ .studio-workspace {grid-template-columns:300px minmax(0,1fr) 320px;grid-template-rows:minmax(0,1fr);height:max(620px,calc(100dvh - 380px));}
  .studio-library,.studio-tools,.studio-inspector {overflow:auto;overscroll-behavior:contain;padding-right:2px;}
  .studio-monitor {order:0;}
  .studio-monitor-frame {flex:1;height:0;min-height:200px;}
@@ -65,3 +65,6 @@
 .studio-library-dialog .studio-library {max-height:none;overflow:visible;}
 
 @media(max-width:480px){.studio-library [data-compact] > button:nth-of-type(2){height:180px;}.studio-library [data-compact] > button:nth-of-type(2) > div{width:101px;}}
+/* Studio simple : deux colonnes (étapes | vidéo), la colonne des réglages avancés est masquée. */
+@media(min-width:1024px){.studio-workspace.studio-simple{grid-template-columns:380px minmax(0,1fr);}}
+@media(min-width:1600px){.studio-workspace.studio-simple{grid-template-columns:440px minmax(0,1fr);}}

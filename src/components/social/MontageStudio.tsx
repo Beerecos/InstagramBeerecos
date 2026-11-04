@@ -30,6 +30,8 @@ import type { MediaItem } from "@/domain/social/montage/media";
 import MontageAnimations, { type MontageAnimationsHandle } from "@/components/social/MontageAnimations";
 import StudioLibraryDialog from "@/components/social/studio/StudioLibraryDialog";
 import StudioFraming from "@/components/social/studio/StudioFraming";
+import StudioSimpleCaptions from "@/components/social/studio/StudioSimpleCaptions";
+import { ANIMATIONS } from "@/domain/social/montage/registry";
 import { removeSequence } from "@/domain/social/montage/sequence-edit";
 import { studioSequences } from "@/domain/social/montage/studio-sequences";
 import type { Scene } from "@/domain/social/montage/scenes";
@@ -353,6 +355,27 @@ function useLibrary() {
 
 type MontageData = Awaited<ReturnType<typeof montage.get>>;
 
+/** Studio simple : les quatre étapes (et « Terminer »), en gros boutons. */
+const SIMPLE_STEPS = [
+  { key: "cadrage", label: "Cadrage", hint: "Choisir la partie gardée en 9:16" },
+  { key: "coupes", label: "Coupes", hint: "Retirer les passages en trop" },
+  { key: "sous-titres", label: "Sous-titres", hint: "Couleurs, taille, position" },
+  { key: "animations", label: "Animations", hint: "Titres, mots, cartes" },
+] as const;
+function SimpleSteps({ step, onStep, hasEdit, ready }: { step: string; onStep: (s: "cadrage" | "coupes" | "sous-titres" | "animations" | "terminer") => void; hasEdit: boolean; ready: boolean }) {
+  return (
+    <nav aria-label="Étapes du montage" className="grid grid-cols-2 gap-2">
+      {SIMPLE_STEPS.map((s, i) => (
+        <button key={s.key} type="button" aria-current={step === s.key ? "step" : undefined} disabled={!hasEdit || (s.key === "sous-titres" && !ready)} onClick={() => onStep(s.key)}
+          className={`flex min-h-16 flex-col items-start justify-center rounded-2xl border px-3 py-2 text-left transition disabled:opacity-40 ${step === s.key ? "border-brand bg-brand text-white" : "border-line bg-white hover:border-brand"}`}>
+          <span className="text-sm font-semibold">{i + 1}. {s.label}</span>
+          <span className={`text-xs ${step === s.key ? "text-white/80" : "text-mut"}`}>{s.hint}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
 /** Choix du projet dans la barre du studio (Instagram BeeRecos) : passer d'un réel à l'autre sans quitter le studio. */
 function ProjectPicker({ id, title, onSwitch }: { id: string; title: string; onSwitch: (target: string) => void }) {
   const [list, setList] = useState<MontageSummary[] | null>(null);
@@ -385,6 +408,11 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   const [panelParams] = useSearchParams();
   const [panel, setPanel] = useState<Panel>(() => PANELS.some((p) => p.key === panelParams.get("panel")) ? panelParams.get("panel") as Panel : "animations");
   const [libraryOpen,setLibraryOpen]=useState(false);
+  // Mode simple (par défaut) : 4 étapes (cadrage, coupes, sous-titres, animations) puis « Terminer ». Le mode avancé
+  // garde tous les outils ; le choix est retenu sur cet appareil.
+  const [simple,setSimpleMode]=useState(()=>{try{return typeof window==="undefined"||localStorage.getItem("ibr.studio.mode")!=="avance";}catch{return true;}});
+  const [simpleStep,setSimpleStep]=useState<"cadrage"|"coupes"|"sous-titres"|"animations"|"terminer">("coupes");
+  const switchMode=(next:boolean)=>{setSimpleMode(next);try{localStorage.setItem("ibr.studio.mode",next?"simple":"avance");}catch{/* stockage indisponible */}};
   const [libraryTab,setLibraryTab]=useState<"animations"|"effects"|"sounds">("animations");
   const [expanded,setExpanded]=useState(()=>typeof window==="undefined"||window.innerWidth>=768);
   const [monitorView, setMonitorView] = useState<"edit"|"render">("edit");
@@ -721,11 +749,16 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
         </div>
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={saving || animationBusy || frozen || (!m.canUndo && !undoOrder.current.length)} onClick={undo} title="Annuler la dernière modification (Ctrl+Z)">↶ Annuler</button>
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={saving || animationBusy || frozen || (!m.canRedo && !redoOrder.current.length)} onClick={redo} title="Refaire la modification annulée (Ctrl+Maj+Z)">↷ Refaire</button>
+        {!simple ? <>
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={!ready} onClick={() => setPanel("coupe")}>✂ Coupe auto</button>
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={!m.edit || saving || animationBusy || frozen || transcribing || m.status === "transcribing" || unsaved} onClick={autoAll} title="Préparer une proposition de coupe et d’animations à tester avant validation">⚡ Tout auto</button>
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" disabled={!m.edit} onClick={() => setPanel("planche")}>Prévisualiser</button>
-        <button type="button" className="btn-ghost min-h-[44px] px-3 text-sm" disabled={!m.edit || !unsaved || Boolean(proposal) || saving || animationBusy || frozen} onClick={() => { void saveDraft().catch(() => {}); }}>Enregistrer le montage</button>
-        <button type="button" className="btn-red min-h-[40px] px-3 text-sm" disabled={!m.edit} onClick={() => {setPanel("rendu");setMonitorView("render");}}>Rendu</button>
+        </> : null}
+        {!simple || unsaved ? <button type="button" className="btn-ghost min-h-[44px] px-3 text-sm" disabled={!m.edit || !unsaved || Boolean(proposal) || saving || animationBusy || frozen} onClick={() => { void saveDraft().catch(() => {}); }}>Enregistrer le montage</button> : null}
+        {simple
+          ? <button type="button" className="btn-red min-h-[44px] px-4 text-sm" disabled={!m.edit} onClick={() => setSimpleStep("terminer")}>Terminer →</button>
+          : <button type="button" className="btn-red min-h-[40px] px-3 text-sm" disabled={!m.edit} onClick={() => {setPanel("rendu");setMonitorView("render");}}>Rendu</button>}
+        <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" aria-pressed={!simple} onClick={()=>switchMode(!simple)} title={simple ? "Afficher tous les outils du studio" : "Revenir au studio simple"}>{simple ? "Mode avancé" : "Mode simple"}</button>
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" onClick={()=>setExpanded(!expanded)} title={expanded ? "Afficher le menu de l'application" : "Studio plein écran"}>{expanded ? "⤡" : "⤢"}</button>
       </div>
       {m.aiSource ? <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><p>Source IA conservée · version {m.aiSource.source.revision}{m.aiSource.verified ? " · narration Audrey vérifiée" : " · narration à vérifier"}</p><button type="button" className="btn-ghost min-h-[44px]" disabled={unsaved||saving||animationBusy} onClick={()=>onOpenSource(m.aiSource!.source)}>Rouvrir la source IA</button></div> : null}
@@ -772,8 +805,29 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
               onSave={async custom=>{await saveDraft(custom);setLibraryOpen(false);}} /></div> : <p className="text-sm text-mut">Envoyez d&apos;abord la prise.</p>}
         </section>
       </StudioLibraryDialog>
-      <div className="studio-workspace" data-testid="studio-workspace">
+      <div className={`studio-workspace${simple ? " studio-simple" : ""}`} data-testid="studio-workspace">
         <aside aria-label="Outils du montage" className="studio-tools min-w-0 space-y-3">
+          {simple ? <SimpleSteps step={simpleStep} onStep={setSimpleStep} hasEdit={Boolean(m.edit)} ready={ready} /> : null}
+          {simple ? (m.edit ? <section hidden={simpleStep!=="cadrage"} className="card p-4"><StudioFraming edit={m.edit} disabled={saving||animationBusy||frozen||unsaved} videoUrl={data.videoUrl} onAutoOpen={()=>setSimpleStep("cadrage")} onApply={framing=>{void save({...m.edit!,framing});}}/></section> : simpleStep==="cadrage" ? <p className="card p-4 text-sm text-mut">Envoie d&apos;abord la vidéo.</p> : null) : null}
+          {simple && simpleStep==="sous-titres" ? <section className="card p-4">{ready && m.edit ? <StudioSimpleCaptions edit={m.edit} disabled={saving||animationBusy||frozen||Boolean(proposal)} onChange={patch=>{if(m.edit)void save({...m.edit,...patch});}} /> : <p className="text-sm text-mut">Les sous-titres arrivent avec la transcription (étape Coupes).</p>}</section> : null}
+          {simple && simpleStep==="animations" ? <section className="card space-y-3 p-4">
+            <button type="button" className="btn-red min-h-12 w-full" disabled={!m.edit||saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>{setLibraryTab("animations");setLibraryOpen(true);}}>+ Ajouter une animation</button>
+            <p className="text-xs text-mut">Elle se place à l&apos;endroit du curseur de lecture. Clique sur une animation pour changer son texte ou sa durée.</p>
+            {draft.length ? <ul aria-label="Animations du réel" className="space-y-1">{draft.map((a)=><li key={a.id} className="flex items-center gap-2">
+              <button type="button" aria-pressed={a.id===selectedId} className="btn-ghost min-h-11 min-w-0 flex-1 truncate text-left text-sm" onClick={()=>{setSelectedId(a.id??null);seekSource(a.fromMs);}}>{ANIMATIONS[a.name]?.label ?? a.name} · {sec(toOutputMs(segments,a.fromMs))}</button>
+              <button type="button" aria-label={`Retirer ${ANIMATIONS[a.name]?.label ?? a.name}`} className="btn-ghost min-h-11 min-w-11 text-red-700" disabled={saving||animationBusy||frozen} onClick={()=>{changeDraft(draft.filter(x=>x.id!==a.id));if(selectedId===a.id)setSelectedId(null);}}>✕</button>
+            </li>)}</ul> : <p className="text-sm text-mut">Aucune animation pour l&apos;instant.</p>}
+            {selectedAnimation ? <StudioInspector animation={selectedAnimation} ranges={m.edit?.ranges ?? []} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChange={changeAnimation} onRemove={() => { changeDraft(draft.filter(a => a.id !== selectedAnimation.id)); setSelectedId(null); }} onTest={() => { seekSource(selectedAnimation.fromMs);player.current?.play(); }} /> : null}
+            {unsaved && !proposal ? <button type="button" className="btn-red min-h-11 w-full" disabled={saving||animationBusy||frozen} onClick={()=>{void saveDraft().catch(()=>{});}}>Enregistrer mes animations</button> : null}
+          </section> : null}
+          {simple && simpleStep==="terminer" ? <section className="card space-y-4 p-4">
+            <h3 className="font-semibold">1. Créer la vidéo finale</h3>
+            {m.edit ? <MontagePublish m={m} disabled={unsaved || saving} showTransfer={false} showVideo={false} onChange={load} onOpenPlanche={() => switchMode(false)} /> : null}
+            <h3 className="font-semibold">2. Préparer le post</h3>
+            <PostPanel m={m} />
+          </section> : null}
+          {simple && simpleStep==="coupes" ? <p className="px-1 text-sm text-mut">Clique sur un mot ou sélectionne une phrase pour la retirer. Sur la timeline : ✂ coupe au curseur, et tu peux tirer les bords d&apos;un plan.</p> : null}
+          <div hidden={simple} className="space-y-3">
           <div className="studio-tabs flex flex-wrap gap-1.5" role="group" aria-label="Outils de création">
             {PANELS.map((p) => (
               <button key={p.key} type="button" aria-pressed={panel === p.key} onClick={() => setPanel(p.key)}
@@ -806,6 +860,8 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             {panel === "post" && <PostPanel m={m} />}
             {panel === "rendu" && (m.edit ? <MontagePublish m={m} disabled={unsaved || saving} showTransfer={false} showVideo={false} onChange={load} onOpenPlanche={() => setPanel("planche")} /> : <p className="text-sm text-mut">Envoyez d&apos;abord la prise.</p>)}
           </section>
+          </div>
+          {!simple || simpleStep==="coupes" ? <>
           {m.edit ? <StudioTrim key={m.updatedAt} edit={m.edit} durationMs={m.durationMs ?? 0} disabled={saving || animationBusy || frozen || unsaved} onSave={async e=>{await save(e);}} /> : null}
           {m.captions.length ? (
             <StudioTranscript words={m.captions} ranges={m.edit?.ranges ?? []} playheadMs={playSource} disabled={saving || animationBusy || frozen || unsaved} takeBreaks={breaks}
@@ -821,11 +877,14 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
               ) : <p className="text-sm text-mut">Envoyez d&apos;abord la prise.</p>}
             </section>
           )}
+          </> : null}
+          {!simple ? <>
           <TakesCard m={m} onChange={load} />
           <MattesCard m={m} onChange={load} />
           {m.captions.length && m.edit ? (
             <button type="button" className="btn-ghost min-h-[36px] text-xs" onClick={transcribe} disabled={transcribing || animationBusy || frozen || m.status === "transcribing"}>{transcribing ? "Transcription en cours…" : "Transcrire à nouveau"}</button>
           ) : null}
+          </> : null}
         </aside>
         <section ref={preview} aria-label="Moniteur du studio" className="studio-monitor rounded-2xl border border-line bg-[#eef0f5] p-3">
           <div className="studio-monitor-frame">
@@ -835,22 +894,22 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             </StudioCanvas></>}
           </div>
           <section aria-label="Lecture de l’aperçu" className="studio-transport flex flex-wrap items-center justify-center gap-2">
-          <div className="flex gap-2" role="group" aria-label="Vue du moniteur">
+          <div hidden={simple} className="flex gap-2" role="group" aria-label="Vue du moniteur">
             <button type="button" className="btn-ghost min-h-[44px]" aria-pressed={!showRendered} onClick={()=>setMonitorView("edit")}>Montage en direct</button>
             <button type="button" className="btn-ghost min-h-[44px]" aria-pressed={showRendered} disabled={unsaved||m.renderStatus!=="done"||!m.finalVideoUrl} onClick={()=>setMonitorView("render")}>Voir le rendu MP4</button>
           </div>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Lecture du montage">
             <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered)void renderedVideo.current?.play().catch(()=>setError("Lecture impossible : réessayez dans le lecteur."));else player.current?.play();}}>Lire</button>
             <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered)renderedVideo.current?.pause();else player.current?.pause();}}>Pause</button>
-            <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered&&renderedVideo.current){renderedVideo.current.currentTime=0;void renderedVideo.current.play().catch(()=>{});}else player.current?.restart();}}>Rejouer</button>
+            {!simple ? <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered&&renderedVideo.current){renderedVideo.current.currentTime=0;void renderedVideo.current.play().catch(()=>{});}else player.current?.restart();}}>Rejouer</button> : null}
             <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered&&renderedVideo.current){renderedVideo.current.muted=false;void renderedVideo.current.play().catch(()=>{});}else player.current?.listen();}}>Écouter avec le son</button>
-            <button type="button" className="btn-ghost min-h-[44px]" onClick={() => { const node=preview.current;if(document.fullscreenElement)void document.exitFullscreen();else void node?.requestFullscreen().catch(()=>setError("Le plein écran n’est pas disponible dans ce navigateur.")); }}>Plein écran</button>
+            {!simple ? <button type="button" className="btn-ghost min-h-[44px]" onClick={() => { const node=preview.current;if(document.fullscreenElement)void document.exitFullscreen();else void node?.requestFullscreen().catch(()=>setError("Le plein écran n’est pas disponible dans ce navigateur.")); }}>Plein écran</button> : null}
           </div>
           </section>
-          <p className="text-xs text-mut">{showRendered ? "MP4 rendu de la version enregistrée : regardez et écoutez avant le transfert." : proposal ? "Aperçu de la modification (non enregistrée)." : "Aperçu en direct 1080×1920 : coupes, sous-titres karaoké et animations (brouillon compris)."}</p>
+          <p hidden={simple} className="text-xs text-mut">{showRendered ? "MP4 rendu de la version enregistrée : regardez et écoutez avant le transfert." : proposal ? "Aperçu de la modification (non enregistrée)." : "Aperçu en direct 1080×1920 : coupes, sous-titres karaoké et animations (brouillon compris)."}</p>
         </section>
-        <aside aria-label="Réglages de la sélection" className="studio-inspector min-w-0 space-y-3">
-          {m.edit ? <section aria-label="Cadrage de la vidéo" className="card p-3">
+        <aside aria-label="Réglages de la sélection" hidden={simple} className="studio-inspector min-w-0 space-y-3">
+          {m.edit && !simple ? <section aria-label="Cadrage de la vidéo" className="card p-3">
             <StudioFraming edit={m.edit} disabled={saving||animationBusy||frozen||unsaved} videoUrl={data.videoUrl} onApply={framing=>{void save({...m.edit!,framing});}}/>
           </section>:null}
           <section aria-label="Écran de fin" className="card space-y-2 p-3">

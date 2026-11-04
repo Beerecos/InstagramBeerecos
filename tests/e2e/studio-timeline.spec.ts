@@ -117,6 +117,7 @@ test("pistes en plus : clip d'illustration au curseur, cadrage, musique baissée
     get: () => ({ montage: { id: "m4", title: "Prise", status: "ready", durationMs: 6000, keptMs: 6000, workspaceId: null, createdAt: "t", updatedAt: `v${version}`, renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit, captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: "https://bee-api.test/fichiers/prise.mp4" }),
     "save-edit": (body) => { edit = body.edit as typeof edit; saved.push(edit); version++; return {}; },
   });
+  await page.addInitScript(() => localStorage.setItem("ibr.studio.mode", "avance"));
   await page.goto("/reels/m4");
   await page.getByRole("button", { name: "Médias", exact: true }).click();
   await page.getByRole("button", { name: "Illustrer au curseur" }).click();
@@ -184,4 +185,37 @@ test("prise paysage : je choisis moi-même la partie gardée en 9:16, appliquée
   await dialog.getByRole("button", { name: "Appliquer le cadrage" }).click();
   await expect.poll(() => saved.at(-1)?.framing?.scale).toBe(2);
   expect(saved.at(-1)!.framing!.y).toBeLessThan(0);
+});
+
+test("studio simple : quatre étapes, couleurs des sous-titres en un clic, mode avancé à la demande", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  let version = 1;
+  let edit = initialEdit("prise.mp4", 6000);
+  const saved: typeof edit[] = [];
+  await mockBee(page, {
+    get: () => ({ montage: { id: "m7", title: "Prise", status: "ready", durationMs: 6000, keptMs: 6000, workspaceId: null, createdAt: "t", updatedAt: `v${version}`, renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit, captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: null }),
+    "save-edit": (body) => { edit = body.edit as typeof edit; saved.push(edit); version++; return {}; },
+  });
+  await page.goto("/reels/m7");
+  const steps = page.getByRole("navigation", { name: "Étapes du montage" }).filter({ visible: true });
+  for (const name of [/Cadrage/, /Coupes/, /Sous-titres/, /Animations/]) await expect(steps.getByRole("button", { name })).toBeVisible();
+  // Les outils avancés sont masqués.
+  await expect(page.getByRole("button", { name: "⚡ Tout auto" }).filter({ visible: true })).toHaveCount(0);
+  await expect(page.getByRole("complementary", { name: "Réglages de la sélection" }).filter({ visible: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Terminer →" }).filter({ visible: true })).toBeVisible();
+
+  await steps.getByRole("button", { name: /Sous-titres/ }).click();
+  await page.getByRole("radiogroup", { name: "Couleurs des sous-titres" }).filter({ visible: true }).getByRole("radio", { name: /Bleu BeeRecos/ }).click();
+  await expect.poll(() => saved.at(-1)?.captionStyle.backgroundColor).toBe("#2851FF");
+  await page.getByRole("radiogroup", { name: "Taille des sous-titres" }).filter({ visible: true }).getByRole("radio", { name: "Grand" }).click();
+  await expect.poll(() => saved.at(-1)?.captionStyle.fontSize).toBe(64);
+
+  await steps.getByRole("button", { name: /Animations/ }).click();
+  await expect(page.getByRole("button", { name: "+ Ajouter une animation" }).filter({ visible: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Mode avancé" }).filter({ visible: true }).click();
+  await expect(page.getByRole("button", { name: "⚡ Tout auto" }).filter({ visible: true })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("ibr.studio.mode"))).toBe("avance");
+  expect(errors).toEqual([]);
 });

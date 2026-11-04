@@ -16,6 +16,8 @@ type Props = {
   videoUrl?: string | null;
   /** Enregistre le cadrage choisi (sauvegarde directe du montage). */
   onApply: (framing: Framing) => Promise<void> | void;
+  /** Appelé quand la fenêtre s'ouvre seule (prise paysage pas encore cadrée). */
+  onAutoOpen?: () => void;
 };
 
 const RESULT_W = 216;
@@ -144,7 +146,7 @@ function CropDialog({ aspect, videoUrl, initial, onClose, onApply }: { aspect: n
   );
 }
 
-export default function StudioFraming({ edit, disabled, videoUrl = null, onApply }: Props) {
+export default function StudioFraming({ edit, disabled, videoUrl = null, onApply, onAutoOpen }: Props) {
   const value: Framing = { x: 0, y: 0, scale: 1, ...edit.framing };
   const [aspect, setAspect] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
@@ -155,7 +157,7 @@ export default function StudioFraming({ edit, disabled, videoUrl = null, onApply
   // Prise paysage pas encore cadrée : la fenêtre de cadrage s'ouvre d'elle-même, une fois.
   const onMeta = (a: number) => {
     setAspect(a);
-    if (needsCrop(a) && unset && !disabled && !autoOpened.current) { autoOpened.current = true; setOpen(true); }
+    if (needsCrop(a) && unset && !disabled && !autoOpened.current) { autoOpened.current = true; setOpen(true); onAutoOpen?.(); }
   };
 
   return (
