@@ -22,7 +22,7 @@ function fakeInstagram(states: string[] = ["FINISHED"], pages: Page[] = [BEERECO
     const ok = (d: unknown) => new Response(JSON.stringify(d), { status: 200 });
     if (url.host !== "graph.facebook.com") return new Response("{}", { status: 404 });
     if (path === "oauth/access_token") return ok({ access_token: "LONG_USER", token_type: "bearer" });
-    if (path === "me/accounts") return auth === "Bearer LONG_USER" ? ok({ data: pages }) : new Response(JSON.stringify({ error: { message: "jeton non échangé" } }), { status: 400 });
+    if (path === "me/accounts") return auth.startsWith("Bearer LONG_USER") ? ok({ data: pages }) : new Response(JSON.stringify({ error: { message: "jeton non échangé" } }), { status: 400 });
     if (url.searchParams.get("fields") === "id,username") {
       const page = pages.find((p) => p.instagram_business_account?.id === path);
       return page && auth === `Bearer ${page.access_token}` ? ok(page.instagram_business_account) : new Response(JSON.stringify({ error: { message: "Object does not exist", code: 100 } }), { status: 400 });
@@ -56,8 +56,16 @@ describe("publication Instagram (service)", () => {
     await expect(connect({ store: none, fetch: fakeInstagram(["FINISHED"], []).f, supabaseUrl: SB, meta: META }, USER, token)).rejects.toThrow(/aucune Page/);
     const other: Page = { id: "9", name: "Autre", access_token: "P2", instagram_business_account: { id: "1784999", username: "autre" } };
     await expect(connect({ store: none, fetch: fakeInstagram(["FINISHED"], [BEERECOS_PAGE, other]).f, supabaseUrl: SB, meta: META }, USER, token)).rejects.toThrow(/Plusieurs comptes.*beerecos, autre/);
-    await expect(connect({ store: none, fetch: fakeInstagram().f, supabaseUrl: SB }, USER, token)).rejects.toThrow(/META_APP_SECRET/);
     expect(none.conn).toBeNull();
+  });
+
+  it("sans clé secrète sur le serveur : utilise le jeton déjà prolongé tel quel, sans échange", async () => {
+    const store = memoryStore(null);
+    const ig = fakeInstagram();
+    const view = await connect({ store, fetch: ig.f, supabaseUrl: SB }, USER, "LONG_USER" + "x".repeat(30));
+    expect(view).toMatchObject({ connected: true, username: "beerecos" });
+    expect(ig.calls.some((c) => c.path === "oauth/access_token")).toBe(false);
+    expect(store.conn?.accessToken).toBe("PAGE_TOKEN");
   });
 
   it("publie un post photo, puis crée la règle de DM du mot-clé", async () => {

@@ -68,11 +68,11 @@ export default function InstagramSettings() {
           <details className="rounded-xl border border-line p-3">
             <summary className="cursor-pointer font-medium">Guide : obtenir le jeton (5 minutes)</summary>
             <ol className="mt-3 list-decimal space-y-2 pl-5">
-              <li>Une seule fois : sur Vercel, ajouter <code>META_APP_SECRET</code> (developers.facebook.com → BeeRecos Studio → Paramètres de l&apos;app → Général → Clé secrète), puis redéployer.</li>
               <li>Ouvrir l&apos;<a className="text-brand underline" href="https://developers.facebook.com/tools/explorer" target="_blank" rel="noreferrer">Explorateur de l&apos;API Graph</a> : application <strong>BeeRecos Studio</strong>, <strong>Jeton d&apos;utilisateur</strong>.</li>
               <li>Autorisations : <code>pages_show_list</code>, <code>pages_read_engagement</code>, <code>business_management</code>, <code>instagram_basic</code>, <code>instagram_content_publish</code>, <code>instagram_manage_comments</code>, <code>instagram_manage_messages</code>.</li>
               <li><strong>Generate Access Token</strong> → cocher uniquement la Page <strong>Beerecos</strong> et le compte Instagram <strong>beerecos</strong>.</li>
-              <li>Copier le jeton, le coller ci-dessus → <strong>Connecter</strong>. Le site affiche « Connecté à beerecos » seulement si Meta renvoie ce compte.</li>
+              <li>Prolonger le jeton : dans l&apos;Explorateur, clic sur l&apos;icône ⓘ à gauche du jeton → <strong>Ouvrir dans l&apos;outil Token d&apos;accès</strong> → <strong>Prolonger le token d&apos;accès</strong> (en bas) → copier le nouveau jeton. Sans cette étape, la connexion tombe au bout de quelques heures.</li>
+              <li>Coller le jeton prolongé ci-dessus → <strong>Connecter</strong>. Le site affiche « Connecté à beerecos » seulement si Meta renvoie ce compte.</li>
             </ol>
           </details>
         </div>

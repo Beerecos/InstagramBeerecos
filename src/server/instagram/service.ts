@@ -68,9 +68,12 @@ const metaError = (e: unknown, fallback: string) => new UserError(e instanceof E
 export async function connect(deps: Deps, userId: string, rawToken: string): Promise<PublicConnection> {
   const token = rawToken.trim();
   if (!/^[A-Za-z0-9_\-.|]{20,600}$/.test(token)) throw new UserError("Ce jeton n'a pas le format attendu : copie-le en entier depuis Meta.");
-  if (!deps.meta?.appSecret) throw new UserError("Connexion impossible : ajoute META_APP_SECRET (clé secrète de l'app BeeRecos Studio) sur Vercel, puis redéploie.", 503);
-  const long = await graph.exchangeUserToken({ token, appId: deps.meta.appId, appSecret: deps.meta.appSecret, fetch: deps.fetch })
-    .catch((e) => { throw metaError(e, "Jeton refusé par Meta."); });
+  // Avec la clé secrète, le serveur prolonge lui-même le jeton ; sans elle, le jeton collé doit déjà être prolongé
+  // (Outil de débogage du token d'accès → « Prolonger le token d'accès ») pour que le jeton de Page n'expire pas.
+  const secret = deps.meta?.appSecret;
+  const long = secret
+    ? await graph.exchangeUserToken({ token, appId: deps.meta!.appId, appSecret: secret, fetch: deps.fetch }).catch((e) => { throw metaError(e, "Jeton refusé par Meta."); })
+    : token;
   const linked = await graph.linkedAccounts({ token: long, fetch: deps.fetch }).catch((e) => { throw metaError(e, "Pages illisibles avec ce jeton."); });
   if (!linked.length) throw new UserError("Meta ne renvoie aucune Page reliée à un compte Instagram : régénère le jeton en cochant la Page Beerecos et le compte beerecos (autorisation pages_show_list comprise).");
   if (linked.length > 1) throw new UserError(`Plusieurs comptes Instagram autorisés (${linked.map((l) => l.username).join(", ")}) : régénère le jeton en ne cochant que la Page du compte à connecter.`);
