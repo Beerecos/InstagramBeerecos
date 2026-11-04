@@ -1,7 +1,7 @@
 "use client";
 /**
  * Une slide de carrousel BeeRecos à taille réelle (1080 × 1350), d'après le carrousel STABILO validé : en-tête
- * « Les InspiBEEz'ness », pagination, logo officiel (bleu sur blanc, blanc sur bleu ou noir), marges de 60 px,
+ * « Les InspiBEEz'ness », pagination, logo officiel (pictogramme et « Recos » en bleu, « Bee » en noir sur blanc ; blanc sur bleu ou noir), marges de 60 px,
  * Poppins, bleu #2851FF / noir / blanc. Les textes et le logo sont rendus par la mise en page, jamais par une IA.
  */
 import { forwardRef, type CSSProperties, type ReactNode } from "react";
@@ -35,7 +35,7 @@ const CarouselSlide = forwardRef<HTMLDivElement, Props>(function CarouselSlide({
   const bg = theme === "white" ? WHITE : theme === "blue" ? BLUE : BLACK;
   const p1 = s.photo ? photos[s.photo] : undefined, p2 = s.photo2 ? photos[s.photo2] : undefined;
   const page = `${String(index + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
-  const logo = theme === "white" && s.layout !== "photo-bandeau" ? "/brand/beerecos-logo-horizontal-blue.svg" : "/brand/beerecos-logo-horizontal-white.svg";
+  const logo = theme === "white" && s.layout !== "photo-bandeau" ? "/brand/beerecos-logo-officiel-couleur.png" : "/brand/beerecos-logo-horizontal-white.svg";
   const footerRight = s.layout === "couverture" ? "Son histoire" : s.source;
   const footerColor = s.layout === "couverture" || s.layout === "invitation" ? BLUE : theme === "white" && s.layout !== "photo-bandeau" ? MUTED : "rgba(255,255,255,.85)";
   const abs = (style: CSSProperties, children: ReactNode, key?: string) => <div key={key} style={{ position: "absolute", ...style }}>{children}</div>;
