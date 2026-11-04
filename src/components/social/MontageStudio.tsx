@@ -51,6 +51,7 @@ import { energyFrames, speechIslands } from "@/domain/social/montage/pipeline";
 import { layout, MAX_STRIP_MS, MAX_TAKES, takeBreaks, takeStrip, toOutputMs, type Edit } from "@/domain/social/montage/edit";
 import { checkStudioEdit, cutSource, outputToSourceMs, restoreSource, wordSpan } from "@/domain/social/montage/studio";
 import { MATTE_COMMAND, MATTE_MAX_BYTES, matteAt } from "@/domain/social/montage/matte";
+import { applyStandard } from "@/domain/social/montage/standard";
 
 /**
  * RÉSEAUX SOCIAUX → MONTAGE (2026-10-21, porté de BeeMarketing / InstagramBeerecos) : une prise filmée → transcription
@@ -436,6 +437,8 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   const [zone, setZone] = useState<{ in: number | null; out: number | null }>({ in: null, out: null });
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** Résultat du Standard BeeRecos, affiché dans l’étape Animations (là où l’on relit). */
+  const [standardNote, setStandardNote] = useState<string | null>(null);
   /** Prompteur du Reel lié (lot S7) : texte chargé à l'ouverture. */
   const [prompteur, setPrompteur] = useState<Reel | null>(null);
   const player = useRef<ReelPreviewHandle>(null);
@@ -680,6 +683,17 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
     void save({ ...m.edit, ranges: restoreSource(m.edit.ranges, span.fromMs, span.toMs, m.durationMs ?? undefined) });
   };
   const ready = Boolean(m.edit && m.captions.length);
+  /** Dynamique « BeeRecos Standard v1 » : mêmes animations, mêmes réglages, posées depuis ce qui est dit (brouillon à relire). */
+  const applyStandardDraft = (replace: boolean) => {
+    if (!m.edit || !ready || frozen || saving || animationBusy || proposal) return;
+    if (!replace && draft.length) return;
+    if (replace && draft.length && !window.confirm("Remplacer les animations actuelles par le standard BeeRecos ?")) return;
+    const edit = m.edit;
+    const end = edit.ranges[edit.ranges.length - 1]?.toMs ?? 0;
+    const r = applyStandard(scenes, { endMs: end, keyword: m.reel?.keyword ?? null, matteAt: (ms) => matteAt(edit, ms) });
+    changeDraft(r.custom);
+    setStandardNote(`Standard BeeRecos appliqué : ${r.custom.length} animation(s). Vérifie dans l’aperçu, ajuste si besoin, puis enregistre.${r.warnings.length ? `\n${r.warnings.join("\n")}` : ""}`);
+  };
   const unsaved = Boolean(proposal) || JSON.stringify(logo)!==JSON.stringify(m.edit?.logo) || JSON.stringify(draft) !== JSON.stringify(m.edit?.custom ?? []) || JSON.stringify(animationChoices) !== JSON.stringify(m.edit?.animationChoices);
   pendingEdits.current = unsaved;
   const canLeave = () => !(unsaved || sync.current?.busy) || window.confirm("Quitter le montage avec des modifications non enregistrées ?");
@@ -818,11 +832,14 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
       </StudioLibraryDialog>
       <div className={`studio-workspace${simple ? " studio-simple" : ""}`} data-testid="studio-workspace">
         <aside aria-label="Outils du montage" className="studio-tools min-w-0 space-y-3">
-          {simple ? <SimpleSteps step={simpleStep} onStep={setSimpleStep} hasEdit={Boolean(m.edit)} ready={ready} /> : null}
+          {simple ? <SimpleSteps step={simpleStep} onStep={(step)=>{setSimpleStep(step);if(step==="animations"&&!m.reel)applyStandardDraft(false);}} hasEdit={Boolean(m.edit)} ready={ready} /> : null}
           {simple ? (m.edit ? <section hidden={simpleStep!=="cadrage"} className="card p-4"><StudioFraming edit={m.edit} disabled={saving||animationBusy||frozen||unsaved} videoUrl={data.videoUrl} onAutoOpen={()=>setSimpleStep("cadrage")} onApply={framing=>{void save({...m.edit!,framing});}}/></section> : simpleStep==="cadrage" ? <p className="card p-4 text-sm text-mut">Envoie d&apos;abord la vidéo.</p> : null) : null}
           {simple && simpleStep==="sous-titres" ? <section className="card p-4">{ready && m.edit ? <StudioSimpleCaptions edit={m.edit} disabled={saving||animationBusy||frozen||Boolean(proposal)} onChange={patch=>{if(m.edit)void save({...m.edit,...patch});}} /> : <p className="text-sm text-mut">Les sous-titres arrivent avec la transcription (étape Coupes).</p>}</section> : null}
           {simple && simpleStep==="animations" ? <section className="card space-y-3 p-4">
-            <button type="button" className="btn-red min-h-12 w-full" disabled={!m.edit||saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>{setLibraryTab("animations");setLibraryOpen(true);}}>+ Ajouter une animation</button>
+            <button type="button" className="btn-red min-h-12 w-full" disabled={!ready||saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>applyStandardDraft(true)}>Appliquer le standard BeeRecos</button>
+            <p className="text-xs text-mut">Toujours les mêmes animations : grand mot d&apos;accroche, onglets, chiffres et étapes dits, mot à retenir, « Commente MOT », logo de fin.</p>
+            {standardNote ? <p role="status" className="whitespace-pre-line rounded-xl bg-brand/5 px-3 py-2 text-xs">{standardNote}</p> : null}
+            <button type="button" className="btn-ghost min-h-11 w-full" disabled={!m.edit||saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>{setLibraryTab("animations");setLibraryOpen(true);}}>+ Ajouter une animation</button>
             <p className="text-xs text-mut">Elle se place à l&apos;endroit du curseur de lecture. Clique sur une animation pour changer son texte ou sa durée.</p>
             {draft.length ? <ul aria-label="Animations du réel" className="space-y-1">{draft.map((a)=><li key={a.id} className="flex items-center gap-2">
               <button type="button" aria-pressed={a.id===selectedId} className="btn-ghost min-h-11 min-w-0 flex-1 truncate text-left text-sm" onClick={()=>{setSelectedId(a.id??null);seekSource(a.fromMs);}}>{ANIMATIONS[a.name]?.label ?? a.name} · {sec(toOutputMs(segments,a.fromMs))}</button>

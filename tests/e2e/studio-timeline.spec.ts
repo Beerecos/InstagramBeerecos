@@ -213,6 +213,14 @@ test("studio simple : quatre étapes, couleurs des sous-titres en un clic, mode 
 
   await steps.getByRole("button", { name: /Animations/ }).click();
   await expect(page.getByRole("button", { name: "+ Ajouter une animation" }).filter({ visible: true })).toBeVisible();
+  // Standard v1 posé automatiquement (brouillon) : accroche reprise de ce qui est dit (onglet sans détourage), logo de fin.
+  const list = page.getByRole("list", { name: "Animations du réel" }).filter({ visible: true });
+  await expect(list.getByRole("button", { name: /^Onglet \(cartouche\) ·/ })).toBeVisible();
+  await expect(list.getByRole("button", { name: /^Logo BeeRecos de fin ·/ })).toBeVisible();
+  await expect(page.getByText(/Standard BeeRecos appliqué/).filter({ visible: true })).toBeVisible();
+  await page.getByRole("button", { name: "Enregistrer mes animations" }).filter({ visible: true }).click();
+  await expect.poll(() => saved.at(-1)?.custom.map((c) => c.name)).toEqual(["onglet", "logo-fin"]);
+  expect(saved.at(-1)?.custom[0].props).toMatchObject({ texte: "BONJOUR JE SUIS", variante: "blanc" });
 
   await page.getByRole("button", { name: "Mode avancé" }).filter({ visible: true }).click();
   await expect(page.getByRole("button", { name: "⚡ Tout auto" }).filter({ visible: true })).toBeVisible();

@@ -1,3 +1,4 @@
+import { STANDARD_V1 } from "./standard";
 import { z } from "zod";
 import type { CaptionWord, Range } from "./edit";
 import type { CustomAnimation } from "./suggest";
@@ -334,7 +335,8 @@ export function seedAnimations(reel: Reel, words: CaptionWord[], ranges: Range[]
     if (s.overlay.preferred_mode === "behind_subject" && !behind) warnings.push(`${s.scene_id} : pas de détourage de la prise — « ${text} » passe en onglet.`);
     const mode: OverlayMode = behind ? "behind_subject" : "tab";
     const anim: CustomAnimation = behind
-      ? { name: "titre-derriere", fromMs: at.startMs, toMs: Math.min(at.startMs + OVERLAY_MS, limit), props: { texte: text, position: "haut", couleur: "blanc", entree: "rebond" }, label: s.scene_id }
+      // Standard v1 : accroche en blanc derrière la tête (rebond), « à retenir » en bleu derrière les épaules (verticale).
+      ? { name: "titre-derriere", fromMs: at.startMs, toMs: Math.min(at.startMs + OVERLAY_MS, limit), props: { texte: text, ...(s.role === "takeaway" ? STANDARD_V1.takeaway : STANDARD_V1.hook) }, label: s.scene_id }
       : { name: "onglet", fromMs: at.startMs, toMs: Math.min(at.startMs + OVERLAY_MS, limit), props: { texte: text, variante: s.role === "hook" ? "bleu" : "blanc" }, label: s.scene_id };
     resolved[s.scene_id] = tryPlace(anim, `${s.scene_id} (« ${text} »)`) ? mode : null;
   });
