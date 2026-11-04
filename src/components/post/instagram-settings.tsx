@@ -13,18 +13,34 @@ export default function InstagramSettings() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  useEffect(() => { instagram.connection().then(setView).catch((e: Error) => setError(e.message)); }, []);
+
 
   const run = (label: string, fn: () => Promise<ConnectionView>) => async () => {
     setBusy(label); setError(null);
-    try { const v = await fn(); setView((old) => ({ ...v, webhook: v.webhook ?? old?.webhook })); setToken(""); } catch (e) { setError(e instanceof Error ? e.message : "Action impossible."); } finally { setBusy(null); }
+    try { const v = await fn(); setView((old) => ({ ...v, oauthReady: old?.oauthReady, webhook: v.webhook ?? old?.webhook })); setToken(""); } catch (e) { setError(e instanceof Error ? e.message : "Action impossible."); } finally { setBusy(null); }
   };
+  const [oauthMessage, setOauthMessage] = useState<string | null>(null);
+  useEffect(() => {
+    const status = new URLSearchParams(window.location.search).get("instagram");
+    const messages: Record<string, string> = {
+      ok: "Connexion Instagram enregistrée.",
+      configuration: "La connexion Meta doit encore être configurée sur le serveur.",
+      interdit: "Votre compte ne peut pas gérer cette connexion.",
+      expire: "La connexion a expiré. Relancez-la depuis ce bouton.",
+      annule: "Connexion annulée dans Meta. Aucun compte n’a été modifié.",
+      "aucun-compte": "Meta ne transmet aucun compte Instagram après la connexion. Le partage du compte reste à résoudre.",
+      "autre-compte": "Le compte partagé ne correspond pas au compte BeeRecos attendu.",
+      erreur: "La connexion n’a pas pu être enregistrée. Vérifiez la configuration Meta avant de réessayer.",
+    };
+    instagram.connection().then((v) => { setView(v); setOauthMessage(status ? messages[status] ?? null : null); }).catch((e: Error) => setError(e.message));
+  }, []);
   const hook = view?.webhook;
   const dmReady = Boolean(hook?.appSecret && hook?.verifyToken);
 
   return (
     <section id="instagram" className="card scroll-mt-20 p-4" aria-labelledby="instagram-titre">
       <h2 id="instagram-titre" className="font-semibold">Instagram</h2>
+      {oauthMessage ? <p role="status" className="mt-2 text-sm">{oauthMessage}</p> : null}
       {error ? <p role="alert" className="mt-2 text-sm text-red-700">{error}</p> : null}
       {!view && !error ? <p role="status" className="mt-2 text-sm text-mut">Lecture…</p> : null}
       {view ? (
@@ -40,13 +56,19 @@ export default function InstagramSettings() {
               <button type="button" className="btn-ghost min-h-11 text-red-700" disabled={Boolean(busy)} onClick={run("off", instagram.disconnect)}>Déconnecter</button>
             </div>
           ) : null}
-          <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); void run("connect", () => instagram.connect(token))(); }}>
+          {view.oauthReady ? <div className="space-y-2">
+            <a className="btn-red inline-flex min-h-11 items-center" href="/api/instagram/connect">Se connecter avec Instagram</a>
+            <p className="text-xs text-mut">Choisissez le compte BeeRecos dans Meta. L’application demande l’accès au profil, à la publication, aux commentaires et aux messages pour publier et répondre aux mots-clés.</p>
+          </div> : null}
+          <details className="rounded-xl border border-line p-3"><summary className="cursor-pointer">Connexion manuelle avec un jeton</summary>
+          <form className="mt-3 space-y-2" onSubmit={(e) => { e.preventDefault(); void run("connect", () => instagram.connect(token))(); }}>
             <label className="block font-medium">{view.connected ? "Remplacer le jeton" : "Jeton d'accès Instagram"}
               <input type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder="Jeton copié depuis Meta" className="mt-1 block min-h-11 w-full rounded-lg border border-line bg-white px-3 font-mono font-normal" />
             </label>
             <button type="submit" className="btn-red min-h-11" disabled={!token.trim() || Boolean(busy)}>{busy === "connect" ? "Vérification auprès d'Instagram…" : "Connecter"}</button>
             <p className="text-xs text-mut">Le jeton est vérifié auprès d&apos;Instagram puis gardé sur le serveur ; il ne s&apos;affiche plus jamais.</p>
           </form>
+          </details>
 
           <div className="rounded-xl bg-black/[0.03] p-3">
             <p className="flex items-center gap-2 font-medium">
