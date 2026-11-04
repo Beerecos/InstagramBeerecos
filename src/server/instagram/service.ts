@@ -33,7 +33,8 @@ export type Store = {
   transitionLinkedIn(id: string, from: Row["linkedinStatus"][], patch: LinkedInPatch): Promise<Row | null>;
 };
 
-export type Deps = { store: Store; fetch?: typeof fetch; supabaseUrl: string };
+/** `meta` : identifiant et clé secrète de l'app BeeRecos Studio (échange du jeton contre un jeton longue durée). */
+export type Deps = { store: Store; fetch?: typeof fetch; supabaseUrl: string; meta?: { appId: string; appSecret?: string } };
 
 export class UserError extends Error {
   constructor(message: string, readonly status = 400) {
@@ -57,24 +58,37 @@ export async function connectionStatus(deps: Deps): Promise<PublicConnection> {
   return publicView(await deps.store.getConnection());
 }
 
-/** Vérifie le jeton auprès d'Instagram (compte réel), tente de le prolonger à 60 jours, puis l'enregistre côté serveur. */
+const metaError = (e: unknown, fallback: string) => new UserError(e instanceof Error ? e.message : fallback);
+
+/**
+ * Connexion par le parcours unifié : le jeton Facebook (Explorateur de l'API Graph) est échangé contre un jeton longue
+ * durée, puis le serveur garde le jeton de la Page reliée au compte Instagram (il n'expire pas tant que les droits
+ * restent accordés). N'est enregistré que le compte que Meta renvoie réellement avec ce jeton de Page.
+ */
 export async function connect(deps: Deps, userId: string, rawToken: string): Promise<PublicConnection> {
   const token = rawToken.trim();
   if (!/^[A-Za-z0-9_\-.|]{20,600}$/.test(token)) throw new UserError("Ce jeton n'a pas le format attendu : copie-le en entier depuis Meta.");
-  const account = await graph.me({ token, fetch: deps.fetch }).catch((e) => { throw new UserError(e instanceof Error ? e.message : "Jeton refusé par Instagram."); });
-  const refreshed = await graph.refreshToken({ token, fetch: deps.fetch }).catch(() => null);
-  const c: Connection = { igUserId: account.userId, username: account.username, accessToken: refreshed?.token ?? token, expiresAt: refreshed?.expiresAt ?? null };
+  if (!deps.meta?.appSecret) throw new UserError("Connexion impossible : ajoute META_APP_SECRET (clé secrète de l'app BeeRecos Studio) sur Vercel, puis redéploie.", 503);
+  const long = await graph.exchangeUserToken({ token, appId: deps.meta.appId, appSecret: deps.meta.appSecret, fetch: deps.fetch })
+    .catch((e) => { throw metaError(e, "Jeton refusé par Meta."); });
+  const linked = await graph.linkedAccounts({ token: long, fetch: deps.fetch }).catch((e) => { throw metaError(e, "Pages illisibles avec ce jeton."); });
+  if (!linked.length) throw new UserError("Meta ne renvoie aucune Page reliée à un compte Instagram : régénère le jeton en cochant la Page Beerecos et le compte beerecos (autorisation pages_show_list comprise).");
+  if (linked.length > 1) throw new UserError(`Plusieurs comptes Instagram autorisés (${linked.map((l) => l.username).join(", ")}) : régénère le jeton en ne cochant que la Page du compte à connecter.`);
+  const [page] = linked;
+  const verified = await graph.account({ token: page.pageToken, userId: page.igUserId, fetch: deps.fetch }).catch((e) => { throw metaError(e, "Compte Instagram illisible."); });
+  const c: Connection = { igUserId: verified.userId, username: verified.username, accessToken: page.pageToken, expiresAt: null };
   await deps.store.saveConnection(c, userId);
   return publicView(c);
 }
 
-export async function refresh(deps: Deps, userId: string): Promise<PublicConnection> {
+/** Vérifie que Meta renvoie toujours le compte avec le jeton enregistré (droits retirés, mot de passe changé…). */
+export async function refresh(deps: Deps): Promise<PublicConnection> {
   const c = await deps.store.getConnection();
   if (!c) throw new UserError("Instagram n'est pas connecté.");
-  const r = await graph.refreshToken({ token: c.accessToken, fetch: deps.fetch }).catch((e) => { throw new UserError(e instanceof Error ? e.message : "Renouvellement refusé."); });
-  const next = { ...c, accessToken: r.token, expiresAt: r.expiresAt };
-  await deps.store.saveConnection(next, userId);
-  return publicView(next);
+  const a = await graph.account({ token: c.accessToken, userId: c.igUserId, fetch: deps.fetch })
+    .catch((e) => { throw metaError(e, "Meta ne renvoie plus le compte : reconnecte-le."); });
+  if (a.userId !== c.igUserId) throw new UserError("Meta renvoie un autre compte : reconnecte-le.");
+  return publicView(c);
 }
 
 // --- Brouillons ---

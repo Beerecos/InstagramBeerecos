@@ -1,22 +1,32 @@
 import { describe, expect, it } from "vitest";
-import { advance, connect, isStudioVideoUrl, saveDraft, start } from "@/server/instagram/service";
+import { advance, connect, isStudioVideoUrl, refresh, saveDraft, start } from "@/server/instagram/service";
 import { memoryStore } from "./fakes";
 
 const USER = "11111111-1111-4111-8111-111111111111";
 const SB = "https://wekbmkjvieagmghjanjb.supabase.co";
 const VIDEO = `${SB}/storage/v1/object/sign/studio/render.mp4?token=abc`;
 
-/** Faux Instagram : enregistre les appels et répond selon le chemin. */
-function fakeInstagram(states: string[] = ["FINISHED"]) {
+const META = { appId: "1144958471333447", appSecret: "secret-app" };
+type Page = { id: string; name: string; access_token: string; instagram_business_account?: { id: string; username: string } };
+const BEERECOS_PAGE: Page = { id: "642079575645383", name: "Beerecos", access_token: "PAGE_TOKEN", instagram_business_account: { id: "17841472645384195", username: "beerecos" } };
+
+/** Faux Meta (graph.facebook.com) : enregistre les appels et répond selon le chemin. */
+function fakeInstagram(states: string[] = ["FINISHED"], pages: Page[] = [BEERECOS_PAGE]) {
   const calls: { method: string; path: string; params: Record<string, string> }[] = [];
   let c = 0;
   const f = (async (input: URL | string, init?: RequestInit) => {
     const url = new URL(String(input));
     const path = url.pathname.replace(/^\/v[\d.]+\//, "");
-    calls.push({ method: init?.method ?? "GET", path, params: Object.fromEntries(url.searchParams) });
+    const auth = new Headers(init?.headers).get("authorization") ?? "";
+    calls.push({ method: init?.method ?? "GET", path, params: { ...Object.fromEntries(url.searchParams), auth } });
     const ok = (d: unknown) => new Response(JSON.stringify(d), { status: 200 });
-    if (path === "me") return ok({ user_id: "1784", username: "beerecos" });
-    if (url.pathname === "/refresh_access_token") return ok({ access_token: "LONG", expires_in: 5184000 });
+    if (url.host !== "graph.facebook.com") return new Response("{}", { status: 404 });
+    if (path === "oauth/access_token") return ok({ access_token: "LONG_USER", token_type: "bearer" });
+    if (path === "me/accounts") return auth === "Bearer LONG_USER" ? ok({ data: pages }) : new Response(JSON.stringify({ error: { message: "jeton non échangé" } }), { status: 400 });
+    if (url.searchParams.get("fields") === "id,username") {
+      const page = pages.find((p) => p.instagram_business_account?.id === path);
+      return page && auth === `Bearer ${page.access_token}` ? ok(page.instagram_business_account) : new Response(JSON.stringify({ error: { message: "Object does not exist", code: 100 } }), { status: 400 });
+    }
     if (path.endsWith("/media")) return ok({ id: `c${++c}` });
     if (path.endsWith("/media_publish")) return ok({ id: "M1" });
     if (url.searchParams.get("fields") === "status_code,status") return ok({ status_code: states.shift() ?? "FINISHED" });
@@ -27,14 +37,27 @@ function fakeInstagram(states: string[] = ["FINISHED"]) {
 }
 
 describe("publication Instagram (service)", () => {
-  it("connecte un compte réel et prolonge le jeton, sans jamais renvoyer le jeton", async () => {
+  it("parcours unifié : jeton échangé, jeton de la Page gardé, seul le compte renvoyé par Meta est enregistré", async () => {
     const store = memoryStore(null);
     const ig = fakeInstagram();
-    const view = await connect({ store, fetch: ig.f, supabaseUrl: SB }, USER, "IGAAT" + "x".repeat(40));
-    expect(view).toMatchObject({ connected: true, username: "beerecos" });
-    expect(JSON.stringify(view)).not.toContain("LONG");
-    expect(store.conn?.accessToken).toBe("LONG");
-    await expect(connect({ store, fetch: ig.f, supabaseUrl: SB }, USER, "court")).rejects.toThrow(/format/);
+    const view = await connect({ store, fetch: ig.f, supabaseUrl: SB, meta: META }, USER, "EAAQ" + "x".repeat(40));
+    expect(view).toMatchObject({ connected: true, username: "beerecos", expiresAt: null, needsRefresh: false });
+    expect(JSON.stringify(view)).not.toMatch(/TOKEN|LONG/);
+    expect(store.conn).toMatchObject({ igUserId: "17841472645384195", username: "beerecos", accessToken: "PAGE_TOKEN" });
+    expect(ig.calls.find((c) => c.path === "oauth/access_token")?.params).toMatchObject({ grant_type: "fb_exchange_token", client_id: META.appId, client_secret: META.appSecret });
+    // Vérification quotidienne : relit le compte avec le jeton de Page.
+    await expect(refresh({ store, fetch: ig.f, supabaseUrl: SB })).resolves.toMatchObject({ connected: true, username: "beerecos" });
+    await expect(connect({ store, fetch: ig.f, supabaseUrl: SB, meta: META }, USER, "court")).rejects.toThrow(/format/);
+  });
+
+  it("refuse de se dire connecté sans compte renvoyé par Meta", async () => {
+    const token = "EAAQ" + "x".repeat(40);
+    const none = memoryStore(null);
+    await expect(connect({ store: none, fetch: fakeInstagram(["FINISHED"], []).f, supabaseUrl: SB, meta: META }, USER, token)).rejects.toThrow(/aucune Page/);
+    const other: Page = { id: "9", name: "Autre", access_token: "P2", instagram_business_account: { id: "1784999", username: "autre" } };
+    await expect(connect({ store: none, fetch: fakeInstagram(["FINISHED"], [BEERECOS_PAGE, other]).f, supabaseUrl: SB, meta: META }, USER, token)).rejects.toThrow(/Plusieurs comptes.*beerecos, autre/);
+    await expect(connect({ store: none, fetch: fakeInstagram().f, supabaseUrl: SB }, USER, token)).rejects.toThrow(/META_APP_SECRET/);
+    expect(none.conn).toBeNull();
   });
 
   it("publie un post photo, puis crée la règle de DM du mot-clé", async () => {

@@ -53,6 +53,9 @@ export const serverEnvSchema = clientEnvSchema.extend({
 
   IG_ACCESS_TOKEN: optionalString,
   IG_USER_ID: optionalString,
+  /** App Meta BeeRecos Studio (parcours unifié) : la clé secrète sert à l'échange du jeton et à la signature du webhook. */
+  META_APP_ID: optionalString,
+  META_APP_SECRET: optionalString,
   IG_APP_SECRET: optionalString,
   IG_VERIFY_TOKEN: optionalString,
 

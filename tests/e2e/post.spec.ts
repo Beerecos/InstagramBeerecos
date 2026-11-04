@@ -282,8 +282,10 @@ test("Paramètres : connexion Instagram et guide intégré", async ({ page }) =>
   const section = page.getByRole("region", { name: "Instagram" });
   await expect(section.getByText("Pas encore connecté.")).toBeVisible();
   await expect(section.getByRole("button", { name: "Connecter" })).toBeDisabled();
-  await section.getByLabel("Jeton d'accès Instagram").fill("IGAAT-test-jeton-assez-long-pour-le-format");
+  await section.getByLabel(/Jeton d'accès \(Explorateur de l'API Graph\)/).fill("EAAQ-test-jeton-assez-long-pour-le-format");
   await section.getByRole("button", { name: "Connecter" }).click();
-  expect(calls.find((c) => c.method === "POST" && c.path === "/connection")?.body).toEqual({ token: "IGAAT-test-jeton-assez-long-pour-le-format" });
+  await expect.poll(() => calls.find((c) => c.method === "POST" && c.path === "/connection")?.body).toEqual({ token: "EAAQ-test-jeton-assez-long-pour-le-format" });
   await expect(section.getByText(/Guide : obtenir le jeton/)).toBeVisible();
+  await section.getByText(/Guide : obtenir le jeton/).click();
+  await expect(section.getByText("pages_show_list")).toBeVisible();
 });

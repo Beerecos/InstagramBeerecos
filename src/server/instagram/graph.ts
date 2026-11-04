@@ -1,7 +1,8 @@
 /**
- * Client Instagram (API Instagram avec connexion Instagram, graph.instagram.com) : compte, conteneurs de publication
- * (réel, photo, carrousel), état, publication, lien public, renouvellement du jeton, DM de réponse à un commentaire.
- * `fetch` est injectable pour les tests ; aucune donnée n'est supposée : chaque étape lit la réponse d'Instagram.
+ * Client Instagram — parcours unifié (Facebook Login for Business, graph.facebook.com), le seul proposé par l'app
+ * BeeRecos Studio : jeton Facebook → Page Beerecos → compte Instagram professionnel relié. Conteneurs de publication
+ * (réel, photo, carrousel), état, publication, lien public. Les appels de publication utilisent le jeton de la Page.
+ * `fetch` est injectable pour les tests ; aucune donnée n'est supposée : chaque étape lit la réponse de Meta.
  */
 export type GraphConfig = { token: string; userId: string; host?: string; version?: string; fetch?: typeof fetch };
 
@@ -12,7 +13,7 @@ export class GraphError extends Error {
   }
 }
 
-const HOST = "graph.instagram.com";
+const HOST = "graph.facebook.com";
 const VERSION = process.env.IG_API_VERSION || "v26.0";
 
 async function call<T>(cfg: GraphConfig, method: "GET" | "POST", path: string, params: Record<string, string> = {}, body?: unknown): Promise<T> {
@@ -29,11 +30,34 @@ async function call<T>(cfg: GraphConfig, method: "GET" | "POST", path: string, p
   return data;
 }
 
-export async function me(cfg: Omit<GraphConfig, "userId">): Promise<{ userId: string; username: string }> {
-  const d = await call<{ user_id?: string | number; id?: string; username?: string }>({ ...cfg, userId: "me" }, "GET", "me", { fields: "user_id,username" });
-  const userId = String(d.user_id ?? d.id ?? "");
-  if (!userId || !d.username) throw new GraphError("Instagram : compte illisible avec ce jeton.", 400);
-  return { userId, username: d.username };
+type TokenCfg = Pick<GraphConfig, "token" | "host" | "version" | "fetch">;
+
+/** Échange un jeton utilisateur (1 à 2 h) contre un jeton longue durée (environ 60 jours) : demande la clé secrète de l'app. */
+export async function exchangeUserToken(cfg: TokenCfg & { appId: string; appSecret: string }): Promise<string> {
+  const d = await call<{ access_token?: string }>({ ...cfg, userId: "me" }, "GET", "oauth/access_token", {
+    grant_type: "fb_exchange_token", client_id: cfg.appId, client_secret: cfg.appSecret, fb_exchange_token: cfg.token,
+  });
+  if (!d.access_token) throw new GraphError("Meta n'a pas renvoyé de jeton longue durée.", 400);
+  return d.access_token;
+}
+
+export type LinkedAccount = { pageId: string; pageName: string; pageToken: string; igUserId: string; username: string };
+
+/** Pages autorisées par ce jeton qui ont un compte Instagram professionnel relié (avec le jeton de chaque Page). */
+export async function linkedAccounts(cfg: TokenCfg): Promise<LinkedAccount[]> {
+  type Page = { id: string; name?: string; access_token?: string; instagram_business_account?: { id?: string; username?: string } };
+  const d = await call<{ data?: Page[] }>({ ...cfg, userId: "me" }, "GET", "me/accounts", { fields: "name,access_token,instagram_business_account{id,username}", limit: "100" });
+  return (d.data ?? []).flatMap((p) => {
+    const ig = p.instagram_business_account;
+    return ig?.id && ig.username && p.access_token ? [{ pageId: p.id, pageName: p.name ?? "", pageToken: p.access_token, igUserId: ig.id, username: ig.username }] : [];
+  });
+}
+
+/** Lecture décisive : le compte Instagram tel que Meta le renvoie avec ce jeton (identifiant et nom réels). */
+export async function account(cfg: GraphConfig): Promise<{ userId: string; username: string }> {
+  const d = await call<{ id?: string; username?: string }>(cfg, "GET", cfg.userId, { fields: "id,username" });
+  if (!d.id || !d.username) throw new GraphError("Instagram : compte illisible avec ce jeton.", 400);
+  return { userId: d.id, username: d.username };
 }
 
 export type ContainerInput =
@@ -63,13 +87,3 @@ export async function publishContainer(cfg: GraphConfig, containerId: string): P
   return { mediaId: id, permalink: link.permalink ?? null };
 }
 
-/** Jeton longue durée : renouvelé pour 60 jours (refusé par Instagram s'il a moins de 24 h). */
-export async function refreshToken(cfg: Pick<GraphConfig, "token" | "host" | "fetch">): Promise<{ token: string; expiresAt: string }> {
-  const url = new URL(`https://${cfg.host ?? HOST}/refresh_access_token`);
-  url.searchParams.set("grant_type", "ig_refresh_token");
-  url.searchParams.set("access_token", cfg.token);
-  const res = await (cfg.fetch ?? fetch)(url, { cache: "no-store" });
-  const d = (await res.json().catch(() => ({}))) as { access_token?: string; expires_in?: number; error?: { message?: string } };
-  if (!res.ok || d.error || !d.access_token || !d.expires_in) throw new GraphError(`Renouvellement refusé : ${d.error?.message ?? `HTTP ${res.status}`}`, res.status);
-  return { token: d.access_token, expiresAt: new Date(Date.now() + d.expires_in * 1000).toISOString() };
-}

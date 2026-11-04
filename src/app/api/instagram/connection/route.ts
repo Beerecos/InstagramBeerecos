@@ -6,7 +6,7 @@ export function GET(request: Request) {
   return guarded("integrations:manage", async ({ deps }) => ({
     ...(await connectionStatus(deps)),
     webhook: {
-      appSecret: Boolean(process.env.IG_APP_SECRET),
+      appSecret: Boolean(process.env.META_APP_SECRET || process.env.IG_APP_SECRET),
       verifyToken: Boolean(process.env.IG_VERIFY_TOKEN),
       callbackUrl: `${new URL(request.url).origin}/api/webhooks/instagram`,
     },
@@ -22,7 +22,7 @@ export function POST(request: Request) {
 }
 
 export function PATCH() {
-  return guarded("integrations:manage", ({ userId, deps }) => refresh(deps, userId));
+  return guarded("integrations:manage", ({ deps }) => refresh(deps));
 }
 
 export function DELETE() {

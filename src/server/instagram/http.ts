@@ -6,6 +6,9 @@ import type { Permission } from "@/domain/roles";
 import { UserError, type Deps } from "./service";
 import { supabaseStore } from "./store";
 
+/** Identifiant public de l'app Meta BeeRecos Studio (non secret). */
+const META_APP_ID = "1144958471333447";
+
 /** Garde commune des routes Instagram : session + permission, configuration présente, erreurs lisibles. */
 export async function guarded(permission: Permission, fn: (ctx: { userId: string; deps: Deps }) => Promise<unknown>) {
   try {
@@ -14,7 +17,10 @@ export async function guarded(permission: Permission, fn: (ctx: { userId: string
     if (isDemoMode() || !env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SECRET_KEY) {
       return NextResponse.json({ error: "Publication Instagram indisponible : base non configurée sur ce serveur." }, { status: 503 });
     }
-    const deps: Deps = { store: supabaseStore(), supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL };
+    const deps: Deps = {
+      store: supabaseStore(), supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
+      meta: { appId: env.META_APP_ID ?? META_APP_ID, appSecret: env.META_APP_SECRET ?? env.IG_APP_SECRET },
+    };
     return NextResponse.json(await fn({ userId: user.id, deps }));
   } catch (e) {
     if (e instanceof ForbiddenError) return NextResponse.json({ error: "Action non autorisée." }, { status: 403 });
