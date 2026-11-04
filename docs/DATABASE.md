@@ -44,6 +44,16 @@ remplacé en phase 5.
 Bucket privé `ig-media` : photos des posts (JPEG préparé dans le navigateur, lien signé d'une heure pour Instagram).
 Tests : `tests/rls/instagram.test.ts`.
 
+## Publication LinkedIn (`20261104090000_linkedin_publication.sql`, base partagée BeeMarketing)
+
+| Élément | Rôle | Protection |
+|---|---|---|
+| li_connection | Compte LinkedIn connecté (OAuth officiel) : URN du membre, nom, **jeton**, expiration, droits accordés | RLS sans politique : serveur uniquement |
+| ig_publications.linkedin_* | Texte LinkedIn adaptable, cible (profil / page), état de la publication, URN du post | déclencheur `ig_publications_linkedin_guard` : une session ne peut pas écrire l'état ni l'URN |
+
+Variables serveur (Vercel) : `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, et `LINKEDIN_ORGANIZATION_URN` pour la page BeeRecos
+(après validation « Community Management API »). Tests : `tests/rls/instagram.test.ts`.
+
 ## Phases suivantes
 
 Voir `PLAN.md` § Modèle de données. Chaque nouvelle table : `organization_id`, `created_at`/`updated_at`, index sur les clés de filtre,

@@ -58,3 +58,28 @@ describe("RLS publication Instagram", () => {
     expect((await db.query<{ public: boolean }>("select public from storage.buckets where id = 'ig-media'")).rows[0].public).toBe(false);
   });
 });
+
+describe("RLS publication LinkedIn", () => {
+  it("le jeton LinkedIn reste inaccessible aux sessions", async () => {
+    await db.query("insert into public.li_connection (member_urn, name, access_token) values ('urn:li:person:abc', 'Cédric', 'SECRET') on conflict (id) do nothing");
+    await expect(asUser(db, CEDRIC, () => db.query("select * from public.li_connection"))).rejects.toThrow(/permission denied/);
+  });
+
+  it("une session règle son texte LinkedIn mais ne peut jamais se déclarer publiée sur LinkedIn", async () => {
+    const id = await asUser(db, CEDRIC, async () =>
+      (await db.query<{ id: string }>("insert into public.ig_publications (kind, linkedin_enabled, linkedin_text, linkedin_status, linkedin_post_urn) values ('post', true, 'Texte LinkedIn', 'published', 'urn:li:share:1') returning id")).rows[0].id);
+    let row = (await db.query<{ linkedin_status: string; linkedin_post_urn: string | null; linkedin_text: string }>("select linkedin_status, linkedin_post_urn, linkedin_text from public.ig_publications where id = $1", [id])).rows[0];
+    expect(row).toEqual({ linkedin_status: "none", linkedin_post_urn: null, linkedin_text: "Texte LinkedIn" });
+    await asUser(db, CEDRIC, () => db.query("update public.ig_publications set linkedin_text = 'Nouveau', linkedin_status = 'published', linkedin_post_urn = 'urn:li:share:2' where id = $1", [id]));
+    row = (await db.query<{ linkedin_status: string; linkedin_post_urn: string | null; linkedin_text: string }>("select linkedin_status, linkedin_post_urn, linkedin_text from public.ig_publications where id = $1", [id])).rows[0];
+    expect(row).toEqual({ linkedin_status: "none", linkedin_post_urn: null, linkedin_text: "Nouveau" });
+    // Le serveur (clé secrète) écrit l'état réel renvoyé par LinkedIn.
+    await db.query("update public.ig_publications set linkedin_status = 'published', linkedin_post_urn = 'urn:li:share:3' where id = $1", [id]);
+    expect((await db.query<{ linkedin_status: string }>("select linkedin_status from public.ig_publications where id = $1", [id])).rows[0].linkedin_status).toBe("published");
+  });
+
+  it("refuse une cible ou un texte hors format", async () => {
+    await expect(asUser(db, CEDRIC, () => db.query("insert into public.ig_publications (kind, linkedin_target) values ('post', 'groupe')"))).rejects.toThrow(/check/);
+    await expect(asUser(db, CEDRIC, () => db.query("insert into public.ig_publications (kind, linkedin_text) values ('post', $1)", ["x".repeat(3001)]))).rejects.toThrow(/check/);
+  });
+});

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { countByStage, stageOf } from "@/domain/instagram/dashboard";
 import type { Publication } from "@/domain/instagram/publication";
 
-const pub = (patch: Partial<Publication>): Publication => ({ id: "p", kind: "post", montageId: null, title: "", caption: "Légende", media: [{ path: "u/a.jpg", type: "image" }], keyword: null, dmText: null, buttonTitle: null, buttonUrl: null, status: "draft", permalink: null, publishedAt: null, error: null, updatedAt: "t", ...patch });
+const pub = (patch: Partial<Publication>): Publication => ({ id: "p", kind: "post", montageId: null, title: "", caption: "Légende", media: [{ path: "u/a.jpg", type: "image" }], keyword: null, dmText: null, buttonTitle: null, buttonUrl: null, status: "draft", permalink: null, publishedAt: null, error: null, updatedAt: "t", linkedinText: null, linkedinTarget: "profil", linkedinStatus: "none", linkedinUrl: null, linkedinPublishedAt: null, linkedinError: null, ...patch });
 
 describe("tableau de bord Post", () => {
   it("un réel n'est prêt qu'avec son MP4 rendu", () => {

@@ -4,9 +4,10 @@ import { mockBee } from "./bee-api";
 // Onglet Post : routes /api/instagram simulées (aucun appel à Instagram, rien n'est publié).
 type Pub = Record<string, unknown> & { id: string; status: string };
 
-async function mockInstagram(page: Page, opts: { connected: boolean; items: Pub[] }) {
+async function mockInstagram(page: Page, opts: { connected: boolean; items: Pub[]; linkedin?: { connected: boolean; pageAllowed?: boolean } }) {
   const calls: { method: string; path: string; body: Record<string, unknown> }[] = [];
   let items = [...opts.items];
+  await page.route("**/api/linkedin/connection", (route) => route.fulfill({ json: { connected: Boolean(opts.linkedin?.connected), name: opts.linkedin?.connected ? "Cédric Picard" : null, expiresAt: null, page: { configured: true, allowed: Boolean(opts.linkedin?.pageAllowed) }, appConfigured: true } }));
   await page.route("**/api/instagram/**", async (route) => {
     const req = route.request();
     const path = new URL(req.url()).pathname.replace("/api/instagram", "");
@@ -19,6 +20,11 @@ async function mockInstagram(page: Page, opts: { connected: boolean; items: Pub[
       const saved = { ...(items.find((i) => i.id === body.id) ?? { id: "p-new", status: "draft", permalink: null, publishedAt: null, error: null, montageId: null }), ...body, updatedAt: "2026-11-03T12:00:00.000Z" } as Pub;
       items = [saved, ...items.filter((i) => i.id !== saved.id)];
       return route.fulfill({ json: { item: saved } });
+    }
+    const linked = path.match(/^\/posts\/([^/]+)\/linkedin$/);
+    if (linked) {
+      items = items.map((i) => (i.id === linked[1] ? { ...i, linkedinStatus: "published", linkedinUrl: "https://www.linkedin.com/feed/update/urn:li:share:77/", linkedinPublishedAt: "2026-11-04T10:00:00.000Z" } : i));
+      return route.fulfill({ json: { item: items.find((i) => i.id === linked[1]) } });
     }
     const publish = path.match(/^\/posts\/([^/]+)\/publish$/);
     if (publish) {
@@ -94,8 +100,8 @@ test("Post : Créer ouvre trois grandes cartes, et le post s'écrit dans son éd
   await expect(page).toHaveURL(/\/post\/p-new$/);
   expect(calls.find((c) => c.method === "POST" && c.path === "/posts")?.body).toMatchObject({ kind: "post", keyword: "CLUB", dmText: "Voici le lien" });
   // Sans connexion ni photo : la fenêtre de publication dit pourquoi et ne publie rien.
-  await page.getByRole("button", { name: "Publier sur Instagram" }).click();
-  const confirm = page.getByRole("alertdialog", { name: "Publier maintenant sur Instagram ?" });
+  await page.getByRole("button", { name: "Publier", exact: true }).click();
+  const confirm = page.getByRole("alertdialog", { name: "Publier maintenant ?" });
   await expect(confirm.getByText("Ajoute au moins une photo.")).toBeVisible();
   await expect(confirm.getByRole("button", { name: "Oui, publier" })).toBeDisabled();
   expect(calls.some((c) => c.path.endsWith("/publish"))).toBe(false);
@@ -151,8 +157,8 @@ test("Post : publier un brouillon demande une confirmation, puis suit Instagram 
   const calls = await mockInstagram(page, { connected: true, items: [draft] });
   await page.goto("/post/p1");
   await expect(page.getByRole("heading", { level: 1, name: "Éditeur de post" })).toBeVisible();
-  await page.getByRole("button", { name: "Publier sur Instagram" }).click();
-  const confirm = page.getByRole("alertdialog", { name: "Publier maintenant sur Instagram ?" });
+  await page.getByRole("button", { name: "Publier", exact: true }).click();
+  const confirm = page.getByRole("alertdialog", { name: "Publier maintenant ?" });
   await expect(confirm.getByText(/public tout de suite/)).toBeVisible();
   await expect(confirm.getByText(/qui commente « CLUB » reçoit ton message/)).toBeVisible();
   await confirm.getByRole("button", { name: "Oui, publier" }).click();
@@ -160,6 +166,27 @@ test("Post : publier un brouillon demande une confirmation, puis suit Instagram 
   await confirm.getByRole("button", { name: "Fermer" }).click();
   await expect(page.getByText(/Publié sur Instagram/)).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("link", { name: /Voir le post/ })).toHaveAttribute("href", "https://www.instagram.com/p/ABC/");
+});
+
+test("Post : publier aussi sur LinkedIn, avec un texte adaptable et le profil par défaut", async ({ page }) => {
+  await mockBee(page);
+  const calls = await mockInstagram(page, { connected: true, items: [draft], linkedin: { connected: true, pageAllowed: false } });
+  await page.goto("/post/p1");
+  await page.getByRole("button", { name: "Publier", exact: true }).click();
+  const confirm = page.getByRole("alertdialog", { name: "Publier maintenant ?" });
+  await expect(confirm.getByLabel("Instagram")).toBeChecked();
+  await expect(confirm.getByLabel("Aussi sur LinkedIn")).not.toBeChecked();
+  await confirm.getByLabel("Aussi sur LinkedIn").check();
+  await expect(confirm.getByRole("radio", { name: /Mon profil/ })).toHaveAttribute("aria-checked", "true");
+  await expect(confirm.getByRole("radio", { name: /Page BeeRecos/ })).toBeDisabled();
+  const text = confirm.getByLabel("Texte LinkedIn");
+  await expect(text).toHaveValue("Viens visiter un club. Commente CLUB !");
+  await text.fill("Viens visiter un club BeeRecos : lien en commentaire.");
+  await confirm.getByRole("button", { name: "Oui, publier" }).click();
+  await expect.poll(() => calls.find((c) => c.path === "/posts/p1/linkedin")?.body).toEqual({ confirm: true, text: "Viens visiter un club BeeRecos : lien en commentaire.", target: "profil" });
+  expect(calls.some((c) => c.path === "/posts/p1/publish")).toBe(true);
+  await confirm.getByRole("button", { name: "Fermer" }).click();
+  await expect(page.getByRole("link", { name: /Voir sur LinkedIn/ })).toHaveAttribute("href", "https://www.linkedin.com/feed/update/urn:li:share:77/");
 });
 
 test("Paramètres : connexion Instagram et guide intégré", async ({ page }) => {

@@ -10,6 +10,7 @@ import { z } from "zod";
 export const CAPTION_MAX = 2200;
 export const HASHTAG_MAX = 30;
 export const MEDIA_MAX = 10;
+export const LINKEDIN_MAX = 3000;
 
 export const PUBLICATION_STATUSES = ["draft", "publishing", "published", "error"] as const;
 export type PublicationStatus = (typeof PUBLICATION_STATUSES)[number];
@@ -46,6 +47,9 @@ export const DraftSchema = z.strictObject({
   dmText: optionalText(900),
   buttonTitle: optionalText(20),
   buttonUrl: z.string().trim().max(500).refine((u) => !u || /^https:\/\/[^\s]+$/.test(u), "Le lien du bouton doit commencer par https://").transform((u) => u || null).nullable().optional(),
+  /** LinkedIn : texte adaptable (pré-rempli avec la légende) et cible (profil membre ou page BeeRecos). */
+  linkedinText: z.string().max(LINKEDIN_MAX, `Texte LinkedIn : ${LINKEDIN_MAX} caractères au plus.`).nullable().optional(),
+  linkedinTarget: z.enum(["profil", "page"]).optional(),
 });
 export type DraftInput = z.input<typeof DraftSchema>;
 export type Draft = z.output<typeof DraftSchema>;
@@ -66,6 +70,12 @@ export type Publication = {
   publishedAt: string | null;
   error: string | null;
   updatedAt: string;
+  linkedinText: string | null;
+  linkedinTarget: "profil" | "page";
+  linkedinStatus: "none" | "publishing" | "published" | "error";
+  linkedinUrl: string | null;
+  linkedinPublishedAt: string | null;
+  linkedinError: string | null;
 };
 
 export function hashtagCount(caption: string): number {

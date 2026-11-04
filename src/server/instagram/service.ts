@@ -14,6 +14,7 @@ export type Connection = { igUserId: string; username: string; accessToken: stri
 export type PublicConnection = { connected: boolean; username: string | null; expiresAt: string | null; needsRefresh: boolean };
 
 export type Row = Publication & { createdBy: string; containerId: string | null; igMediaId: string | null };
+export type LinkedInPatch = Partial<Pick<Row, "linkedinStatus" | "linkedinUrl" | "linkedinPublishedAt" | "linkedinError">> & { linkedinPostUrn?: string | null };
 
 export type Store = {
   getConnection(): Promise<Connection | null>;
@@ -28,6 +29,8 @@ export type Store = {
   transition(id: string, from: Row["status"][], patch: Partial<Pick<Row, "status" | "containerId" | "igMediaId" | "permalink" | "publishedAt" | "error">>, whenContainer?: string): Promise<Row | null>;
   addDmRule(rule: { publicationId: string; mediaId: string; keyword: string; dmText: string; buttonTitle: string | null; buttonUrl: string | null; label: string }): Promise<void>;
   signMedia(media: PublicationMedia[]): Promise<string[]>;
+  /** État LinkedIn conditionnel (n'écrit que si l'état actuel est l'un de `from`). */
+  transitionLinkedIn(id: string, from: Row["linkedinStatus"][], patch: LinkedInPatch): Promise<Row | null>;
 };
 
 export type Deps = { store: Store; fetch?: typeof fetch; supabaseUrl: string };

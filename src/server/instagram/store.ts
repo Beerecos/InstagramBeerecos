@@ -1,6 +1,7 @@
 import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { Store, Row } from "./service";
+import { postUrl } from "@/server/linkedin/api";
 
 /**
  * Stockage Supabase (clé secrète, serveur uniquement). Toutes les lectures de publications sont filtrées sur l'auteur
@@ -10,12 +11,17 @@ type DbRow = {
   id: string; created_by: string; kind: Row["kind"]; montage_id: string | null; title: string; caption: string; media: Row["media"];
   keyword: string | null; dm_text: string | null; button_title: string | null; button_url: string | null; status: Row["status"];
   container_id: string | null; ig_media_id: string | null; permalink: string | null; published_at: string | null; error: string | null; updated_at: string;
+  // Colonnes LinkedIn (20261104090000) : absentes tant que la migration n'est pas appliquée.
+  linkedin_text?: string | null; linkedin_target?: "profil" | "page"; linkedin_status?: Row["linkedinStatus"]; linkedin_post_urn?: string | null;
+  linkedin_published_at?: string | null; linkedin_error?: string | null;
 };
 
 const toRow = (r: DbRow): Row => ({
   id: r.id, createdBy: r.created_by, kind: r.kind, montageId: r.montage_id, title: r.title, caption: r.caption, media: r.media ?? [],
   keyword: r.keyword, dmText: r.dm_text, buttonTitle: r.button_title, buttonUrl: r.button_url, status: r.status,
   containerId: r.container_id, igMediaId: r.ig_media_id, permalink: r.permalink, publishedAt: r.published_at, error: r.error, updatedAt: r.updated_at,
+  linkedinText: r.linkedin_text ?? null, linkedinTarget: r.linkedin_target ?? "profil", linkedinStatus: r.linkedin_status ?? "none",
+  linkedinUrl: r.linkedin_post_urn ? postUrl(r.linkedin_post_urn) : null, linkedinPublishedAt: r.linkedin_published_at ?? null, linkedinError: r.linkedin_error ?? null,
 });
 
 const SIGNED_SECONDS = 3600;
@@ -27,6 +33,9 @@ export function supabaseStore(): Store {
   const fields = (d: Parameters<Store["insert"]>[1]) => ({
     kind: d.kind, montage_id: d.montageId ?? null, title: d.title, caption: d.caption, media: d.media,
     keyword: d.keyword ?? null, dm_text: d.dmText ?? null, button_title: d.buttonTitle ?? null, button_url: d.buttonUrl ?? null,
+    // LinkedIn seulement s'il est demandé : un post Instagram seul reste enregistrable avant la migration LinkedIn.
+    ...(d.linkedinText !== undefined ? { linkedin_text: d.linkedinText, linkedin_enabled: true } : {}),
+    ...(d.linkedinTarget !== undefined ? { linkedin_target: d.linkedinTarget } : {}),
   });
 
   return {
@@ -86,6 +95,16 @@ export function supabaseStore(): Store {
       if (whenContainer) q = q.eq("container_id", whenContainer);
       const { data, error } = await q.select("*").maybeSingle();
       fail("Mise à jour de la publication", error);
+      return data ? toRow(data as DbRow) : null;
+    },
+    async transitionLinkedIn(id, from, patch) {
+      const set: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if ("linkedinStatus" in patch) set.linkedin_status = patch.linkedinStatus;
+      if ("linkedinPostUrn" in patch) set.linkedin_post_urn = patch.linkedinPostUrn;
+      if ("linkedinPublishedAt" in patch) set.linkedin_published_at = patch.linkedinPublishedAt;
+      if ("linkedinError" in patch) set.linkedin_error = patch.linkedinError;
+      const { data, error } = await sb.from("ig_publications").update(set).eq("id", id).in("linkedin_status", from).select("*").maybeSingle();
+      fail("Mise à jour de la publication LinkedIn", error);
       return data ? toRow(data as DbRow) : null;
     },
     async addDmRule(rule) {

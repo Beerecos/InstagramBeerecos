@@ -21,6 +21,8 @@ async function call<T>(path: string, init?: { method?: string; body?: unknown })
   return data;
 }
 
+export type LinkedInView = { connected: boolean; name: string | null; expiresAt: string | null; page: { configured: boolean; allowed: boolean }; appConfigured?: boolean };
+
 export const instagram = {
   connection: () => call<ConnectionView>("/connection"),
   connect: (token: string) => call<ConnectionView>("/connection", { method: "POST", body: { token } }),
@@ -31,6 +33,14 @@ export const instagram = {
   save: (draft: DraftInput & { id?: string }) => call<{ item: Publication }>("/posts", { method: "POST", body: draft }),
   remove: (id: string) => call<{ ok: true }>(`/posts/${id}`, { method: "DELETE" }),
   publish: (id: string, videoUrl?: string) => call<{ item: Publication }>(`/posts/${id}/publish`, { method: "POST", body: { confirm: true, videoUrl } }),
+  linkedin: (id: string, o: { text: string; target: "profil" | "page"; videoUrl?: string }) => call<{ item: Publication }>(`/posts/${id}/linkedin`, { method: "POST", body: { confirm: true, ...o } }),
+  linkedinConnection: async (): Promise<LinkedInView> => {
+    const res = await fetch("/api/linkedin/connection", { cache: "no-store" });
+    const data = (await res.json().catch(() => ({}))) as { error?: string } & LinkedInView;
+    if (!res.ok) throw new Error(data.error ?? `Erreur ${res.status}`);
+    return data;
+  },
+  linkedinDisconnect: async () => { await fetch("/api/linkedin/connection", { method: "DELETE" }); },
 };
 
 /** Photo → JPEG au bon format Instagram, puis envoi direct dans le bucket privé. Renvoie son chemin. */

@@ -3,9 +3,10 @@
  * Paramètres : marque (charte appliquée par le studio) et connexions. Les capacités affichées viennent du serveur
  * (`settings-get` de la fonction `montage`) : rien n'est annoncé disponible sans réponse réelle.
  */
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import StudioSettingsPanel from "@/components/social/studio/StudioSettingsPanel";
 import InstagramSettings from "@/components/post/instagram-settings";
+import LinkedInSettings from "@/components/post/linkedin-settings";
 import { apiUrl } from "@/lib/social/api-config";
 import { isMontageConfigured, montage } from "@/lib/social/montage-api";
 import { RENDER_MODE } from "@/lib/social/reel-render-client";
@@ -45,6 +46,7 @@ export default function Settings() {
         </dl>
       </section>
       <InstagramSettings />
+      <Suspense fallback={null}><LinkedInSettings /></Suspense>
       <section className="card p-4" aria-labelledby="marque">
         <h2 id="marque" className="font-semibold">Marque</h2>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
