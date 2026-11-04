@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
-import StudioHome from "@/components/reels/studio-home";
+import { Suspense } from "react";
+import PostHub from "@/components/post/post-hub";
 
-export const metadata: Metadata = { title: "Studio" };
+export const metadata: Metadata = { title: "Post" };
 
-/** Accueil : le studio s'ouvre directement sur le dernier projet (choix du projet dans sa barre d'outils). */
+/** Accueil : tableau de bord des posts en cours. Le Studio ne s'ouvre que pour un réel. */
 export default function HomePage() {
-  return <StudioHome />;
+  return (
+    <Suspense fallback={<p role="status" className="p-6 text-sm">Chargement…</p>}>
+      <PostHub />
+    </Suspense>
+  );
 }

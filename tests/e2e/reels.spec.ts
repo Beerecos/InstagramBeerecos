@@ -2,20 +2,20 @@ import { expect, test } from "@playwright/test";
 import { mockBee } from "./bee-api";
 
 // Studio des réels (Instagram BeeRecos), en mode démo : aucun appel réel, aucun serveur de montage configuré.
-test("l'accueil ouvre directement le studio sur le dernier projet, avec le choix du projet", async ({ page }) => {
+test("le studio d'un réel garde le choix du projet et revient au tableau de bord Post", async ({ page }) => {
   const base = { status: "ready", durationMs: 40000, keptMs: 40000, workspaceId: null, createdAt: "2026-11-02T09:00:00.000Z", renderStatus: null, sentToReels: false, finalVideoUrl: null };
   const old = { ...base, id: "m0", title: "V03 · Ancien", updatedAt: "2026-11-01T10:00:00.000Z" };
   const recent = { ...base, id: "m1", title: "V12 · Le réseau qui recommande", updatedAt: "2026-11-02T10:00:00.000Z" };
   await mockBee(page, { list: () => ({ montages: [old, recent] }), get: (b) => ({ montage: { ...(b.id === "m0" ? old : recent), aiSource: null, edit: null, captions: [], canUndo: false, error: null, renderError: null }, videoUrl: null }) });
-  await page.goto("/");
-  await expect(page).toHaveURL(/\/reels\/m1$/);
+  await page.goto("/reels/m1");
   const picker = page.getByLabel("Projet ouvert").filter({ visible: true });
   await expect(picker).toHaveValue("m1");
   await picker.selectOption("m0");
   await expect(page).toHaveURL(/\/reels\/m0$/);
   // La page précédente reste en mémoire, masquée (navigation Next.js) : on vise le sélecteur visible.
   await page.getByLabel("Projet ouvert").filter({ visible: true }).selectOption("__tous");
-  await expect(page).toHaveURL(/\/post$/);
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Post" })).toBeVisible();
 });
 
 test("Mes réels : statut, prochaine action, corbeille récupérable", async ({ page }) => {
@@ -48,20 +48,20 @@ test("Mes réels : statut, prochaine action, corbeille récupérable", async ({ 
   expect(errors).toEqual([]);
 });
 
-test("navigation : Scripts → Studio → Post → Calendrier", async ({ page, isMobile }) => {
+test("navigation : Post (accueil, scripts compris) → Calendrier → Paramètres", async ({ page, isMobile }) => {
   await page.goto("/");
   const nav = () => page.getByRole("navigation", { name: isMobile ? "Navigation mobile" : "Navigation principale" });
-  for (const label of ["Scripts", "Studio", "Post", "Calendrier"]) await expect(nav().getByRole("link", { name: label })).toBeVisible();
-  await nav().getByRole("link", { name: "Scripts" }).click();
+  for (const label of ["Post", "Calendrier", "Paramètres"]) await expect(nav().getByRole("link", { name: label })).toBeVisible();
+  await expect(nav().getByRole("link", { name: "Scripts" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1, name: "Post" })).toBeVisible();
+  await page.getByRole("link", { name: /Les 72 scripts et mes prises/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Scripts" })).toBeVisible();
   await expect(page.getByRole("link", { name: /J'ai déjà mes prises/ })).toHaveAttribute("href", "/reels/tournage");
   await expect(page.getByRole("link", { name: /Nouveau script/ }).first()).toHaveAttribute("href", "/scripts/nouveau");
-  await nav().getByRole("link", { name: "Post" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Post" })).toBeVisible();
   await nav().getByRole("link", { name: "Calendrier" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Calendrier éditorial" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Ajouter un réel terminé" })).toHaveAttribute("href", "/post");
-  await page.goto("/settings");
+  await expect(page.getByRole("link", { name: "Ajouter un réel terminé" })).toHaveAttribute("href", "/");
+  await nav().getByRole("link", { name: "Paramètres" }).click();
   await expect(page.getByText("Serveur BeeMarketing (Edge Functions, base partagée)")).toBeVisible();
 });
 

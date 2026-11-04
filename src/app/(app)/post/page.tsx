@@ -1,8 +1,6 @@
-import type { Metadata } from "next";
-import PostHub from "@/components/post/post-hub";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Post" };
-
+/** L'onglet Post est l'accueil. */
 export default function PostPage() {
-  return <PostHub />;
+  redirect("/");
 }

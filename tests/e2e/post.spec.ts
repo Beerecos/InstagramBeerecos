@@ -37,34 +37,62 @@ async function mockInstagram(page: Page, opts: { connected: boolean; items: Pub[
 
 const draft: Pub = { id: "p1", kind: "post", montageId: null, title: "Visite de club", caption: "Viens visiter un club. Commente CLUB !", media: [{ path: "u/a.jpg", type: "image" }], keyword: "CLUB", dmText: "Voici le lien", buttonTitle: null, buttonUrl: null, status: "draft", permalink: null, publishedAt: null, error: null, updatedAt: "2026-11-03T10:00:00.000Z" };
 
-test("Post : un bouton Créer, trois choix, et le formulaire de post simple", async ({ page }) => {
+const reel = (id: string, title: string, done: boolean) => ({ id, title, status: "ready", durationMs: 40000, keptMs: 40000, workspaceId: null, createdAt: "2026-11-02T09:00:00.000Z", updatedAt: "2026-11-03T09:00:00.000Z", renderStatus: done ? "done" : null, sentToReels: false, finalVideoUrl: done ? "https://bee-api.test/v.mp4" : null });
+
+test("Post : tableau de bord des posts en cours, rangés par étape", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await mockBee(page, { list: () => ({ montages: [reel("m1", "V12 · En montage", false), reel("m2", "V20 · Rendu", true)] }) });
+  await mockInstagram(page, { connected: true, items: [draft, { ...draft, id: "p2", title: "Sans photo", media: [] }] });
+  await page.goto("/");
+  await expect(page).toHaveTitle(/Post · Instagram BeeRecos/);
+  const steps = page.getByRole("navigation", { name: "Étapes" });
+  await expect(steps.getByRole("button", { name: /2\s*En préparation/ })).toBeVisible();
+  await expect(steps.getByRole("button", { name: /2\s*Prêts à publier/ })).toBeVisible();
+  const reprendre = page.getByRole("region", { name: /À reprendre/ });
+  await expect(reprendre.getByRole("link", { name: /V12 · En montage/ })).toHaveAttribute("href", "/reels/m1?panel=post");
+  await expect(reprendre.getByRole("link", { name: /Sans photo/ })).toHaveAttribute("href", "/post/p2");
+  await expect(page.getByRole("region", { name: /Prêts à publier/ }).getByRole("link", { name: /Visite de club/ })).toHaveAttribute("href", "/post/p1");
+  await expect(page.getByRole("region", { name: /Scripts/ }).getByRole("link", { name: "Nouveau script" })).toHaveAttribute("href", "/scripts/nouveau");
+  // Une étape cliquée devient une liste, avec son adresse (lien direct).
+  await steps.getByRole("button", { name: /Prêts à publier/ }).click();
+  await expect(page).toHaveURL(/\?vue=pret$/);
+  await expect(page.getByRole("region", { name: /Prêts à publier/ }).getByRole("link")).toHaveCount(2);
+  expect(errors).toEqual([]);
+});
+
+test("Post : Créer ouvre trois grandes cartes, et le post s'écrit dans son éditeur avec aperçu", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await mockBee(page);
   const calls = await mockInstagram(page, { connected: false, items: [] });
-  await page.goto("/post");
-  await expect(page).toHaveTitle(/Post · Instagram BeeRecos/);
+  await page.goto("/");
   await expect(page.getByText(/Instagram n'est pas encore connecté/)).toBeVisible();
   await page.getByRole("button", { name: "Créer", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Que veux-tu créer ?" });
   await expect(dialog.getByRole("link", { name: /Réel IA/ })).toHaveAttribute("href", "/reels/nouveau/ia");
   await expect(dialog.getByRole("link", { name: /Réel filmé/ })).toHaveAttribute("href", "/reels/nouveau/video");
-  await dialog.getByRole("button", { name: /Post simple/ }).click();
+  await expect(dialog.getByRole("link", { name: "Écrire un script" })).toHaveAttribute("href", "/scripts/nouveau");
+  await dialog.getByRole("link", { name: /^Post/ }).click();
 
-  const form = page.getByRole("dialog", { name: /^(Nouveau post|Post)$/ });
-  await form.getByLabel("Légende").fill("Viens découvrir BeeRecos.");
-  await expect(form.getByLabel("Message envoyé en DM")).toHaveCount(0);
-  await form.getByLabel(/Mot-clé pour recevoir un DM/).fill("club");
-  await expect(form.getByLabel(/Mot-clé pour recevoir un DM/)).toHaveValue("CLUB");
-  await form.getByRole("button", { name: "Ajouter « Commente CLUB »" }).click();
-  await expect(form.getByLabel("Légende")).toHaveValue(/Commente CLUB/);
-  await form.getByLabel("Message envoyé en DM").fill("Voici le lien");
-  await form.getByRole("button", { name: "Enregistrer" }).click();
-  await expect(form.getByText("Brouillon enregistré.")).toBeVisible();
-  const save = calls.find((c) => c.method === "POST" && c.path === "/posts");
-  expect(save?.body).toMatchObject({ kind: "post", keyword: "CLUB", dmText: "Voici le lien" });
+  await expect(page).toHaveURL(/\/post\/nouveau$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Nouveau post" })).toBeVisible();
+  const preview = page.getByRole("figure", { name: "Aperçu Instagram" });
+  await page.getByLabel("Légende").fill("Viens découvrir BeeRecos.");
+  await expect(preview).toContainText("Viens découvrir BeeRecos.");
+  await expect(page.getByLabel("Message envoyé en DM")).toHaveCount(0);
+  await page.getByLabel(/Mot-clé pour recevoir un DM/).fill("club");
+  await expect(page.getByLabel(/Mot-clé pour recevoir un DM/)).toHaveValue("CLUB");
+  await page.getByRole("button", { name: "Ajouter « Commente CLUB »" }).click();
+  await expect(page.getByLabel("Légende")).toHaveValue(/Commente CLUB/);
+  await expect(preview).toContainText("Qui commente « CLUB » reçoit ton DM");
+  await page.getByLabel("Message envoyé en DM").fill("Voici le lien");
+  await page.getByRole("button", { name: "Enregistrer" }).click();
+  await expect(page.getByText("Brouillon enregistré.")).toBeVisible();
+  await expect(page).toHaveURL(/\/post\/p-new$/);
+  expect(calls.find((c) => c.method === "POST" && c.path === "/posts")?.body).toMatchObject({ kind: "post", keyword: "CLUB", dmText: "Voici le lien" });
   // Sans connexion ni photo : la fenêtre de publication dit pourquoi et ne publie rien.
-  await form.getByRole("button", { name: "Publier sur Instagram" }).click();
+  await page.getByRole("button", { name: "Publier sur Instagram" }).click();
   const confirm = page.getByRole("alertdialog", { name: "Publier maintenant sur Instagram ?" });
   await expect(confirm.getByText("Ajoute au moins une photo.")).toBeVisible();
   await expect(confirm.getByRole("button", { name: "Oui, publier" })).toBeDisabled();
@@ -75,18 +103,17 @@ test("Post : un bouton Créer, trois choix, et le formulaire de post simple", as
 test("Post : publier un brouillon demande une confirmation, puis suit Instagram jusqu'au lien public", async ({ page }) => {
   await mockBee(page);
   const calls = await mockInstagram(page, { connected: true, items: [draft] });
-  await page.goto("/post");
-  await page.getByRole("button", { name: /Visite de club/ }).click();
-  const form = page.getByRole("dialog", { name: "Post" });
-  await form.getByRole("button", { name: "Publier sur Instagram" }).click();
+  await page.goto("/post/p1");
+  await expect(page.getByRole("heading", { level: 1, name: "Éditeur de post" })).toBeVisible();
+  await page.getByRole("button", { name: "Publier sur Instagram" }).click();
   const confirm = page.getByRole("alertdialog", { name: "Publier maintenant sur Instagram ?" });
   await expect(confirm.getByText(/public tout de suite/)).toBeVisible();
   await expect(confirm.getByText(/qui commente « CLUB » reçoit ton message/)).toBeVisible();
   await confirm.getByRole("button", { name: "Oui, publier" }).click();
   expect(calls.find((c) => c.path === "/posts/p1/publish")?.body).toEqual({ confirm: true });
   await confirm.getByRole("button", { name: "Fermer" }).click();
-  await expect(form.getByText(/Publié sur Instagram/)).toBeVisible({ timeout: 15_000 });
-  await expect(form.getByRole("link", { name: /Voir le post/ })).toHaveAttribute("href", "https://www.instagram.com/p/ABC/");
+  await expect(page.getByText(/Publié sur Instagram/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("link", { name: /Voir le post/ })).toHaveAttribute("href", "https://www.instagram.com/p/ABC/");
 });
 
 test("Paramètres : connexion Instagram et guide intégré", async ({ page }) => {

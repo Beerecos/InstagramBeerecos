@@ -137,7 +137,7 @@ export default function Calendar({ embedded = false, match }: { embedded?: boole
   return <Shell className={embedded ? "" : "mx-auto max-w-7xl px-5 pb-28 pt-12"}>
     {!embedded && <><div className="flex flex-wrap items-start justify-between gap-4">
       <div><p className="kicker text-brand">Instagram BeeRecos</p><h1 className="mt-2 font-display text-4xl">Calendrier éditorial</h1><p className="mt-3 max-w-2xl text-sm text-mut">Prépare, organise et valide tes contenus. Les dates prévues ne déclenchent aucune publication automatique.</p></div>
-      <Link className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white" to="/post">Ajouter un réel terminé</Link>
+      <Link className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white" to="/">Ajouter un réel terminé</Link>
     </div>
     </>}
     {demo && <p role="status" className="card mt-4 p-3 text-sm">Démonstration — les modifications nécessitent une connexion au service.</p>}
@@ -163,7 +163,7 @@ export default function Calendar({ embedded = false, match }: { embedded?: boole
       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-7">{range.days.map((day) => {
         const key = localDayKey(day);
         return <section key={key} aria-label={day.toLocaleDateString("fr-FR", { dateStyle: "full" })} className={`card min-h-32 p-2 ${key === localDayKey(new Date()) ? "border-brand/60" : ""}`}>
-          <div className="mb-2 flex items-center justify-between gap-1"><h2 className="text-xs font-semibold">{day.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</h2><Link aria-label={`Créer un post le ${day.toLocaleDateString("fr-FR")}`} className="rounded px-2 py-1 text-brand hover:bg-brand/10" to="/post">+</Link></div>
+          <div className="mb-2 flex items-center justify-between gap-1"><h2 className="text-xs font-semibold">{day.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</h2><Link aria-label={`Créer un post le ${day.toLocaleDateString("fr-FR")}`} className="rounded px-2 py-1 text-brand hover:bg-brand/10" to="/">+</Link></div>
           <div className="space-y-2">{(byDay.get(key) ?? []).map(contentCard)}</div>
         </section>;
       })}</div>

@@ -33,7 +33,7 @@ export default function Scripts() {
   return (
     <div className="social-studio -mx-4 space-y-4 px-4 py-2 sm:-mx-8 sm:px-8">
       <header>
-        <p className="kicker">Instagram BeeRecos</p>
+        <Link href="/" className="inline-flex min-h-10 items-center rounded-lg px-2 text-sm text-mut hover:bg-black/[0.05]">← Post</Link>
         <h1 className="font-display text-3xl font-semibold">Scripts</h1>
         <p className="mt-1 text-sm text-mut">Écris ou reprends un script, puis transforme-le en réel filmé ou en réel IA.</p>
       </header>
