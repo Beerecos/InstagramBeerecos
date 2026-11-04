@@ -31,18 +31,18 @@ export default function InstagramSettings() {
         <div className="mt-3 space-y-4 text-sm">
           <p className="flex items-center gap-2">
             {view.connected ? <CheckCircle2 aria-hidden size={18} className="text-acid-dim" /> : <CircleAlert aria-hidden size={18} className="text-amber-700" />}
-            {view.connected ? <>Connecté à <strong>@{view.username}</strong>{view.expiresAt ? ` · jeton valable jusqu'au ${new Date(view.expiresAt).toLocaleDateString("fr-FR")} (renouvelé automatiquement)` : " · date d'expiration inconnue : renouvelle-le dans un jour"}</> : "Pas encore connecté."}
+            {view.connected ? <>Connecté à <strong>@{view.username}</strong>{view.renewal === "meta" ? " · renouvellement depuis Meta selon la durée choisie lors de la génération" : view.expiresAt ? ` · jeton valable jusqu'au ${new Date(view.expiresAt).toLocaleDateString("fr-FR")} (renouvelé automatiquement)` : " · date d'expiration inconnue : renouvelle-le dans un jour"}</> : "Pas encore connecté."}
           </p>
           {view.needsRefresh ? <p className="text-amber-800">Le jeton expire bientôt.</p> : null}
           {view.connected ? (
             <div className="flex flex-wrap gap-2">
-              <button type="button" className="btn-ghost min-h-11" disabled={Boolean(busy)} onClick={run("refresh", instagram.refresh)}>{busy === "refresh" ? "Renouvellement…" : "Renouveler le jeton"}</button>
+              {view.renewal !== "meta" ? <button type="button" className="btn-ghost min-h-11" disabled={Boolean(busy)} onClick={run("refresh", instagram.refresh)}>{busy === "refresh" ? "Renouvellement…" : "Renouveler le jeton"}</button> : null}
               <button type="button" className="btn-ghost min-h-11 text-red-700" disabled={Boolean(busy)} onClick={run("off", instagram.disconnect)}>Déconnecter</button>
             </div>
           ) : null}
           <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); void run("connect", () => instagram.connect(token))(); }}>
             <label className="block font-medium">{view.connected ? "Remplacer le jeton" : "Jeton d'accès Instagram"}
-              <input type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder="IGAA…" className="mt-1 block min-h-11 w-full rounded-lg border border-line bg-white px-3 font-mono font-normal" />
+              <input type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder="Jeton copié depuis Meta" className="mt-1 block min-h-11 w-full rounded-lg border border-line bg-white px-3 font-mono font-normal" />
             </label>
             <button type="submit" className="btn-red min-h-11" disabled={!token.trim() || Boolean(busy)}>{busy === "connect" ? "Vérification auprès d'Instagram…" : "Connecter"}</button>
             <p className="text-xs text-mut">Le jeton est vérifié auprès d&apos;Instagram puis gardé sur le serveur ; il ne s&apos;affiche plus jamais.</p>
@@ -69,10 +69,10 @@ export default function InstagramSettings() {
             <ol className="mt-3 list-decimal space-y-2 pl-5">
               <li>Dans l&apos;app Instagram : <strong>Paramètres → Type de compte</strong> → compte <strong>professionnel</strong>. Puis <strong>Messages → Outils connectés</strong> → autoriser l&apos;accès aux messages.</li>
               <li>Sur <a className="text-brand underline" href="https://developers.facebook.com/apps" target="_blank" rel="noreferrer">developers.facebook.com/apps</a> : <strong>Créer une app</strong>, type <strong>Business</strong>.</li>
-              <li>Ajouter le produit <strong>Instagram</strong> → <strong>API setup with Instagram login</strong>.</li>
-              <li>Cocher les autorisations : <code>instagram_business_basic</code>, <code>instagram_business_content_publish</code>, <code>instagram_business_manage_comments</code>, <code>instagram_business_manage_messages</code>.</li>
+              <li>Ajouter le produit <strong>Instagram</strong> → <strong>API setup with Unified login</strong>.</li>
+              <li>Cocher les autorisations : <code>instagram_basic</code>, <code>instagram_content_publish</code>, <code>instagram_manage_comments</code>, <code>instagram_manage_messages</code>.</li>
               <li><strong>Generate access tokens</strong> → ajouter le compte BeeRecos → copier le jeton → le coller ci-dessus → <strong>Connecter</strong>.</li>
-              <li>Pour les DM : dans <strong>Webhooks</strong>, coller l&apos;adresse ci-dessus, choisir une phrase de vérification, s&apos;abonner à <strong>comments</strong>. Envoie-moi la phrase et la clé secrète de l&apos;app (App secret) : je les pose sur Vercel avec ton accord.</li>
+              <li>Pour les DM : dans <strong>Webhooks</strong>, coller l&apos;adresse ci-dessus, choisir une phrase de vérification, s&apos;abonner à <strong>comments</strong>. Renseigne toi-même la phrase dans IG_VERIFY_TOKEN et la clé secrète Meta dans IG_APP_SECRET sur Vercel, sans les transmettre dans une conversation.</li>
               <li>Pour répondre à tout le monde (pas seulement aux comptes de test) : passer l&apos;app <strong>en direct</strong> ; Meta peut demander une vérification de l&apos;app.</li>
             </ol>
           </details>

@@ -12,11 +12,16 @@ export class GraphError extends Error {
   }
 }
 
-const HOST = "graph.instagram.com";
+export function unifiedLogin(): boolean {
+  const mode = process.env.IG_LOGIN_MODE || "instagram";
+  if (!["instagram", "unified"].includes(mode)) throw new GraphError("Configuration Instagram invalide : IG_LOGIN_MODE.", 503);
+  return mode === "unified";
+}
+export const graphHost = () => unifiedLogin() ? "graph.facebook.com" : "graph.instagram.com";
 const VERSION = process.env.IG_API_VERSION || "v26.0";
 
 async function call<T>(cfg: GraphConfig, method: "GET" | "POST", path: string, params: Record<string, string> = {}, body?: unknown): Promise<T> {
-  const url = new URL(`https://${cfg.host ?? HOST}/${cfg.version ?? VERSION}/${path.replace(/^\//, "")}`);
+  const url = new URL(`https://${cfg.host ?? graphHost()}/${cfg.version ?? VERSION}/${path.replace(/^\//, "")}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   const res = await (cfg.fetch ?? fetch)(url, {
     method,
@@ -30,6 +35,13 @@ async function call<T>(cfg: GraphConfig, method: "GET" | "POST", path: string, p
 }
 
 export async function me(cfg: Omit<GraphConfig, "userId">): Promise<{ userId: string; username: string }> {
+  if (unifiedLogin()) {
+    const id = process.env.IG_USER_ID;
+    if (!id || !/^\d+$/.test(id)) throw new GraphError("Renseigner IG_USER_ID avec l’identifiant du compte Instagram dans la configuration serveur.", 503);
+    const account = await call<{ id?: string; username?: string }>({ ...cfg, userId: id }, "GET", id, { fields: "id,username" });
+    if (String(account.id) !== id || !account.username) throw new GraphError("Compte Instagram inaccessible avec ce jeton.", 400);
+    return { userId: id, username: account.username };
+  }
   const d = await call<{ user_id?: string | number; id?: string; username?: string }>({ ...cfg, userId: "me" }, "GET", "me", { fields: "user_id,username" });
   const userId = String(d.user_id ?? d.id ?? "");
   if (!userId || !d.username) throw new GraphError("Instagram : compte illisible avec ce jeton.", 400);
@@ -65,7 +77,8 @@ export async function publishContainer(cfg: GraphConfig, containerId: string): P
 
 /** Jeton longue durée : renouvelé pour 60 jours (refusé par Instagram s'il a moins de 24 h). */
 export async function refreshToken(cfg: Pick<GraphConfig, "token" | "host" | "fetch">): Promise<{ token: string; expiresAt: string }> {
-  const url = new URL(`https://${cfg.host ?? HOST}/refresh_access_token`);
+  if (unifiedLogin() || cfg.host === "graph.facebook.com") throw new GraphError("Ce jeton Unified Login doit être remplacé depuis Meta avant son expiration.", 400);
+  const url = new URL(`https://${cfg.host ?? graphHost()}/refresh_access_token`);
   url.searchParams.set("grant_type", "ig_refresh_token");
   url.searchParams.set("access_token", cfg.token);
   const res = await (cfg.fetch ?? fetch)(url, { cache: "no-store" });

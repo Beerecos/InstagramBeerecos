@@ -6,6 +6,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export type ConnectionView = {
   connected: boolean; username: string | null; expiresAt: string | null; needsRefresh: boolean;
+  renewal?: "automatic" | "meta";
   webhook?: { appSecret: boolean; verifyToken: boolean; callbackUrl: string };
 };
 
