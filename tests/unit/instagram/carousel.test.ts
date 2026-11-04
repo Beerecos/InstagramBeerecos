@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INVITATION, fitSize, normalizePlan, parsePlan, planBrief, SlideSchema } from "@/domain/instagram/carousel";
+import { INVITATION, removePhotoFromPlan, fitSize, normalizePlan, parsePlan, planBrief, SlideSchema } from "@/domain/instagram/carousel";
 import { INSPI_CTA } from "@/domain/instagram/story-caption";
 
 const slide = (patch: Record<string, unknown>) => SlideSchema.parse({ layout: "affiche", title: "Du fluo lisible", ...patch });
@@ -52,4 +52,13 @@ describe("visuels de carrousel", () => {
     expect(fitSize("x".repeat(80), 150, 20, 80)).toBe(80);
     expect(fitSize("x".repeat(30), 150, 20, 80)).toBeLessThan(150);
   });
+});
+
+it("retirer une source préserve les autres photos, les deux emplacements et les réglages", () => {
+  const original = [slide({ photo: 1, photo2: 2 }), slide({ photo: 3, photo2: 1, photoZoom: 1.5 }), { ...INVITATION, photo: 3 }];
+  const next = removePhotoFromPlan(original, 2);
+  expect(next.map((s) => [s.photo, s.photo2])).toEqual([[1, null], [2, 1], [2, null]]);
+  expect(next[1].photoZoom).toBe(1.5);
+  expect(original[1].photo).toBe(3);
+  expect(removePhotoFromPlan(next, 1).map((s) => [s.photo, s.photo2])).toEqual([[null, null], [1, null], [1, null]]);
 });

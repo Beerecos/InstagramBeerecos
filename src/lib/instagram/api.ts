@@ -6,6 +6,8 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export type ConnectionView = {
   connected: boolean; username: string | null; expiresAt: string | null; needsRefresh: boolean;
+  renewal?: "automatic" | "meta";
+  oauthReady?: boolean;
   webhook?: { appSecret: boolean; verifyToken: boolean; callbackUrl: string };
 };
 
@@ -46,7 +48,7 @@ export const instagram = {
 };
 
 /** Photo → JPEG au bon format Instagram, puis envoi direct dans le bucket privé. Renvoie son chemin. */
-export async function uploadPhoto(file: File): Promise<{ path: string; cropped: boolean }> {
+export async function uploadPhoto(file: File): Promise<{ path: string; cropped: boolean; preview: Blob }> {
   if (!file.type.startsWith("image/")) throw new Error(`« ${file.name} » n'est pas une image.`);
   const bitmap = await createImageBitmap(file);
   const c = photoCrop(bitmap.width, bitmap.height);
@@ -55,10 +57,11 @@ export async function uploadPhoto(file: File): Promise<{ path: string; cropped: 
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Préparation de la photo impossible dans ce navigateur.");
   ctx.drawImage(bitmap, c.sx, c.sy, c.sw, c.sh, 0, 0, c.w, c.h);
+  bitmap.close();
   const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.9));
   if (!blob) throw new Error("Conversion de la photo impossible.");
   if (blob.size > 8 * 1024 * 1024) throw new Error(`« ${file.name} » dépasse 8 Mo une fois préparée.`);
-  return { path: await uploadJpeg(blob), cropped: c.cropped };
+  return { path: await uploadJpeg(blob), cropped: c.cropped, preview: blob };
 }
 
 /** Envoi direct d'un JPEG déjà au bon format (ex. slide générée en 1080 × 1350) dans le bucket privé. */

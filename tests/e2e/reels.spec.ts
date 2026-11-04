@@ -94,6 +94,8 @@ test("autres formats : les carrousels restent accessibles", async ({ page }) => 
 test("vidéo IA : un seul éditeur, le modèle Recommandation devient des scènes modifiables", async ({ page }) => {
   await page.goto("/reels/nouveau/ia");
   await expect(page.getByRole("radiogroup", { name: "Style de la vidéo IA" })).toHaveCount(0);
+  // Charger le modèle remplace le travail affiché : confirmation demandée.
+  page.once("dialog", (d) => void d.accept());
   await page.getByRole("button", { name: "Modèle « Recommandation »" }).click();
   await expect(page.locator("textarea").filter({ hasText: "Tu recommandes un pro." }).first()).toBeVisible();
   await expect(page.locator("textarea").filter({ hasText: "Commente CLUB pour recevoir le lien de visite." }).first()).toBeVisible();

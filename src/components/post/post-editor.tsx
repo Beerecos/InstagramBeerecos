@@ -6,7 +6,7 @@
  */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight, ImagePlus, MessageCircle, Sparkles, Trash2, X } from "lucide-react";
 import { CAPTION_MAX, STATUS_LABELS, formatBlockers, formatOf, mentionsKeyword, normalizeKeyword, photoLimit, type PostFormat, type Publication } from "@/domain/instagram/publication";
 import { generateEditorialText } from "@/lib/social/editorial-api";
@@ -31,7 +31,7 @@ function Preview({ photos, caption, username, keyword }: { photos: Photo[]; capt
       <div className="relative aspect-[4/5] bg-black/[0.06]">
         {photos[at]?.url ? (
           // eslint-disable-next-line @next/next/no-img-element -- photo locale ou lien signé court
-          <img src={photos[at].url} alt={`Aperçu de la photo ${at + 1}`} className="h-full w-full object-cover" />
+          <img src={photos[at].url} alt={`Aperçu de la photo ${at + 1}`} className="h-full w-full object-contain" />
         ) : <span className="absolute inset-0 grid place-items-center text-sm text-mut">{photos.length ? "Aperçu indisponible" : "Ajoute une photo"}</span>}
         {photos.length > 1 ? <>
           {at > 0 ? <button type="button" aria-label="Photo précédente" onClick={() => setI(at - 1)} className="absolute left-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-white/90"><ChevronLeft aria-hidden size={16} /></button> : null}
@@ -42,7 +42,7 @@ function Preview({ photos, caption, username, keyword }: { photos: Photo[]; capt
       {photos.length > 1 ? <div className="flex justify-center gap-1 pt-2" aria-hidden>{photos.map((p, k) => <span key={p.path} className={`size-1.5 rounded-full ${k === at ? "bg-brand" : "bg-black/20"}`} />)}</div> : null}
       <figcaption className="space-y-1 px-3 pb-4 pt-2 text-sm">
         <p className="whitespace-pre-wrap break-words"><span className="font-semibold">{username}</span> {caption || <span className="text-mut">Ta légende apparaîtra ici.</span>}</p>
-        {keyword ? <p className="flex items-center gap-1 text-xs text-mut"><MessageCircle aria-hidden size={12} /> Qui commente « {keyword} » reçoit ton DM automatiquement.</p> : null}
+        {keyword ? <p className="flex items-center gap-1 text-xs text-mut"><MessageCircle aria-hidden size={12} /> DM prévu pour « {keyword} » après publication et activation de la connexion.</p> : null}
       </figcaption>
     </figure>
   );
@@ -50,6 +50,9 @@ function Preview({ photos, caption, username, keyword }: { photos: Photo[]; capt
 
 export default function PostEditor({ id, initialFormat = "simple" }: { id: string | null; initialFormat?: PostFormat }) {
   const router = useRouter();
+  const previewUrls = useRef<string[]>([]);
+  const uploadInFlight = useRef(false);
+  const [uploadProgress, setUploadProgress] = useState("");
   const [loading, setLoading] = useState(Boolean(id));
   const [current, setCurrent] = useState<Publication | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -70,6 +73,8 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
   const story = format === "carrousel" && captionMode === "histoire";
   const [promptCopied, setPromptCopied] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [carouselBusy, setCarouselBusy] = useState(false);
+  const working = Boolean(busy) || carouselBusy;
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,27 +93,43 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
     return () => { alive = false; };
   }, [id]);
 
+  useEffect(() => () => { previewUrls.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
+  useEffect(() => {
+    if (!dirty && !working) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty, working]);
+
   const locked = current?.status === "publishing" || current?.status === "published";
   const kw = normalizeKeyword(keyword);
   const edit = <T,>(set: (v: T) => void) => (v: T) => { set(v); setDirty(true); setNotice(null); };
 
   const add = async (files: FileList | null) => {
-    if (!files?.length) return;
+    if (!files?.length || uploadInFlight.current) return;
     const limit = photoLimit(format);
     const room = limit - photos.length;
     if (room <= 0) { setError(format === "simple" ? "Un post simple n'a qu'une photo : passe en carrousel pour en ajouter." : `${limit} photos au plus.`); return; }
+    uploadInFlight.current = true;
     setBusy("photos"); setError(null); setNotice(null);
     try {
       let cropped = false;
-      for (const file of Array.from(files).slice(0, room)) {
+      const selected = Array.from(files).slice(0, room);
+      let done = 0;
+      for (const file of selected) {
+        setUploadProgress(`Photo ${done + 1} sur ${selected.length}…`);
         const r = await uploadPhoto(file);
         cropped ||= r.cropped;
-        setPhotos((p) => [...p, { path: r.path, url: URL.createObjectURL(file) }]);
+        const url = URL.createObjectURL(r.preview);
+        previewUrls.current.push(url);
+        setPhotos((p) => [...p, { path: r.path, url }]);
+        setDirty(true);
+        done++;
       }
       setDirty(true);
       if (files.length > room) setNotice(`Seules ${room} photo(s) ajoutée(s) : ${limit} au plus pour ce format.`);
       else if (cropped) setNotice("Photo recadrée au centre pour le format Instagram (entre 4:5 et 1,91:1).");
-    } catch (e) { setError(e instanceof Error ? e.message : "Envoi impossible."); } finally { setBusy(null); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Envoi impossible."); } finally { uploadInFlight.current = false; setUploadProgress(""); setBusy(null); }
   };
 
   const move = (from: number, to: number) => {
@@ -150,6 +171,7 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
     try { await save(); setNotice("Brouillon enregistré."); } catch (e) { setError(e instanceof Error ? e.message : "Enregistrement impossible."); } finally { setBusy(null); }
   };
   const remove = async () => {
+    if ((current || dirty) && !window.confirm(current ? "Supprimer ce brouillon ? Cette action est définitive." : "Abandonner ce post et ses modifications ?")) return;
     if (current) {
       setBusy("delete");
       try { await instagram.remove(current.id); } catch (e) { setError(e instanceof Error ? e.message : "Suppression impossible."); setBusy(null); return; }
@@ -162,14 +184,14 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
   return (
     <div className="social-studio -mx-4 min-h-full px-4 py-2 sm:-mx-8 sm:px-8">
       <header className="flex flex-wrap items-center gap-3">
-        <Link href="/" className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-sm text-mut hover:bg-black/[0.05]"><ArrowLeft aria-hidden size={16} /> Post</Link>
+        <Link href="/" onClick={(event) => { if ((dirty || working) && !window.confirm("Quitter sans enregistrer les modifications du post ?")) event.preventDefault(); }} className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-sm text-mut hover:bg-black/[0.05]"><ArrowLeft aria-hidden size={16} /> Post</Link>
         <h1 className="font-display text-2xl font-semibold">{current ? "Éditeur de post" : format === "carrousel" ? "Nouveau carrousel" : "Nouveau post"}</h1>
         {current ? <span className="pill bg-black/[0.05] text-mut">{STATUS_LABELS[current.status]}</span> : null}
       </header>
 
       {error && !current && id ? <p role="alert" className="mt-4 text-sm text-red-700">{error}</p> : (
         <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <fieldset disabled={locked} className="min-w-0 space-y-5 text-sm">
+          <fieldset disabled={locked || working} className="min-w-0 space-y-5 text-sm">
             <div role="radiogroup" aria-label="Format" className="inline-flex rounded-xl bg-black/[0.05] p-1">
               {(["simple", "carrousel"] as const).map((f) => {
                 const blocked = f === "simple" && photos.length > 1;
@@ -182,7 +204,7 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
                 );
               })}
             </div>
-            {format === "carrousel" && !locked ? <CarouselBuilder subject={brief} facts={facts} disabled={Boolean(busy)} onDone={(slides) => { setPhotos(slides); setDirty(true); }} /> : null}
+            {format === "carrousel" && !locked ? <CarouselBuilder onBusyChange={setCarouselBusy} subject={brief} facts={facts} onSubjectChange={setBrief} onFactsChange={setFacts} disabled={working} onDone={(slides) => { setPhotos(slides); setDirty(true); }} existingPhotos={photos.length} /> : null}
             <section aria-labelledby="photos-titre">
               <h2 id="photos-titre" className="font-medium">{format === "simple" ? "Photo" : "Photos"} <span className="font-normal text-mut">{format === "simple" ? "(une seule)" : `(${photos.length}/${photoLimit("carrousel")} · 2 au moins)`}</span></h2>
               <ul className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-5">
@@ -201,7 +223,7 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
                 ))}
                 {photos.length < photoLimit(format) && !locked ? (
                   <li><label className="grid aspect-[4/5] cursor-pointer place-items-center rounded-lg border-2 border-dashed border-line text-mut hover:border-brand hover:text-brand">
-                    <span className="flex flex-col items-center gap-1 text-xs"><ImagePlus aria-hidden size={20} />{busy === "photos" ? "Envoi…" : "Ajouter"}</span>
+                    <span className="flex flex-col items-center gap-1 text-xs"><ImagePlus aria-hidden size={20} />{busy === "photos" ? uploadProgress : "Ajouter"}</span>
                     <input type="file" accept="image/*" multiple className="sr-only" aria-label="Ajouter des photos" onChange={(e) => { void add(e.target.files); e.target.value = ""; }} />
                   </label></li>
                 ) : null}
@@ -235,7 +257,7 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
                   <span>(InspiBEEz&apos;ness, version du {new Date(INSPIBEEZNESS_PROMPT_VERSION).toLocaleDateString("fr-FR")})</span>
                 </p>
               ) : null}
-              <button type="button" className="btn-red min-h-11" disabled={!brief.trim() || (story && !facts.trim()) || Boolean(busy)} onClick={propose}><Sparkles aria-hidden size={16} /> {busy === "ia" ? "Rédaction…" : caption.trim() ? "Proposer une nouvelle version" : "Proposer une légende"}</button>
+              <button type="button" className="btn-red min-h-11" disabled={!brief.trim() || (story && !facts.trim()) || working} onClick={propose}><Sparkles aria-hidden size={16} /> {busy === "ia" ? "Rédaction…" : caption.trim() ? "Proposer une nouvelle version" : "Proposer une légende"}</button>
               <p className="text-xs text-mut">L&apos;IA suit la charte BeeRecos et n&apos;invente ni chiffre ni témoignage. Relis toujours sa proposition.</p>
               {suggestion ? (
                 <div className="space-y-2 rounded-lg bg-white p-3">
@@ -280,14 +302,15 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
       )}
 
       <footer className="sticky bottom-0 z-10 -mx-4 mt-6 space-y-2 border-t border-line bg-white/95 px-4 py-3 backdrop-blur sm:-mx-8 sm:px-8">
+        {uploadProgress ? <p role="status" className="text-sm text-mut">{uploadProgress}</p> : null}
         {notice ? <p role="status" className="text-sm text-mut">{notice}</p> : null}
         {error && (current || !id) ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          {!locked ? <button type="button" className="btn-ghost min-h-11 text-red-700" disabled={Boolean(busy)} onClick={remove}><Trash2 aria-hidden size={16} /> {current ? "Supprimer" : "Annuler"}</button> : <span />}
+          {!locked ? <button type="button" className="btn-ghost min-h-11 text-red-700" disabled={working} onClick={remove}><Trash2 aria-hidden size={16} /> {current ? "Supprimer" : "Annuler"}</button> : <span />}
           <div className="flex flex-wrap items-center gap-2">
             {!locked ? <span className="text-xs text-mut">{dirty ? "Modifications non enregistrées" : current ? "Enregistré" : ""}</span> : null}
-            {!locked ? <button type="button" className="btn-ghost min-h-11" disabled={Boolean(busy)} onClick={saveDraft}>{busy === "save" ? "Enregistrement…" : "Enregistrer"}</button> : null}
-            <PublishButton prepare={save} current={current} connected={connected} onChange={setCurrent} disabled={Boolean(busy)} extraBlockers={formatBlockers(format, photos.length)} />
+            {!locked ? <button type="button" className="btn-ghost min-h-11" disabled={working} onClick={saveDraft}>{busy === "save" ? "Enregistrement…" : "Enregistrer"}</button> : null}
+            <PublishButton prepare={save} current={current} connected={connected} onChange={setCurrent} disabled={working} extraBlockers={formatBlockers(format, photos.length)} />
           </div>
         </div>
       </footer>

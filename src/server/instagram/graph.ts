@@ -14,6 +14,8 @@ export class GraphError extends Error {
 }
 
 const HOST = "graph.facebook.com";
+/** Hôte unique du parcours unifié (aussi utilisé par le webhook des DM). */
+export const graphHost = () => HOST;
 const VERSION = process.env.IG_API_VERSION || "v26.0";
 
 async function call<T>(cfg: GraphConfig, method: "GET" | "POST", path: string, params: Record<string, string> = {}, body?: unknown): Promise<T> {

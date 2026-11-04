@@ -4,10 +4,10 @@
  * plan proposé par l'IA (modèle + textes + photo), réglage slide par slide, puis création des images 1080 × 1350
  * (rendues par la mise en page : charte, logo officiel et textes exacts, jamais générés).
  */
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { toJpeg } from "html-to-image";
 import { ImagePlus, Move, RotateCcw, Sparkles, Wand2, X } from "lucide-react";
-import { LAYOUTS, normalizePlan, parsePlan, planBrief, SLIDE_H, SLIDE_W, type Layout, type Slide } from "@/domain/instagram/carousel";
+import { LAYOUTS, removePhotoFromPlan, normalizePlan, parsePlan, planBrief, SLIDE_H, SLIDE_W, type Layout, type Slide } from "@/domain/instagram/carousel";
 import { generateEditorialText } from "@/lib/social/editorial-api";
 import { instagram, uploadJpeg } from "@/lib/instagram/api";
 import { IMAGE_MODES } from "@/domain/instagram/visual-prompt";
@@ -15,7 +15,7 @@ import CarouselSlide from "./carousel-slide";
 
 /** Photo source : gardée dans le navigateur (seules les slides finales sont envoyées), PNG transparent intact. */
 type SourcePhoto = { id: string; url: string; label: string; ai?: boolean };
-type Props = { subject: string; facts: string; disabled?: boolean; onDone: (slides: { path: string; url: string }[]) => void };
+type Props = { subject: string; facts: string; onSubjectChange: (value: string) => void; onFactsChange: (value: string) => void; existingPhotos?: number; disabled?: boolean; onBusyChange?: (busy: boolean) => void; onDone: (slides: { path: string; url: string }[]) => void };
 
 const PREVIEW = 0.3;
 /** Grand aperçu de la slide choisie : on y fait glisser la photo pour la placer. */
@@ -32,9 +32,7 @@ const FIELDS: { key: keyof Slide; label: string; layouts?: Layout[] }[] = [
   { key: "source", label: "Source (pied de slide)" },
 ];
 
-export default function CarouselBuilder({ subject: initialSubject, facts: initialFacts, disabled, onDone }: Props) {
-  const [subject, setSubject] = useState(initialSubject);
-  const [facts, setFacts] = useState(initialFacts);
+export default function CarouselBuilder({ subject, facts, onSubjectChange: setSubject, onFactsChange: setFacts, existingPhotos = 0, disabled, onBusyChange, onDone }: Props) {
   const [photos, setPhotosState] = useState<SourcePhoto[]>([]);
   // Copie synchrone : les numéros de photo restent justes quand plusieurs images arrivent à la suite.
   const photosRef = useRef<SourcePhoto[]>([]);
@@ -43,7 +41,16 @@ export default function CarouselBuilder({ subject: initialSubject, facts: initia
   const pushPhotos = (items: SourcePhoto[]) => { const first = photosRef.current.length + 1; setPhotos((all) => [...all, ...items]); return first; };
   const [slides, setSlides] = useState<Slide[]>([]);
   const [selected, setSelected] = useState(0);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusyState] = useState<string | null>(null);
+  const setBusy = (value: string | null) => { setBusyState(value); onBusyChange?.(Boolean(value)); };
+  useEffect(() => () => { photosRef.current.forEach((photo) => URL.revokeObjectURL(photo.url)); }, []);
+  const removePhoto = (index: number) => {
+    const photo = photosRef.current[index];
+    if (!photo) return;
+    setSlides((all) => removePhotoFromPlan(all, index + 1));
+    setPhotos((all) => all.filter((item) => item.id !== photo.id));
+    URL.revokeObjectURL(photo.url);
+  };
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const nodes = useRef<(HTMLDivElement | null)[]>([]);
@@ -100,20 +107,22 @@ export default function CarouselBuilder({ subject: initialSubject, facts: initia
   };
   const startDrag = (e: PointerEvent<HTMLDivElement>) => {
     const cur = slides[selected];
-    if (!cur?.photo) return;
+    if (disabled || busy || !cur?.photo) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     drag.current = { x: e.clientX, y: e.clientY, px: cur.photoX, py: cur.photoY };
   };
   const moveDrag = (e: PointerEvent<HTMLDivElement>) => {
     const d = drag.current;
-    if (!d) return;
+    if (disabled || busy || !d) return;
     patch(selected, { photoX: Math.round(d.px + (e.clientX - d.x) / BIG), photoY: Math.round(d.py + (e.clientY - d.y) / BIG) });
   };
   const render = async () => {
+    if (existingPhotos && !window.confirm(`Remplacer les ${existingPhotos} photo(s) du post par ces slides ?`)) return;
     setBusy("images"); setError(null);
     try {
       const out: { path: string; url: string }[] = [];
       for (let i = 0; i < slides.length; i++) {
+        setNotice(`Création de la slide ${i + 1} sur ${slides.length}…`);
         const node = nodes.current[i];
         if (!node) throw new Error(`Slide ${i + 1} introuvable.`);
         const dataUrl = await toJpeg(node, { width: SLIDE_W, height: SLIDE_H, pixelRatio: 1, quality: 0.92, cacheBust: true });
@@ -128,7 +137,7 @@ export default function CarouselBuilder({ subject: initialSubject, facts: initia
   const field = "mt-1 block w-full rounded-lg border border-line bg-white px-3 font-normal";
   const s = slides[selected];
   return (
-    <section aria-labelledby="visuels-titre" className="min-w-0 space-y-3 rounded-xl border border-brand/20 bg-brand-soft/40 p-3 text-sm">
+    <fieldset disabled={disabled || Boolean(busy)} aria-labelledby="visuels-titre" className="min-w-0 space-y-3 rounded-xl border border-brand/20 bg-brand-soft/40 p-3 text-sm">
       <h2 id="visuels-titre" className="flex items-center gap-2 font-medium"><Sparkles aria-hidden size={16} className="text-brand" /> Créer les visuels avec l&apos;IA</h2>
       <p className="text-xs text-mut">L&apos;IA propose le plan des slides à partir de tes faits ; la charte BeeRecos, le logo officiel et la mise en page sont appliqués automatiquement. Aucune photo n&apos;est inventée : sans photo, la slide devient typographique.</p>
       <label className="block">Sujet<input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="L'histoire du STABILO BOSS" className={`${field} min-h-11`} /></label>
@@ -144,7 +153,7 @@ export default function CarouselBuilder({ subject: initialSubject, facts: initia
               <img src={p.url} alt="" className="size-12 rounded object-cover" />
               <span className="w-16 shrink-0 text-xs text-mut">Photo {i + 1}</span>
               <input aria-label={`Description de la photo ${i + 1}`} value={p.label} onChange={(e) => setPhotos((all) => all.map((x, k) => (k === i ? { ...x, label: e.target.value } : x)))} className={`${field} min-h-10 flex-1`} placeholder="Ex. surligneur jaune détouré (photo produit officielle)" />
-              <button type="button" aria-label={`Retirer la photo ${i + 1}`} onClick={() => setPhotos((all) => all.filter((x) => x.id !== p.id))} className="grid size-9 place-items-center rounded-lg hover:bg-black/[0.05]"><X aria-hidden size={14} /></button>
+              <button type="button" aria-label={`Retirer la photo ${i + 1}`} onClick={() => removePhoto(i)} className="grid size-9 place-items-center rounded-lg hover:bg-black/[0.05]"><X aria-hidden size={14} /></button>
             </li>
           ))}
         </ul>
@@ -285,6 +294,6 @@ export default function CarouselBuilder({ subject: initialSubject, facts: initia
       </> : null}
       {notice ? <p role="status" className="text-acid-dim">{notice}</p> : null}
       {error ? <p role="alert" className="text-red-700">{error}</p> : null}
-    </section>
+    </fieldset>
   );
 }

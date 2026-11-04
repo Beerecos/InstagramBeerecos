@@ -132,3 +132,10 @@ export function fitSize(text: string, base: number, comfortable: number, min: nu
 }
 
 export const INVITATION_TEXT = INSPI_CTA;
+
+/** Retire une source sans changer l'identité des autres photos utilisées par les slides. */
+export function removePhotoFromPlan(slides: Slide[], removedNumber: number): Slide[] {
+  const remap = (number: number | null) =>
+    number === null || number === removedNumber ? null : number > removedNumber ? number - 1 : number;
+  return slides.map((slide) => ({ ...slide, photo: remap(slide.photo), photo2: remap(slide.photo2) }));
+}

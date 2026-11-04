@@ -5,6 +5,7 @@
 import { extractComments, handleComment, verifySignature } from "../../../../../automation/lib/cta.mjs";
 import { replyToComment, sendPrivateReply } from "../../../../../automation/lib/instagram.mjs";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { graphHost } from "@/server/instagram/graph";
 import { supabaseStore } from "@/server/instagram/store";
 
 const unavailable = () => new Response("Instagram integration not configured", { status: 503 });
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
 
   const conn = await supabaseStore().getConnection().catch(() => null);
   if (!conn) return new Response("EVENT_RECEIVED", { status: 200 });
-  const cfg = { host: "graph.instagram.com", version: process.env.IG_API_VERSION || "v26.0", userId: conn.igUserId, token: conn.accessToken };
+  const cfg = { host: graphHost(), version: process.env.IG_API_VERSION || "v26.0", userId: conn.igUserId, token: conn.accessToken };
   const sb = createSupabaseAdminClient();
 
   const deps = {

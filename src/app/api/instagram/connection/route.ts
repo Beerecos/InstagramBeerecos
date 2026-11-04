@@ -1,3 +1,4 @@
+import { oauthReady } from "@/server/instagram/oauth";
 import { body, guarded } from "@/server/instagram/http";
 import { connect, connectionStatus, refresh, UserError } from "@/server/instagram/service";
 
@@ -5,6 +6,7 @@ import { connect, connectionStatus, refresh, UserError } from "@/server/instagra
 export function GET(request: Request) {
   return guarded("integrations:manage", async ({ deps }) => ({
     ...(await connectionStatus(deps)),
+    oauthReady: oauthReady(),
     webhook: {
       appSecret: Boolean(process.env.META_APP_SECRET || process.env.IG_APP_SECRET),
       verifyToken: Boolean(process.env.IG_VERIFY_TOKEN),

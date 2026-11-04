@@ -56,7 +56,7 @@ test("Post : tableau de bord des posts en cours, rangés par étape", async ({ p
   await expect(steps.getByRole("button", { name: /2\s*En préparation/ })).toBeVisible();
   await expect(steps.getByRole("button", { name: /2\s*Prêts à publier/ })).toBeVisible();
   const reprendre = page.getByRole("region", { name: /À reprendre/ });
-  await expect(reprendre.getByRole("link", { name: /V12 · En montage/ })).toHaveAttribute("href", "/reels/m1?panel=post");
+  await expect(reprendre.getByRole("link", { name: /V12 · En montage/ })).toHaveAttribute("href", "/reels/m1");
   await expect(reprendre.getByRole("link", { name: /Sans photo/ })).toHaveAttribute("href", "/post/p2");
   await expect(page.getByRole("region", { name: /Prêts à publier/ }).getByRole("link", { name: /Visite de club/ })).toHaveAttribute("href", "/post/p1");
   await expect(page.getByRole("region", { name: /Scripts/ }).getByRole("link", { name: "Nouveau script" })).toHaveAttribute("href", "/scripts/nouveau");
@@ -125,7 +125,7 @@ test("Post : Créer ouvre trois grandes cartes, et le post s'écrit dans son éd
   await expect(page.getByLabel(/Mot-clé pour recevoir un DM/)).toHaveValue("CLUB");
   await page.getByRole("button", { name: "Ajouter « Commente CLUB »" }).click();
   await expect(page.getByLabel("Légende", { exact: true })).toHaveValue(/Commente CLUB/);
-  await expect(preview).toContainText("Qui commente « CLUB » reçoit ton DM");
+  await expect(preview).toContainText("DM prévu pour « CLUB » après publication");
   await page.getByLabel("Message envoyé en DM").fill("Voici le lien");
   await page.getByRole("button", { name: "Enregistrer" }).click();
   await expect(page.getByText("Brouillon enregistré.")).toBeVisible();
@@ -195,7 +195,7 @@ test("Post : visuels du carrousel, plan proposé par l'IA aux couleurs BeeRecos,
   const ai = await mockBee(page, { "": () => ({ text: `Voici : ${JSON.stringify(plan)}` }) });
   await mockInstagram(page, { connected: true, items: [] });
   await page.goto("/post/nouveau?format=carrousel");
-  const visuels = page.getByRole("region", { name: "Créer les visuels avec l'IA" });
+  const visuels = page.getByRole("group", { name: "Créer les visuels avec l'IA" });
   await expect(visuels.getByRole("button", { name: "Proposer les slides" })).toBeDisabled();
   await visuels.getByRole("textbox", { name: "Sujet", exact: true }).fill("L'histoire du STABILO BOSS");
   await visuels.getByLabel("Faits et sources").fill("1971 : lancement du STABILO BOSS (STABILO)\nMai 2025 : plus de trois milliards vendus");
@@ -288,4 +288,15 @@ test("Paramètres : connexion Instagram et guide intégré", async ({ page }) =>
   await expect(section.getByText(/Guide : obtenir le jeton/)).toBeVisible();
   await section.getByText(/Guide : obtenir le jeton/).click();
   await expect(section.getByText("pages_show_list")).toBeVisible();
+});
+
+test("Carrousel : le sujet saisi pour les visuels est partagé avec la légende", async ({ page }) => {
+  await mockBee(page);
+  await mockInstagram(page, { connected: false, items: [] });
+  await page.goto('/post/nouveau');
+  await page.getByRole('radio', { name: 'Carrousel', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Sujet', exact: true }).fill('La rencontre des entrepreneurs');
+  await expect(page.getByRole('textbox', { name: 'De quoi parle ce post ?' })).toHaveValue('La rencontre des entrepreneurs');
+  await page.getByRole('textbox', { name: 'De quoi parle ce post ?' }).fill('Un nouveau sujet');
+  await expect(page.getByRole('textbox', { name: 'Sujet', exact: true })).toHaveValue('Un nouveau sujet');
 });
