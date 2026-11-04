@@ -1,3 +1,4 @@
+vi.mock("@/server/instagram/diagnostic", () => ({ diagnoseMetaAccess: vi.fn() }));
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 const mocks = vi.hoisted(() => ({ permission: vi.fn(), exchange: vi.fn(), connect: vi.fn() }));
