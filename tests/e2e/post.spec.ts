@@ -73,10 +73,10 @@ test("Post : Créer ouvre trois grandes cartes, et le post s'écrit dans son éd
   await expect(dialog.getByRole("link", { name: /Réel IA/ })).toHaveAttribute("href", "/reels/nouveau/ia");
   await expect(dialog.getByRole("link", { name: /Réel filmé/ })).toHaveAttribute("href", "/reels/nouveau/video");
   await expect(dialog.getByRole("link", { name: "Écrire un script" })).toHaveAttribute("href", "/scripts/nouveau");
-  await expect(dialog.getByRole("link", { name: /Carrousel/ })).toHaveAttribute("href", "/post/nouveau?format=carrousel");
-  await dialog.getByRole("link", { name: /Post simple/ }).click();
+  await expect(dialog.getByRole("link")).toHaveCount(4); // 3 cartes + « Écrire un script »
+  await dialog.getByRole("link", { name: /^Post/ }).click();
 
-  await expect(page).toHaveURL(/\/post\/nouveau\?format=simple$/);
+  await expect(page).toHaveURL(/\/post\/nouveau$/);
   await expect(page.getByRole("radio", { name: "Post simple" })).toHaveAttribute("aria-checked", "true");
   await expect(page.getByRole("heading", { level: 1, name: "Nouveau post" })).toBeVisible();
   const preview = page.getByRole("figure", { name: "Aperçu Instagram" });

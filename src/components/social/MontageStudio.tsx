@@ -185,7 +185,7 @@ export function Uploader({ onDone, reelId }: { onDone: (id: string) => void; ree
         <input disabled={locked} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} placeholder="Ex. Une recommandation, ça vaut combien ?" className="mt-1 block w-full rounded-xl border border-line bg-white px-3 py-2 text-sm" />
       </label>)}
       <label className="block text-sm font-medium">
-        Prise(s) filmée(s) (vertical 9:16, .mp4 ou .mov, 500 Mo au plus chacune, {MAX_TAKES} au plus, {MAX_STRIP_MS / 60_000} min en tout)
+        Prise(s) filmée(s) (verticale ou paysage — recadrage 9:16 dans le studio —, .mp4 ou .mov, 500 Mo au plus chacune, {MAX_TAKES} au plus, {MAX_STRIP_MS / 60_000} min en tout)
         <input disabled={locked} type="file" multiple accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.m4v,.webm" onChange={(e) => setFiles([...(e.target.files ?? [])].sort((a, b) => a.name.localeCompare(b.name, "fr", { numeric: true })))} className="mt-1 block w-full text-sm" />
       </label>
       {files.length > 1 ? (
