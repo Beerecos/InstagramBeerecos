@@ -94,7 +94,7 @@ function ReelItem({ m, pub, onDelete }: { m: MontageSummary; pub?: Publication; 
   return (
     <li className="relative">
       <DeleteButton title={m.title} disabled={m.renderStatus === "rendering" || published} reason={published ? "Déjà publié" : "Rendu en cours"} onClick={() => onDelete({ kind: "reel", id: m.id, title: m.title })} />
-      <Link href={`/reels/${m.id}?panel=post`} className="card flex gap-3 p-3 pr-12 transition hover:border-brand/40">
+      <Link href={`/reels/${m.id}${m.renderStatus === "done" && m.finalVideoUrl || published ? "?panel=post" : ""}`} className="card flex gap-3 p-3 pr-12 transition hover:border-brand/40">
         <div className="relative aspect-[9/16] w-16 shrink-0 overflow-hidden rounded-lg bg-black/[0.06]">
           {thumb ? <video src={`${thumb}#t=0.5`} preload="metadata" muted playsInline aria-hidden className="h-full w-full object-cover" /> : <Film aria-hidden className="absolute inset-0 m-auto text-mut-2" size={20} />}
         </div>

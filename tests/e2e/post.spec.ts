@@ -56,7 +56,7 @@ test("Post : tableau de bord des posts en cours, rangés par étape", async ({ p
   await expect(steps.getByRole("button", { name: /2\s*En préparation/ })).toBeVisible();
   await expect(steps.getByRole("button", { name: /2\s*Prêts à publier/ })).toBeVisible();
   const reprendre = page.getByRole("region", { name: /À reprendre/ });
-  await expect(reprendre.getByRole("link", { name: /V12 · En montage/ })).toHaveAttribute("href", "/reels/m1?panel=post");
+  await expect(reprendre.getByRole("link", { name: /V12 · En montage/ })).toHaveAttribute("href", "/reels/m1");
   await expect(reprendre.getByRole("link", { name: /Sans photo/ })).toHaveAttribute("href", "/post/p2");
   await expect(page.getByRole("region", { name: /Prêts à publier/ }).getByRole("link", { name: /Visite de club/ })).toHaveAttribute("href", "/post/p1");
   await expect(page.getByRole("region", { name: /Scripts/ }).getByRole("link", { name: "Nouveau script" })).toHaveAttribute("href", "/scripts/nouveau");
@@ -286,4 +286,15 @@ test("Paramètres : connexion Instagram et guide intégré", async ({ page }) =>
   await section.getByRole("button", { name: "Connecter" }).click();
   expect(calls.find((c) => c.method === "POST" && c.path === "/connection")?.body).toEqual({ token: "IGAAT-test-jeton-assez-long-pour-le-format" });
   await expect(section.getByText(/Guide : obtenir le jeton/)).toBeVisible();
+});
+
+test("Carrousel : le sujet saisi pour les visuels est partagé avec la légende", async ({ page }) => {
+  await mockBee(page);
+  await mockInstagram(page, { connected: false, items: [] });
+  await page.goto('/post/nouveau');
+  await page.getByRole('radio', { name: 'Carrousel', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Sujet', exact: true }).fill('La rencontre des entrepreneurs');
+  await expect(page.getByRole('textbox', { name: 'De quoi parle ce post ?' })).toHaveValue('La rencontre des entrepreneurs');
+  await page.getByRole('textbox', { name: 'De quoi parle ce post ?' }).fill('Un nouveau sujet');
+  await expect(page.getByRole('textbox', { name: 'Sujet', exact: true })).toHaveValue('Un nouveau sujet');
 });

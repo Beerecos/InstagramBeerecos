@@ -15,7 +15,7 @@ import CarouselSlide from "./carousel-slide";
 
 /** Photo source : gardée dans le navigateur (seules les slides finales sont envoyées), PNG transparent intact. */
 type SourcePhoto = { id: string; url: string; label: string; ai?: boolean };
-type Props = { subject: string; facts: string; disabled?: boolean; onDone: (slides: { path: string; url: string }[]) => void };
+type Props = { subject: string; facts: string; onSubjectChange: (value: string) => void; onFactsChange: (value: string) => void; existingPhotos?: number; disabled?: boolean; onDone: (slides: { path: string; url: string }[]) => void };
 
 const PREVIEW = 0.3;
 /** Grand aperçu de la slide choisie : on y fait glisser la photo pour la placer. */
@@ -32,9 +32,7 @@ const FIELDS: { key: keyof Slide; label: string; layouts?: Layout[] }[] = [
   { key: "source", label: "Source (pied de slide)" },
 ];
 
-export default function CarouselBuilder({ subject: initialSubject, facts: initialFacts, disabled, onDone }: Props) {
-  const [subject, setSubject] = useState(initialSubject);
-  const [facts, setFacts] = useState(initialFacts);
+export default function CarouselBuilder({ subject, facts, onSubjectChange: setSubject, onFactsChange: setFacts, existingPhotos = 0, disabled, onDone }: Props) {
   const [photos, setPhotosState] = useState<SourcePhoto[]>([]);
   // Copie synchrone : les numéros de photo restent justes quand plusieurs images arrivent à la suite.
   const photosRef = useRef<SourcePhoto[]>([]);
@@ -110,10 +108,12 @@ export default function CarouselBuilder({ subject: initialSubject, facts: initia
     patch(selected, { photoX: Math.round(d.px + (e.clientX - d.x) / BIG), photoY: Math.round(d.py + (e.clientY - d.y) / BIG) });
   };
   const render = async () => {
+    if (existingPhotos && !window.confirm(`Remplacer les ${existingPhotos} photo(s) du post par ces slides ?`)) return;
     setBusy("images"); setError(null);
     try {
       const out: { path: string; url: string }[] = [];
       for (let i = 0; i < slides.length; i++) {
+        setNotice(`Création de la slide ${i + 1} sur ${slides.length}…`);
         const node = nodes.current[i];
         if (!node) throw new Error(`Slide ${i + 1} introuvable.`);
         const dataUrl = await toJpeg(node, { width: SLIDE_W, height: SLIDE_H, pixelRatio: 1, quality: 0.92, cacheBust: true });

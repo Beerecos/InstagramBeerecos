@@ -431,6 +431,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   /** Prompteur du Reel lié (lot S7) : texte chargé à l'ouverture. */
   const [prompteur, setPrompteur] = useState<Reel | null>(null);
   const player = useRef<ReelPreviewHandle>(null);
+  const pendingEdits = useRef(false);
   const pendingSeek = useRef<number | null>(null);
   const preview = useRef<HTMLElement>(null);
   // Brouillon des animations : affiché tout de suite dans l'aperçu, enregistré seulement sur demande.
@@ -464,7 +465,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
       if (k === "z" && !e.shiftKey) { e.preventDefault(); shortcuts.current.undo(); }
       else if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); shortcuts.current.redo(); }
     };
-    const onLeave = (e: BeforeUnloadEvent) => { if (sync.current?.busy) { e.preventDefault(); e.returnValue = ""; } };
+    const onLeave = (e: BeforeUnloadEvent) => { if (sync.current?.busy || pendingEdits.current) { e.preventDefault(); e.returnValue = ""; } };
     window.addEventListener("keydown", onKey);
     window.addEventListener("beforeunload", onLeave);
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("beforeunload", onLeave); };
@@ -672,6 +673,8 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   };
   const ready = Boolean(m.edit && m.captions.length);
   const unsaved = Boolean(proposal) || JSON.stringify(logo)!==JSON.stringify(m.edit?.logo) || JSON.stringify(draft) !== JSON.stringify(m.edit?.custom ?? []) || JSON.stringify(animationChoices) !== JSON.stringify(m.edit?.animationChoices);
+  pendingEdits.current = unsaved;
+  const canLeave = () => !(unsaved || sync.current?.busy) || window.confirm("Quitter le montage avec des modifications non enregistrées ?");
   const manualPreview = (edit: Edit, source: NonNullable<Proposal["source"]>) => {
     setError(null);setMonitorView("edit");setProposal({edit,baseUpdatedAt:m.updatedAt,source});
   };
@@ -738,8 +741,8 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
     <div className={expanded ? "social-studio studio-expanded space-y-3" : "space-y-4"}>
       {/* En-tête du studio (kit §7) : montages, annuler / refaire, coupe auto, rendu. */}
       <div className="card flex flex-wrap items-center gap-2 p-3" role="toolbar" aria-label="Outils du montage">
-        <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" onClick={onBack} title="Quitter le studio : tous mes réels">←</button>
-        {onSwitch ? <ProjectPicker id={m.id} title={m.title} onSwitch={onSwitch} /> : null}
+        <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" onClick={() => { if (canLeave()) onBack(); }} title="Quitter le studio : tous mes réels">←</button>
+        {onSwitch ? <ProjectPicker id={m.id} title={m.title} onSwitch={(target) => { if (canLeave()) onSwitch(target); }} /> : null}
         <div className="studio-title min-w-0 basis-full lg:basis-auto lg:min-w-[160px] lg:flex-1">
           <p className="kicker text-brand">{MONTAGE_STATUS_LABELS[m.status]}{saving ? " · enregistrement…" : ""} · {sec(m.keptMs)} montées</p>
           <p role="status" aria-live="polite" className={`text-xs ${syncState.status === "conflit" || syncState.status === "erreur" ? "text-red-700" : "text-mut"}`}>
