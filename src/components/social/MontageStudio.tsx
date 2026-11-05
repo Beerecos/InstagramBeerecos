@@ -42,7 +42,7 @@ import { useWaveform } from "@/components/reels/use-waveform";
 import { cutOutputZone, stepMs } from "@/domain/studio/timeline";
 import { EditSync, History, type SyncState } from "@/domain/studio/edit-sync";
 import PostPanel from "@/components/reels/post-panel";
-import type { CustomAnimation } from "@/domain/social/montage/suggest";
+import { keptWords, type CustomAnimation } from "@/domain/social/montage/suggest";
 import { stampMotionVersions } from "@/domain/social/montage/beemotion";
 import { isMontageConfigured, montage, reels, type MontageDetail, type MontageSummary } from "@/lib/social/montage-api";
 import { buildEditComposition } from "@/domain/social/montage/edit-composition";
@@ -555,6 +555,16 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
     return takeStrip(e).map((t) => ({ key: t.file, url: t.file === e.video ? data.videoUrl! : data.takeUrls?.[t.file] ?? "", fromMs: t.fromMs, toMs: t.toMs })).filter((t) => t.url);
   }, [data]);
   const { wave, note: waveNote } = useWaveform(waveTakes, data?.montage.durationMs ?? 0);
+  // Standard BeeRecos posé automatiquement (brouillon) à l'ouverture d'une vidéo transcrite sans animation, une fois par
+  // montage, quel que soit le mode du Studio. La fonction est définie plus bas (après le chargement) : appelée par ref.
+  const standardRef = useRef<((replace: boolean) => void) | null>(null);
+  const standardDone = useRef<string | null>(null);
+  useEffect(() => {
+    const mm = data?.montage;
+    if (!mm?.edit || !mm.captions.length || mm.reel || standardDone.current === mm.id) return;
+    standardDone.current = mm.id;
+    if (!(mm.edit.custom ?? []).length) standardRef.current?.(false);
+  }, [data]);
 
   if (error && !data) return <p role="alert" className="text-sm text-red-700">{error}</p>;
   if (!data) return <p role="status" className="text-sm text-mut">Chargement du montage…</p>;
@@ -683,6 +693,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
     void save({ ...m.edit, ranges: restoreSource(m.edit.ranges, span.fromMs, span.toMs, m.durationMs ?? undefined) });
   };
   const ready = Boolean(m.edit && m.captions.length);
+  standardRef.current = (replace: boolean) => applyStandardDraft(replace);
   /** Dynamique « BeeRecos Standard v1 » : mêmes animations, mêmes réglages, posées depuis ce qui est dit (brouillon à relire). */
   const applyStandardDraft = (replace: boolean) => {
     if (!m.edit || !ready || frozen || saving || animationBusy || proposal) return;
@@ -690,9 +701,12 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
     if (replace && draft.length && !window.confirm("Remplacer les animations actuelles par le standard BeeRecos ?")) return;
     const edit = m.edit;
     const end = edit.ranges[edit.ranges.length - 1]?.toMs ?? 0;
-    const r = applyStandard(scenes, { endMs: end, keyword: m.reel?.keyword ?? null, matteAt: (ms) => matteAt(edit, ms) });
-    changeDraft(r.custom);
-    setStandardNote(`Standard BeeRecos appliqué : ${r.custom.length} animation(s). Vérifie dans l’aperçu, ajuste si besoin, puis enregistre.${r.warnings.length ? `\n${r.warnings.join("\n")}` : ""}`);
+    const r = applyStandard(scenes, { endMs: end, keyword: m.reel?.keyword ?? null, matteAt: (ms) => matteAt(edit, ms), words: keptWords(m.captions, edit.ranges) });
+    // À l'ouverture : enregistré tout de suite (sinon le brouillon bloquerait le cadrage et les sous-titres) ; modifiable
+    // ensuite comme toute animation, et rien n'est rendu sans l'aperçu validé. Sur le bouton : brouillon à relire.
+    if (replace) changeDraft(r.custom);
+    else { const placed = withAnimationIds(r.custom); setDraft(placed); void saveDraft(placed).catch(() => {}); }
+    setStandardNote(`Standard BeeRecos appliqué : ${r.custom.length} animation(s). ${replace ? "Vérifie dans l’aperçu, ajuste si besoin, puis enregistre." : "Enregistré : vérifie dans l’aperçu et ajuste si besoin."}${r.warnings.length ? `\n${r.warnings.join("\n")}` : ""}`);
   };
   const unsaved = Boolean(proposal) || JSON.stringify(logo)!==JSON.stringify(m.edit?.logo) || JSON.stringify(draft) !== JSON.stringify(m.edit?.custom ?? []) || JSON.stringify(animationChoices) !== JSON.stringify(m.edit?.animationChoices);
   pendingEdits.current = unsaved;
@@ -832,7 +846,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
       </StudioLibraryDialog>
       <div className={`studio-workspace${simple ? " studio-simple" : ""}`} data-testid="studio-workspace">
         <aside aria-label="Outils du montage" className="studio-tools min-w-0 space-y-3">
-          {simple ? <SimpleSteps step={simpleStep} onStep={(step)=>{setSimpleStep(step);if(step==="animations"&&!m.reel)applyStandardDraft(false);}} hasEdit={Boolean(m.edit)} ready={ready} /> : null}
+          {simple ? <SimpleSteps step={simpleStep} onStep={setSimpleStep} hasEdit={Boolean(m.edit)} ready={ready} /> : null}
           {simple ? (m.edit ? <section hidden={simpleStep!=="cadrage"} className="card p-4"><StudioFraming edit={m.edit} disabled={saving||animationBusy||frozen||unsaved} videoUrl={data.videoUrl} onAutoOpen={()=>setSimpleStep("cadrage")} onApply={framing=>{void save({...m.edit!,framing});}}/></section> : simpleStep==="cadrage" ? <p className="card p-4 text-sm text-mut">Envoie d&apos;abord la vidéo.</p> : null) : null}
           {simple && simpleStep==="sous-titres" ? <section className="card p-4">{ready && m.edit ? <StudioSimpleCaptions edit={m.edit} disabled={saving||animationBusy||frozen||Boolean(proposal)} onChange={patch=>{if(m.edit)void save({...m.edit,...patch});}} /> : <p className="text-sm text-mut">Les sous-titres arrivent avec la transcription (étape Coupes).</p>}</section> : null}
           {simple && simpleStep==="animations" ? <section className="card space-y-3 p-4">

@@ -155,10 +155,11 @@ export default function StudioFraming({ edit, disabled, videoUrl = null, onApply
   const crop = aspect !== null && needsCrop(aspect);
 
   // Prise paysage pas encore cadrée : la fenêtre de cadrage s'ouvre d'elle-même, une fois.
-  const onMeta = (a: number) => {
-    setAspect(a);
-    if (needsCrop(a) && unset && !disabled && !autoOpened.current) { autoOpened.current = true; setOpen(true); onAutoOpen?.(); }
-  };
+  const onMeta = (a: number) => setAspect(a);
+  // Ouverture dès que le Studio est libre (un enregistrement en cours, ex. le standard d'animations, ne la fait pas manquer).
+  useEffect(() => {
+    if (aspect !== null && needsCrop(aspect) && unset && !disabled && !autoOpened.current) { autoOpened.current = true; setOpen(true); onAutoOpen?.(); }
+  }, [aspect, unset, disabled, onAutoOpen]);
 
   return (
     <div className="space-y-2">

@@ -191,10 +191,10 @@ test("studio simple : quatre étapes, couleurs des sous-titres en un clic, mode 
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   let version = 1;
-  let edit = initialEdit("prise.mp4", 6000);
+  let edit = initialEdit("prise.mp4", 12000);
   const saved: typeof edit[] = [];
   await mockBee(page, {
-    get: () => ({ montage: { id: "m7", title: "Prise", status: "ready", durationMs: 6000, keptMs: 6000, workspaceId: null, createdAt: "t", updatedAt: `v${version}`, renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit, captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: null }),
+    get: () => ({ montage: { id: "m7", title: "Prise", status: "ready", durationMs: 12000, keptMs: 12000, workspaceId: null, createdAt: "t", updatedAt: `v${version}`, renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit, captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: null }),
     "save-edit": (body) => { edit = body.edit as typeof edit; saved.push(edit); version++; return {}; },
   });
   await page.goto("/reels/m7");
@@ -217,10 +217,9 @@ test("studio simple : quatre étapes, couleurs des sous-titres en un clic, mode 
   const list = page.getByRole("list", { name: "Animations du réel" }).filter({ visible: true });
   await expect(list.getByRole("button", { name: /^Onglet \(cartouche\) ·/ })).toBeVisible();
   await expect(list.getByRole("button", { name: /^Logo BeeRecos de fin ·/ })).toBeVisible();
-  await expect(page.getByText(/Standard BeeRecos appliqué/).filter({ visible: true })).toBeVisible();
-  await page.getByRole("button", { name: "Enregistrer mes animations" }).filter({ visible: true }).click();
+  // Posé et enregistré dès l'ouverture : les autres étapes ne sont pas bloquées.
   await expect.poll(() => saved.at(-1)?.custom.map((c) => c.name)).toEqual(["onglet", "logo-fin"]);
-  expect(saved.at(-1)?.custom[0].props).toMatchObject({ texte: "BONJOUR JE SUIS", variante: "blanc" });
+  expect(saved.at(-1)?.custom[0].props).toMatchObject({ texte: "BEERECOS", variante: "blanc" });
 
   await page.getByRole("button", { name: "Mode avancé" }).filter({ visible: true }).click();
   await expect(page.getByRole("button", { name: "⚡ Tout auto" }).filter({ visible: true })).toBeVisible();

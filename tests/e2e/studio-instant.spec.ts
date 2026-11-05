@@ -2,11 +2,13 @@ import { expect, test } from "@playwright/test";
 import { mockBee } from "./bee-api";
 import { initialEdit } from "../../src/domain/social/montage/montage";
 
+// Vidéo qui a déjà une animation : le standard BeeRecos ne s'applique pas à l'ouverture (ces tests comptent les enregistrements).
+const withAnimation = (e: ReturnType<typeof initialEdit>) => ({ ...e, custom: [{ name: "logo-fin", fromMs: 4000, toMs: 6000, props: { baseline: true } }] });
 const WORDS = ["Bonjour", "euh", "je", "suis", "Cédric", "et", "voici", "BeeRecos."].map((text, i) => ({ text, startMs: i * 700, endMs: i * 700 + 500 }));
 
 test("montage instantané : la coupe s'affiche tout de suite, l'enregistrement suit, Ctrl+Z annule", async ({ page }) => {
   let version = 1;
-  let edit = initialEdit("prise.mp4", 6000);
+  let edit = withAnimation(initialEdit("prise.mp4", 6000));
   let release: () => void = () => {};
   const held = new Promise<void>((r) => { release = r; });
   let saves = 0;
@@ -47,7 +49,7 @@ test("montage instantané : la coupe s'affiche tout de suite, l'enregistrement s
 });
 
 test("montage instantané : une modification faite ailleurs est signalée, jamais écrasée", async ({ page }) => {
-  const edit = initialEdit("prise.mp4", 6000);
+  const edit = withAnimation(initialEdit("prise.mp4", 6000));
   await mockBee(page, {
     get: () => ({ montage: { id: "m2", title: "Prise", status: "ready", durationMs: 6000, keptMs: 6000, workspaceId: null, createdAt: "t", updatedAt: "v1", renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit, captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: "https://bee-api.test/fichiers/prise.mp4" }),
     "save-edit": (_b, route) => route.fulfill({ status: 409, json: { error: "Le montage a changé depuis l'ouverture : rechargez." } }).then(() => "handled"),

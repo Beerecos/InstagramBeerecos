@@ -48,3 +48,27 @@ describe("Standard v1", () => {
     expect(warnings.join("\n")).toMatch(/sans mot-clé/);
   });
 });
+
+describe("Standard v1 sur une vraie prise (« test 1 », 2026-11-05)", () => {
+  const said = "Tu connais cinq cents personnes qui sait vraiment quand te recommander. Imagine que tu sois photographe, tes contacts connaissent ton métier. Cette précision peut leur faire penser à toi au détour d'une conversation. Tu sauras si ton message est assez clair pour être transmis. Commente réseau et je t'envoie les informations.";
+  const w = said.split(" ").map((t, i) => ({ text: ` ${t}`, startMs: i * 450, endMs: i * 450 + 400 }));
+  const scenes = analyzeScenes(w, {});
+  const end = w[w.length - 1].endMs + 2500;
+
+  it("mots forts dits (pas les premiers mots venus), mot-clé repris après « Commente »", () => {
+    const { custom, warnings } = applyStandard(scenes, { endMs: end, keyword: null, words: w });
+    const texts = custom.map((c) => String(c.props.texte ?? c.props.mot ?? ""));
+    expect(texts).toContain("RECOMMANDER");
+    expect(texts).toContain("PRÉCISION");
+    expect(texts).toContain("RÉSEAU");
+    expect(texts.join(" ")).not.toMatch(/TU CONNAIS/);
+    expect(warnings.join("\n")).toMatch(/Mot-clé dit dans la vidéo : « RÉSEAU »/);
+    expect(checkTimeline(custom)).toEqual([]);
+  });
+
+  it("un chiffre dit en toutes lettres devient un chiffre animé, avec la suite de la phrase", () => {
+    const one = analyzeScenes(w.slice(0, 11), {});
+    const { custom } = applyStandard([...one, ...one.map((s) => ({ ...s, index: 1, startMs: s.startMs + 20000, endMs: s.endMs + 20000 })), ...one.map((s) => ({ ...s, index: 2, startMs: s.startMs + 40000, endMs: s.endMs + 40000 }))], { endMs: 60000, words: [...w.slice(0, 11), ...w.slice(0, 11).map((x) => ({ ...x, startMs: x.startMs + 20000, endMs: x.endMs + 20000 })), ...w.slice(0, 11).map((x) => ({ ...x, startMs: x.startMs + 40000, endMs: x.endMs + 40000 }))] });
+    expect(custom.find((c) => c.name === "chiffre")?.props).toMatchObject({ valeur: 500, legende: "personnes qui sait vraiment" });
+  });
+});
