@@ -1,8 +1,10 @@
 "use client";
 import { createElement, forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 
+import type { Edit, Placement } from "@/domain/social/montage/edit";
+
 /** Commandes exposées par l'aperçu : sauter à un instant, lire, mettre en pause, rejouer depuis le début. */
-export type ReelPreviewHandle = { seek: (seconds: number) => void; play: () => void; pause: () => void; paused?: () => boolean; restart: () => void; listen: () => void; bounds: (index: number) => { x: number; y: number; width: number; height: number } | null };
+export type ReelPreviewHandle = { seek: (seconds: number) => void; play: () => void; pause: () => void; paused?: () => boolean; restart: () => void; listen: () => void; sourceAspect: () => number; previewPlacement: (index: number, placement: Placement) => void; previewFraming: (framing: Edit["framing"]) => void; bounds: (index: number) => { x: number; y: number; width: number; height: number } | null };
 
 type PlayerElement = HTMLElement & { seek?: (t: number) => void; play?: () => void; pause?: () => void; currentTime?: number; paused?: boolean; muted?: boolean; iframeElement?: HTMLIFrameElement };
 
@@ -74,6 +76,25 @@ const ReelPreview = forwardRef<ReelPreviewHandle, { html: string; title: string;
     paused: () => player.current?.paused ?? true,
     restart: () => { player.current?.seek?.(0); player.current?.play?.(); },
     listen: () => { if (player.current) { player.current.muted = false; player.current.play?.(); } },
+    sourceAspect: () => {
+      const videos = player.current?.iframeElement?.contentDocument?.querySelectorAll<HTMLVideoElement>('video.take');
+      const video = Array.from(videos ?? []).find(v => Number(v.dataset.start) <= (player.current?.currentTime ?? 0) && Number(v.dataset.start) + Number(v.dataset.duration) > (player.current?.currentTime ?? 0));
+      return video?.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : 9 / 16;
+    },
+    // Transient transforms during a gesture; the same values are persisted on pointerup.
+    previewPlacement: (index, placement) => {
+      const el = player.current?.iframeElement?.contentDocument?.getElementById(`placement-${index}`);
+      if (el) el.style.transform = `translate(${placement.x}px,${placement.y}px) scale(${placement.scale})`;
+    },
+    previewFraming: (framing) => {
+      const doc = player.current?.iframeElement?.contentDocument;
+      doc?.querySelectorAll<HTMLElement>("video.take").forEach(el => {
+        const rhythm = Number(el.dataset.rhythmZoom ?? 1);
+        el.style.transform = framing ? `translate(${framing.x}px, ${framing.y}px) scale(${framing.scale * rhythm})` : rhythm !== 1 ? `scale(${rhythm})` : "";
+        el.style.transformOrigin = framing ? "50% 50%" : "50% 32%";
+        el.style.objectPosition = `${framing?.focusX ?? 50}% ${framing?.focusY ?? 50}%`;
+      });
+    },
     bounds: (index: number) => {
       try {
         const doc = player.current?.iframeElement?.contentDocument;

@@ -10,6 +10,8 @@ import StudioTrim from "@/components/social/studio/StudioTrim";
 import ReelPreview, { prefersReducedMotion, type ReelPreviewHandle } from "@/components/social/ReelPreview";
 import StudioTimeline from "@/components/social/studio/StudioTimeline";
 import StudioInspector from "@/components/social/studio/StudioInspector";
+import StudioVideoDrag from "@/components/social/studio/StudioVideoDrag";
+import { CENTERED_FRAME } from "@/domain/social/montage/direct-framing";
 import StudioCanvas from "@/components/social/studio/StudioCanvas";
 import StudioEffectLibrary from "@/components/social/studio/StudioEffectLibrary";
 import type { StudioSourceRef, StudioSourceTransfer } from "@/domain/social/studio-sources";
@@ -316,7 +318,7 @@ function MattesCard({ m, onChange }: { m: MontageDetail; onChange: () => void })
   return (
     <section id="studio-mattes" tabIndex={-1} aria-label="Détourage" className="card space-y-2 p-4">
       <h3 className="font-display text-base">Détourage (titre derrière le sujet)</h3>
-      <p className="text-xs text-mut">Sur votre ordinateur, détourez le fichier envoyé (environ 7 à 8 min pour 30 s de vidéo), puis envoyez le .webm obtenu.</p>
+      <p className="text-xs text-mut">Importez la même prise sur fond transparent (.webm), avec la même durée et le même cadrage. La vidéo originale et ses coupes sont conservées.</p>
       <ol className="space-y-2 text-sm">
         {takes.map((t, i) => {
           const label = takes.length > 1 ? `la prise ${i + 1}` : "la prise";
@@ -330,7 +332,7 @@ function MattesCard({ m, onChange }: { m: MontageDetail; onChange: () => void })
               </div>
               {!matte && !frozen ? (
                 <>
-                  <code className="block overflow-x-auto whitespace-nowrap rounded bg-black/[0.05] px-2 py-1 text-xs">{MATTE_COMMAND(t.file)}</code>
+                  <details className="text-xs"><summary className="cursor-pointer py-2">Préparer le fichier sur ordinateur (outil technique)</summary><code className="block overflow-x-auto whitespace-nowrap rounded bg-black/[0.05] px-2 py-1 text-xs">{MATTE_COMMAND(t.file)}</code></details>
                   <label className="block text-xs font-medium">
                     Envoyer le détourage de {label} (.webm)
                     <input type="file" accept="video/webm,.webm" disabled={Boolean(step)} onChange={(e) => { send(t.file, label, e.target.files?.[0]); e.target.value = ""; }} className="mt-1 block w-full text-sm" />
@@ -417,6 +419,8 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   const [panelParams] = useSearchParams();
   const [panel, setPanel] = useState<Panel>(() => PANELS.some((p) => p.key === panelParams.get("panel")) ? panelParams.get("panel") as Panel : "animations");
   const [libraryOpen,setLibraryOpen]=useState(false);
+  const [canvasMode,setCanvasMode]=useState<"animation"|"video">("animation");
+  const [matteOpen,setMatteOpen]=useState(false);
   // Mode simple (par défaut) : 4 étapes (cadrage, coupes, sous-titres, animations) puis « Terminer ». Le mode avancé
   // garde tous les outils ; le choix est retenu sur cet appareil.
   const [simple,setSimpleMode]=useState(()=>{try{return typeof window==="undefined"||localStorage.getItem("ibr.studio.mode")!=="avance";}catch{return true;}});
@@ -583,7 +587,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   const changeAnimation = (a: CustomAnimation) => changeDraft(draft.map((c) => c.id === a.id ? a : c));
   const activeScene = scenes.find(scene=>scene.index===selectedSceneIndex) ?? scenes[0];
   const selectScene = (scene:Scene) => {
-    setSelectedSceneIndex(scene.index);setPanel("animations");setMonitorView("edit");
+    setCanvasMode("animation");setSelectedSceneIndex(scene.index);setPanel("animations");setMonitorView("edit");
     setSelectedId(draft.find(a=>a.fromMs>=scene.startMs&&a.fromMs<scene.endMs)?.id??null);
     seekSource(scene.startMs);
   };
@@ -835,7 +839,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             if(!checked.ok) throw new Error(checked.errors.join("\n"));
             changeDraft(next);setPanel("animations");setLibraryTab("animations");setLibraryOpen(false);
           }}/> : null}
-            {m.edit ? <div hidden={libraryTab!=="animations"}><MontageAnimations ref={animations} studioMode activeScene={activeScene} onAppendOutro={appendOutro} onPlaced={a=>{setLibraryOpen(false);setSelectedId(a.id??null);setPanel("animations");seekSource(a.fromMs);}} key={m.updatedAt} m={m} draft={draft} onDraft={changeDraft} choices={animationChoices} onChoices={setAnimationChoices} onBusy={setAnimationBusy}
+            {m.edit ? <div hidden={libraryTab!=="animations"}><MontageAnimations ref={animations} studioMode activeScene={activeScene} onAppendOutro={appendOutro} onPlaced={a=>{setLibraryOpen(false);setCanvasMode("animation");setSelectedId(a.id??null);setPanel("animations");seekSource(a.fromMs+Math.min(800,(a.toMs-a.fromMs)/2));}} key={m.updatedAt} m={m} draft={draft} onDraft={changeDraft} choices={animationChoices} onChoices={setAnimationChoices} onBusy={setAnimationBusy}
               disabled={saving || animationBusy || frozen || transcribing || m.status === "transcribing" || Boolean(proposal)} playheadMs={playSource}
               onTest={(sourceMs) => {
                 seekSource(sourceMs); player.current?.play();
@@ -856,7 +860,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             <button type="button" className="btn-ghost min-h-11 w-full" disabled={!m.edit||saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>{setLibraryTab("animations");setLibraryOpen(true);}}>+ Ajouter une animation</button>
             <p className="text-xs text-mut">Elle se place à l&apos;endroit du curseur de lecture. Clique sur une animation pour changer son texte ou sa durée.</p>
             {draft.length ? <ul aria-label="Animations du réel" className="space-y-1">{draft.map((a)=><li key={a.id} className="flex items-center gap-2">
-              <button type="button" aria-pressed={a.id===selectedId} className="btn-ghost min-h-11 min-w-0 flex-1 truncate text-left text-sm" onClick={()=>{setSelectedId(a.id??null);seekSource(a.fromMs);}}>{ANIMATIONS[a.name]?.label ?? a.name} · {sec(toOutputMs(segments,a.fromMs))}</button>
+              <button type="button" aria-pressed={a.id===selectedId} className="btn-ghost min-h-11 min-w-0 flex-1 truncate text-left text-sm" onClick={()=>{setCanvasMode("animation");setSelectedId(a.id??null);seekSource(a.fromMs+Math.min(800,(a.toMs-a.fromMs)/2));}}>{ANIMATIONS[a.name]?.label ?? a.name} · {sec(toOutputMs(segments,a.fromMs))}</button>
               <button type="button" aria-label={`Retirer ${ANIMATIONS[a.name]?.label ?? a.name}`} className="btn-ghost min-h-11 min-w-11 text-red-700" disabled={saving||animationBusy||frozen} onClick={()=>{changeDraft(draft.filter(x=>x.id!==a.id));if(selectedId===a.id)setSelectedId(null);}}>✕</button>
             </li>)}</ul> : <p className="text-sm text-mut">Aucune animation pour l&apos;instant.</p>}
             {selectedAnimation ? <StudioInspector animation={selectedAnimation} ranges={m.edit?.ranges ?? []} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChange={changeAnimation} onRemove={() => { changeDraft(draft.filter(a => a.id !== selectedAnimation.id)); setSelectedId(null); }} onTest={() => { seekSource(selectedAnimation.fromMs);player.current?.play(); }} /> : null}
@@ -922,17 +926,35 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
           </> : null}
           {!simple ? <>
           <TakesCard m={m} onChange={load} />
-          <MattesCard m={m} onChange={load} />
+          <button type="button" className="btn-ghost min-h-11" onClick={()=>setMatteOpen(true)}>Préparer le détourage</button>
           {m.captions.length && m.edit ? (
             <button type="button" className="btn-ghost min-h-[36px] text-xs" onClick={transcribe} disabled={transcribing || animationBusy || frozen || m.status === "transcribing"}>{transcribing ? "Transcription en cours…" : "Transcrire à nouveau"}</button>
           ) : null}
           </> : null}
         </aside>
+        <StudioLibraryDialog title="Texte derrière le personnage" open={matteOpen} onClose={()=>setMatteOpen(false)}>
+          <p className="mb-3 text-sm">Pour passer devant les mots, la silhouette doit être isolée sur fond transparent. Le studio superpose ce détourage à la vidéo et garde les deux calques alignés pendant le cadrage.</p>
+          <MattesCard m={m} onChange={load} />
+          {activeScene && m.edit && matteAt(m.edit,activeScene.startMs) ? <button type="button" className="btn-red mt-3 min-h-11" disabled={saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>{setMatteOpen(false);setSimpleStep("animations");setLibraryTab("animations");setLibraryOpen(true);animations.current?.place("titre-derriere",activeScene);}}>Ajouter le texte sur cette séquence</button> : null}
+        </StudioLibraryDialog>
         <section ref={preview} aria-label="Moniteur du studio" className="studio-monitor rounded-2xl border border-line bg-[#eef0f5] p-3">
+          {!showRendered && m.edit ? <div className="studio-transport space-y-2 text-center">
+            <div role="group" aria-label="Manipuler l’aperçu" className="flex flex-wrap justify-center gap-2">
+              <button type="button" className="btn-ghost min-h-11" aria-pressed={canvasMode==="video"} disabled={saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>{setCanvasMode("video");player.current?.pause();}}>Déplacer la vidéo</button>
+              <button type="button" className="btn-ghost min-h-11" aria-pressed={canvasMode==="animation"} disabled={saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>{setCanvasMode("animation");setSimpleStep("animations");if(selectedAnimation)seekSource(selectedAnimation.fromMs+Math.min(800,(selectedAnimation.toMs-selectedAnimation.fromMs)/2));}}>Déplacer une animation</button>
+              <button type="button" className="btn-ghost min-h-11" disabled={!activeScene||saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>{setSimpleStep("animations");if(activeScene&&m.edit&&matteAt(m.edit,activeScene.startMs)){setLibraryTab("animations");setLibraryOpen(true);animations.current?.place("titre-derriere",activeScene);}else setMatteOpen(true);}}>Texte derrière le personnage</button>
+            </div>
+            {canvasMode==="video" ? <div className="flex flex-wrap items-center justify-center gap-2">
+              <label className="rounded-xl bg-white px-3 py-1 text-xs text-black">Zoom vidéo <select aria-label="Zoom vidéo" className="min-h-9 bg-white" value={m.edit.framing?.scale??1} disabled={saving||animationBusy||frozen||Boolean(proposal)} onChange={e=>{void save({...m.edit!,framing:{...(m.edit!.framing??CENTERED_FRAME),scale:Number(e.target.value),x:0,y:0}});}}>{[...new Set([1,1.1,1.25,1.5,1.75,2,m.edit.framing?.scale??1])].sort((a,b)=>a-b).map(n=><option key={n} value={n}>{Math.round(n*100)} %</option>)}</select></label>
+              <button type="button" className="btn-ghost min-h-11" disabled={saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>{void save({...m.edit!,framing:{...CENTERED_FRAME}});}}>Recentrer</button>
+              <span className="rounded-lg bg-white px-2 py-1 text-xs text-black">Glissez l’image. Zoomez pour déplacer une prise verticale sans bord vide.</span>
+            </div> : <p className="rounded-lg bg-white px-2 py-1 text-xs text-black">Sélectionnez une animation sur la timeline, puis déplacez-la dans l’aperçu. La poignée règle sa taille.</p>}
+          </div> : null}
           <div className="studio-monitor-frame">
             {showRendered ? <video ref={renderedVideo} src={m.finalVideoUrl!} controls playsInline className="h-full max-w-full rounded-xl bg-black" aria-label={`MP4 rendu de « ${m.title} »`}/> : <>
-            <StudioCanvas animation={selectedAnimation} index={selectedAnim} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChange={changeAnimation} player={player} time={playOut}>
+            <StudioCanvas animation={canvasMode==="animation"?selectedAnimation:null} index={selectedAnim} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChange={changeAnimation} player={player} time={playOut}>
             {html ? <ReelPreview ref={player} html={html} title={m.title} onTimeUpdate={onTime} onReady={()=>{if(pendingSeek.current!==null){player.current?.seek(pendingSeek.current);pendingSeek.current=null;}}} autoplay={false} preservePosition /> : <div className="grid aspect-[9/16] place-items-center rounded-2xl border border-dashed border-line p-4 text-center text-sm text-mut">La prise n&apos;est pas encore reçue.</div>}
+            {canvasMode==="video" && m.edit && html && !saving && !animationBusy && !frozen && !proposal ? <StudioVideoDrag framing={m.edit.framing} player={player} onChange={framing=>{void save({...m.edit!,framing});}}/> : null}
             </StudioCanvas></>}
           </div>
           <section aria-label="Lecture de l’aperçu" className="studio-transport flex flex-wrap items-center justify-center gap-2">
@@ -945,7 +967,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered)renderedVideo.current?.pause();else player.current?.pause();}}>Pause</button>
             {!simple ? <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered&&renderedVideo.current){renderedVideo.current.currentTime=0;void renderedVideo.current.play().catch(()=>{});}else player.current?.restart();}}>Rejouer</button> : null}
             <button type="button" className="btn-ghost min-h-[44px]" onClick={() => {if(showRendered&&renderedVideo.current){renderedVideo.current.muted=false;void renderedVideo.current.play().catch(()=>{});}else player.current?.listen();}}>Écouter avec le son</button>
-            {!simple ? <button type="button" className="btn-ghost min-h-[44px]" onClick={() => { const node=preview.current;if(document.fullscreenElement)void document.exitFullscreen();else void node?.requestFullscreen().catch(()=>setError("Le plein écran n’est pas disponible dans ce navigateur.")); }}>Plein écran</button> : null}
+            <button type="button" className="btn-ghost min-h-[44px]" onClick={() => { const node=preview.current;if(document.fullscreenElement)void document.exitFullscreen();else void node?.requestFullscreen().catch(()=>setError("Le plein écran n’est pas disponible dans ce navigateur.")); }}>Plein écran</button>
           </div>
           </section>
           <p hidden={simple} className="text-xs text-mut">{showRendered ? "MP4 rendu de la version enregistrée : regardez et écoutez avant le transfert." : proposal ? "Aperçu de la modification (non enregistrée)." : "Aperçu en direct 1080×1920 : coupes, sous-titres karaoké et animations (brouillon compris)."}</p>
@@ -973,10 +995,10 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             <button type="button" className="btn-ghost min-h-[44px]" onClick={()=>{seekSource(activeScene.startMs);player.current?.play();}}>Tester cette séquence</button>
             <button type="button" className="btn-ghost min-h-[44px] text-red-700" disabled={saving||animationBusy||frozen||unsaved} onClick={deleteScene}>Supprimer cette séquence</button>
             <button type="button" className="btn-ghost min-h-[44px]" disabled={saving||animationBusy||frozen||Boolean(proposal)||!m.edit||!matteAt(m.edit,activeScene.startMs)} onClick={()=>{setLibraryTab("animations");setLibraryOpen(true);animations.current?.place("titre-derriere",activeScene);}}>Ajouter un titre ou mot derrière le personnage</button>
-            {m.edit&&!matteAt(m.edit,activeScene.startMs)?<div className="space-y-1 text-xs text-mut"><p>Cette prise doit être détourée pour que le personnage passe devant les lettres. Importez sa vidéo transparente .webm ; le détourage automatique n’est pas encore disponible ici.</p><button type="button" className="btn-ghost min-h-[44px]" onClick={()=>{const card=document.getElementById("studio-mattes");card?.scrollIntoView({block:"center"});card?.focus({preventScroll:true});}}>Préparer le détourage</button></div>:null}
+            {m.edit&&!matteAt(m.edit,activeScene.startMs)?<div className="space-y-1 text-xs text-mut"><p>Cette prise doit être détourée pour que le personnage passe devant les lettres. Importez sa vidéo transparente .webm ; le détourage automatique n’est pas encore disponible ici.</p><button type="button" className="btn-ghost min-h-[44px]" onClick={()=>setMatteOpen(true)}>Préparer le détourage</button></div>:null}
             {unsaved&&!proposal?<p className="text-xs text-mut">Enregistrez vos animations avant de supprimer une séquence ou d’ajouter l’écran de fin.</p>:null}
             <ul aria-label={`Animations de la séquence ${activeScene.index+1}`} className="space-y-1">{draft.map((a,i)=>({a,i})).filter(({a})=>a.fromMs>=activeScene.startMs&&a.fromMs<activeScene.endMs).map(({a,i})=><li key={a.id}>
-              <button type="button" draggable={!saving&&!frozen} onDragStart={e=>{e.dataTransfer.setData("application/x-beegrowth-motion",a.name);e.dataTransfer.setData("application/x-beegrowth-animation-index",String(i));e.dataTransfer.effectAllowed="move";}} aria-pressed={a.id===selectedId} className="btn-ghost min-h-[44px] w-full truncate text-left text-xs" onClick={()=>{setSelectedId(a.id??null);setPanel("animations");seekSource(a.fromMs);}}>⠿ {a.name} · {Object.values(a.props).map(v=>Array.isArray(v)?v.join(" · "):String(v)).join(" ")}</button>
+              <button type="button" draggable={!saving&&!frozen} onDragStart={e=>{e.dataTransfer.setData("application/x-beegrowth-motion",a.name);e.dataTransfer.setData("application/x-beegrowth-animation-index",String(i));e.dataTransfer.effectAllowed="move";}} aria-pressed={a.id===selectedId} className="btn-ghost min-h-[44px] w-full truncate text-left text-xs" onClick={()=>{setCanvasMode("animation");setSelectedId(a.id??null);setPanel("animations");seekSource(a.fromMs+Math.min(800,(a.toMs-a.fromMs)/2));}}>⠿ {a.name} · {Object.values(a.props).map(v=>Array.isArray(v)?v.join(" · "):String(v)).join(" ")}</button>
             </li>)}</ul>
           </section> : null}
           <ReelBrandCharter />
@@ -989,7 +1011,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
       </section>:null}
       {m.edit && m.durationMs ? (
         <StudioTimeline onDeleteScene={deleteScene} deleteDisabled={unsaved} onOpenSounds={()=>{setLibraryTab("sounds");setLibraryOpen(true);}} onOpenLibrary={()=>{setLibraryTab("animations");setLibraryOpen(true);}} scenes={scenes} selectedScene={activeScene?.index} onSelectScene={selectScene} onDropScene={(name,scene,fromIndex)=>animations.current?.place(name,scene,fromIndex)} durationMs={m.durationMs} ranges={proposal?.edit.ranges ?? m.edit.ranges} captions={m.captions} custom={proposal?.edit.custom ?? draft} sounds={proposal?.edit.sounds ?? m.edit.sounds} outroMs={(proposal?.edit??m.edit).outro?.durationMs} onSeekOutro={()=>{setMonitorView("edit");player.current?.seek(segments.reduce((n,s)=>n+s.toMs-s.fromMs,0)/1000);}} playheadMs={playSource}
-          onSeek={seekSource} selected={selectedAnim} onSelectAnimation={(i) => { setSelectedId(draft[i]?.id ?? null); const scene=scenes.find(s=>draft[i].fromMs>=s.startMs&&draft[i].fromMs<s.endMs); if(scene)setSelectedSceneIndex(scene.index); setPanel("animations"); }} takeBreaks={breaks} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChangeAnimation={(_i,a) => changeAnimation(a)} onChangeRanges={proposal ? undefined : (r) => { if (m.edit) void save({ ...m.edit, ranges: r }); }} waveform={wave} waveformNote={waveNote} broll={(proposal?.edit ?? m.edit).broll ?? []} zone={zone} onCutZone={cutZone} onClearZone={() => setZone({ in: null, out: null })} />
+          onSeek={seekSource} selected={selectedAnim} onSelectAnimation={(i) => { setCanvasMode("animation");setSelectedId(draft[i]?.id ?? null);setSimpleStep("animations");const scene=scenes.find(s=>draft[i].fromMs>=s.startMs&&draft[i].fromMs<s.endMs); if(scene)setSelectedSceneIndex(scene.index); setPanel("animations"); }} takeBreaks={breaks} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChangeAnimation={(_i,a) => changeAnimation(a)} onChangeRanges={proposal ? undefined : (r) => { if (m.edit) void save({ ...m.edit, ranges: r }); }} waveform={wave} waveformNote={waveNote} broll={(proposal?.edit ?? m.edit).broll ?? []} zone={zone} onCutZone={cutZone} onClearZone={() => setZone({ in: null, out: null })} />
       ) : null}
       <p role="status" className="text-xs text-mut">{unsaved ? "Modifications locales non enregistrées : appliquez ou annulez la proposition et enregistrez les animations avant le transfert." : "Montage enregistré sur le serveur."}</p>
     </div>
