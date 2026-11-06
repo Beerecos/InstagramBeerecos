@@ -35,10 +35,11 @@
 .studio-expanded .studio-workspace {flex:none;height:max(660px,calc(100dvh - 380px));min-height:660px;}
 /* Grand écran : tout tient sur la hauteur de l'écran ; la timeline reste visible en bas. */
 @media(min-width:1024px){
- .studio-expanded {overflow:hidden;}
+ .studio-expanded {overflow:auto;}
  .studio-expanded > [role="toolbar"] {flex-wrap:nowrap;overflow-x:auto;}
  .studio-expanded > [role="toolbar"] .studio-title .kicker {white-space:nowrap;}
- .studio-expanded .studio-workspace {flex:1 1 auto;height:auto;min-height:0;}
+ /* Keep the phone large enough to grab titles; short screens scroll to the timeline. */
+ .studio-expanded .studio-workspace {flex:1 0 600px;height:auto;min-height:600px;}
  .studio-expanded .studio-monitor {background:#16181d;border-color:#16181d;}
  .studio-expanded .studio-monitor > p {color:#9aa1b1;text-align:center;}
  .studio-expanded .studio-transport .btn-ghost {background:#262a33;border-color:#333845;color:#f3f4f7;}
