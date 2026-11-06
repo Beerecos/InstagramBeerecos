@@ -22,7 +22,14 @@ type Props = {
   onUseStory?: (file: File, title: string, spec: StorySpec, transfer: StudioSourceTransfer) => Promise<void>;
 };
 
-export default function AiEditor({ sourceRef, scriptId, onUseMotion, onUseStory }: Props) {
+export default function AiEditor(props: Props) {
+  const { sourceRef, scriptId } = props;
+  // Query navigation keeps this page mounted: a converted source must not mask the next project.
+  const identity = JSON.stringify([sourceRef?.kind, sourceRef?.assetId, sourceRef?.revision, scriptId]);
+  return <AiEditorSession key={identity} {...props} />;
+}
+
+function AiEditorSession({ sourceRef, scriptId, onUseMotion, onUseStory }: Props) {
   const [loadedScript, setLoadedScript] = useState<string | null>(null);
   const loadingScript = Boolean(scriptId && /^V\d{2}$/.test(scriptId) && loadedScript !== scriptId);
   const [initial, setInitial] = useState<MotionSpec | undefined>(undefined);
