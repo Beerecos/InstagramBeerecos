@@ -1038,14 +1038,14 @@ function FinalVideos({ list, onOpen }: { list: MontageSummary[] | null; onOpen: 
  * Instagram BeeRecos : `montageId` ouvre directement l'éditeur (route /reels/[id]) ; `onOpenMontage` remplace la
  * navigation par paramètre `?montage=` ; `compact` masque les sections secondaires (pages de création).
  */
-export default function MontageStudio({ source = "reel", montageId, onOpenMontage, compact = false }: { source?: "reel" | "ai"; montageId?: string; onOpenMontage?: (id: string | null) => void; compact?: boolean }) {
+export default function MontageStudio({ source = "reel", montageId, onOpenMontage, onOpenSource, compact = false }: { source?: "reel" | "ai"; montageId?: string; onOpenMontage?: (id: string | null) => void; onOpenSource?: (ref: StudioSourceRef) => void; compact?: boolean }) {
   const [list, setList] = useState<MontageSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const open = montageId ?? searchParams.get("montage");
   const assetKind=searchParams.get("studioKind"),assetId=searchParams.get("studioAsset"),assetRevision=Number(searchParams.get("studioRevision"));
   const sourceRef:StudioSourceRef|undefined=assetId&&Number.isInteger(assetRevision)&&assetRevision>0&&(assetKind==="motion"||assetKind==="story")?{assetId,revision:assetRevision,kind:assetKind}:undefined;
-  const openSource=(ref:StudioSourceRef)=>setSearchParams(previous=>{const next=new URLSearchParams(previous);next.delete("montage");next.set("studioAsset",ref.assetId);next.set("studioRevision",String(ref.revision));next.set("studioKind",ref.kind);return next;},{replace:true});
+  const openSource=(ref:StudioSourceRef)=>onOpenSource ? onOpenSource(ref) : setSearchParams(previous=>{const next=new URLSearchParams(previous);next.delete("montage");next.set("studioAsset",ref.assetId);next.set("studioRevision",String(ref.revision));next.set("studioKind",ref.kind);return next;},{replace:true});
   const setOpen = (id: string | null) => onOpenMontage ? onOpenMontage(id) : setSearchParams((previous) => {
     const next = new URLSearchParams(previous);
     // The resume channel belongs to this source only, never to a new import or another montage.
