@@ -1,6 +1,7 @@
 import type { CaptionWord } from "./edit";
 import type { Scene } from "./scenes";
 import { checkTimeline, MIN_GAP_MS, type CustomAnimation } from "./suggest";
+import { STANDARD_TEMPLATE, type AnimationTemplate } from "./template";
 
 /**
  * DYNAMIQUE « BEERECOS STANDARD V1 » (validée par Cédric le 2026-11-04) : toutes les vidéos suivent le même déroulé,
@@ -33,6 +34,8 @@ type Opts = {
   matteAt?: (ms: number) => string | null;
   /** Mots gardés au montage (temps de chaque mot) : pour caler une animation sur le mot fort prononcé. */
   words?: CaptionWord[];
+  /** « Mon modèle » de Cédric (template.ts) ; sans lui, le Standard BeeRecos v1. */
+  template?: AnimationTemplate;
 };
 
 /** Mots forts BeeRecos (sans accents) : ils passent avant tout autre mot de la phrase. */
@@ -138,7 +141,10 @@ function spokenSteps(scene: Scene): string[] {
  * seulement si elle respecte l'écart minimal et ne chevauche rien.
  */
 export function applyStandard(scenes: Scene[], opts: Opts): { custom: CustomAnimation[]; warnings: string[] } {
-  const S = STANDARD_V1;
+  const T = opts.template ?? STANDARD_TEMPLATE;
+  const S = { ...STANDARD_V1, overlayMs: T.overlayMs, minSpacingMs: T.minSpacingMs, maxBehind: T.maxBehind, hook: T.hook, takeaway: T.takeaway };
+  const on = (a: keyof AnimationTemplate["auto"]) => T.auto[a];
+  const L = T.name;
   const warnings: string[] = [];
   const closingFrom = Math.max(0, opts.endMs - S.closingMs);
   const candidates: { priority: number; a: CustomAnimation; behind: boolean }[] = [];
@@ -147,9 +153,9 @@ export function applyStandard(scenes: Scene[], opts: Opts): { custom: CustomAnim
   const ctaIndex = scenes.findIndex((s) => s.intent === "CTA");
   const content = scenes.filter((s) => s.intent !== "CTA");
 
-  if (opts.endMs > S.closingMs) add(0, { name: "logo-fin", fromMs: closingFrom, toMs: opts.endMs, props: { baseline: true }, label: "Standard v1 · fin" });
+  if (on("logo-fin") && opts.endMs > S.closingMs) add(0, { name: "logo-fin", fromMs: closingFrom, toMs: opts.endMs, props: { baseline: true }, label: `${L} · fin` });
 
-  if (ctaIndex >= 0) {
+  if (ctaIndex >= 0 && on("mot-cle")) {
     const cta = scenes[ctaIndex];
     const tw = timedWords(cta, opts.words);
     // Mot-clé du Reel lié ; sinon le mot dit juste après « Commente » (à activer comme mot-clé du post avant publication).
@@ -160,32 +166,33 @@ export function applyStandard(scenes: Scene[], opts: Opts): { custom: CustomAnim
       const kw = fold(keyword);
       const said = tw.find((w) => w.key.replace(/[.,!?…]+$/, "") === kw) ?? cta.pivotWords.map((p) => ({ startMs: p.startMs, key: fold(clean(p.word)) })).find((p) => p.key === kw);
       const at = said?.startMs ?? cta.startMs;
-      add(1, { name: "mot-cle", fromMs: at, toMs: at + S.ctaMs, props: { mot: keyword }, label: "Standard v1 · mot-clé" });
+      add(1, { name: "mot-cle", fromMs: at, toMs: at + S.ctaMs, props: { mot: keyword }, label: `${L} · mot-clé` });
       if (!opts.keyword) warnings.push(`Mot-clé dit dans la vidéo : « ${keyword} ». Mets-le comme mot-clé du post pour que le DM parte vraiment.`);
     } else warnings.push("Appel à l'action sans mot-clé : pastille « Commente MOT » non posée.");
   }
 
-  const big = (scene: Scene, style: typeof S.hook | typeof S.takeaway, priority: number, label: string) => {
+  const big = (scene: Scene, style: AnimationTemplate["hook"], priority: number, label: string) => {
     const strong = strongWords(scene, opts.words);
     if (!strong) return;
     const { text, atMs } = strong;
-    const behind = Boolean(opts.matteAt?.(atMs));
+    const behind = S.maxBehind > 0 && Boolean(opts.matteAt?.(atMs));
+    if (!behind && !on("onglet") && S.maxBehind > 0) { warnings.push(`${label} : pas de détourage de la prise et onglets désactivés, « ${text} » n'est pas affiché.`); return; }
     const a: CustomAnimation = behind
       ? { name: "titre-derriere", fromMs: atMs, toMs: atMs + S.overlayMs, props: { texte: text, ...style }, label }
       : { name: "onglet", fromMs: atMs, toMs: atMs + S.overlayMs, props: { texte: text, ...S.onglet }, label };
-    if (!behind) warnings.push(`${label} : pas de détourage de la prise, « ${text} » passe en onglet.`);
+    if (!behind && S.maxBehind > 0) warnings.push(`${label} : pas de détourage de la prise, « ${text} » passe en onglet.`);
     add(priority, a, behind);
   };
-  if (content[0]) big(content[0], S.hook, 2, "Standard v1 · accroche");
-  if (content.length > 2) big(content[content.length - 1], S.takeaway, 3, "Standard v1 · à retenir");
+  if (content[0]) big(content[0], S.hook, 2, `${L} · accroche`);
+  if (content.length > 2) big(content[content.length - 1], S.takeaway, 3, `${L} · à retenir`);
 
   content.slice(1, -1).forEach((scene) => {
     const figure = spokenFigure(scene, opts.words);
-    if (figure) return add(4, { name: "chiffre", fromMs: figure.atMs, toMs: figure.atMs + 3000, props: { valeur: figure.valeur, decimales: Number.isInteger(figure.valeur) ? 0 : 1, apres: figure.apres, legende: figure.legende }, label: "Standard v1 · chiffre" });
-    const steps = scene.intent === "LIST" ? spokenSteps(scene) : [];
-    if (steps.length) return add(5, { name: "liste", fromMs: scene.startMs, toMs: Math.min(scene.endMs, scene.startMs + 1500 + steps.length * 1200), props: { items: steps }, label: "Standard v1 · étapes" });
+    if (figure && on("chiffre")) return add(4, { name: "chiffre", fromMs: figure.atMs, toMs: figure.atMs + 3000, props: { valeur: figure.valeur, decimales: Number.isInteger(figure.valeur) ? 0 : 1, apres: figure.apres, legende: figure.legende }, label: `${L} · chiffre` });
+    const steps = scene.intent === "LIST" && on("liste") ? spokenSteps(scene) : [];
+    if (steps.length) return add(5, { name: "liste", fromMs: scene.startMs, toMs: Math.min(scene.endMs, scene.startMs + 1500 + steps.length * 1200), props: { items: steps }, label: `${L} · étapes` });
     const strong = strongWords(scene, opts.words);
-    if (strong) add(6, { name: "onglet", fromMs: strong.atMs, toMs: strong.atMs + S.overlayMs, props: { texte: strong.text, ...S.onglet }, label: "Standard v1 · idée" });
+    if (strong && on("onglet")) add(6, { name: "onglet", fromMs: strong.atMs, toMs: strong.atMs + S.overlayMs, props: { texte: strong.text, ...S.onglet }, label: `${L} · idée` });
   });
 
   const placed: { a: CustomAnimation; behind: boolean }[] = [];
@@ -199,8 +206,12 @@ export function applyStandard(scenes: Scene[], opts: Opts): { custom: CustomAnim
   }
   // Jamais deux grands mots à la suite : le second redevient un onglet.
   const ordered = placed.sort((x, y) => x.a.fromMs - y.a.fromMs);
+  const dropped = new Set<number>();
   ordered.forEach((p, i) => {
-    if (p.behind && ordered[i - 1]?.behind) { p.behind = false; p.a = { ...p.a, name: "onglet", props: { texte: String(p.a.props.texte), ...S.onglet } }; }
+    if (!p.behind || !ordered[i - 1]?.behind || dropped.has(i - 1)) return;
+    // Onglets désactivés dans le modèle : le second grand mot n'est pas affiché plutôt que de devenir un onglet.
+    if (!on("onglet")) { dropped.add(i); return; }
+    p.behind = false; p.a = { ...p.a, name: "onglet", props: { texte: String(p.a.props.texte), ...S.onglet } };
   });
-  return { custom: ordered.map((p) => p.a), warnings };
+  return { custom: ordered.filter((_, i) => !dropped.has(i)).map((p) => p.a), warnings };
 }

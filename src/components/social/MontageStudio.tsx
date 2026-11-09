@@ -52,6 +52,7 @@ import { layout, MAX_STRIP_MS, MAX_TAKES, takeBreaks, takeStrip, toOutputMs, typ
 import { checkStudioEdit, cutSource, outputToSourceMs, restoreSource, wordSpan } from "@/domain/social/montage/studio";
 import { MATTE_COMMAND, MATTE_MAX_BYTES, matteAt } from "@/domain/social/montage/matte";
 import { applyStandard } from "@/domain/social/montage/standard";
+import type { AnimationTemplate } from "@/domain/social/montage/template";
 
 /**
  * RÉSEAUX SOCIAUX → MONTAGE (2026-10-21, porté de BeeMarketing / InstagramBeerecos) : une prise filmée → transcription
@@ -439,6 +440,10 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   const [notice, setNotice] = useState<string | null>(null);
   /** Résultat du Standard BeeRecos, affiché dans l’étape Animations (là où l’on relit). */
   const [standardNote, setStandardNote] = useState<string | null>(null);
+  // « Mon modèle » (réglages du Studio) : utilisé à la place du Standard BeeRecos v1 quand il existe.
+  const [template, setTemplate] = useState<AnimationTemplate | null | undefined>(undefined); // undefined : pas encore lu
+  const [useStandard, setUseStandard] = useState(false);
+  useEffect(() => { montage.getSettings().then((r) => setTemplate(r.settings.animationTemplate ?? null)).catch(() => setTemplate(null)); }, []);
   /** Prompteur du Reel lié (lot S7) : texte chargé à l'ouverture. */
   const [prompteur, setPrompteur] = useState<Reel | null>(null);
   const player = useRef<ReelPreviewHandle>(null);
@@ -561,10 +566,11 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   const standardDone = useRef<string | null>(null);
   useEffect(() => {
     const mm = data?.montage;
-    if (!mm?.edit || !mm.captions.length || mm.reel || standardDone.current === mm.id) return;
+    // Attendre de savoir s'il existe « Mon modèle » pour ne pas poser le Standard à sa place.
+    if (!mm?.edit || !mm.captions.length || mm.reel || standardDone.current === mm.id || template === undefined) return;
     standardDone.current = mm.id;
     if (!(mm.edit.custom ?? []).length) standardRef.current?.(false);
-  }, [data]);
+  }, [data, template]);
 
   if (error && !data) return <p role="alert" className="text-sm text-red-700">{error}</p>;
   if (!data) return <p role="status" className="text-sm text-mut">Chargement du montage…</p>;
@@ -695,18 +701,19 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   const ready = Boolean(m.edit && m.captions.length);
   standardRef.current = (replace: boolean) => applyStandardDraft(replace);
   /** Dynamique « BeeRecos Standard v1 » : mêmes animations, mêmes réglages, posées depuis ce qui est dit (brouillon à relire). */
-  const applyStandardDraft = (replace: boolean) => {
+  const applyStandardDraft = (replace: boolean, standardOnly = useStandard) => {
     if (!m.edit || !ready || frozen || saving || animationBusy || proposal) return;
     if (!replace && draft.length) return;
-    if (replace && draft.length && !window.confirm("Remplacer les animations actuelles par le standard BeeRecos ?")) return;
+    const chosen = standardOnly ? null : template ?? null;
+    if (replace && draft.length && !window.confirm(chosen ? `Remplacer les animations actuelles par ton modèle « ${chosen.name} » ?` : "Remplacer les animations actuelles par le standard BeeRecos ?")) return;
     const edit = m.edit;
     const end = edit.ranges[edit.ranges.length - 1]?.toMs ?? 0;
-    const r = applyStandard(scenes, { endMs: end, keyword: m.reel?.keyword ?? null, matteAt: (ms) => matteAt(edit, ms), words: keptWords(m.captions, edit.ranges) });
+    const r = applyStandard(scenes, { endMs: end, keyword: m.reel?.keyword ?? null, matteAt: (ms) => matteAt(edit, ms), words: keptWords(m.captions, edit.ranges), ...(chosen ? { template: chosen } : {}) });
     // À l'ouverture : enregistré tout de suite (sinon le brouillon bloquerait le cadrage et les sous-titres) ; modifiable
     // ensuite comme toute animation, et rien n'est rendu sans l'aperçu validé. Sur le bouton : brouillon à relire.
     if (replace) changeDraft(r.custom);
     else { const placed = withAnimationIds(r.custom); setDraft(placed); void saveDraft(placed).catch(() => {}); }
-    setStandardNote(`Standard BeeRecos appliqué : ${r.custom.length} animation(s). ${replace ? "Vérifie dans l’aperçu, ajuste si besoin, puis enregistre." : "Enregistré : vérifie dans l’aperçu et ajuste si besoin."}${r.warnings.length ? `\n${r.warnings.join("\n")}` : ""}`);
+    setStandardNote(`${chosen ? `Mon modèle « ${chosen.name} »` : "Standard BeeRecos"} appliqué : ${r.custom.length} animation(s). ${replace ? "Vérifie dans l’aperçu, ajuste si besoin, puis enregistre." : "Enregistré : vérifie dans l’aperçu et ajuste si besoin."}${r.warnings.length ? `\n${r.warnings.join("\n")}` : ""}`);
   };
   const unsaved = Boolean(proposal) || JSON.stringify(logo)!==JSON.stringify(m.edit?.logo) || JSON.stringify(draft) !== JSON.stringify(m.edit?.custom ?? []) || JSON.stringify(animationChoices) !== JSON.stringify(m.edit?.animationChoices);
   pendingEdits.current = unsaved;
@@ -850,8 +857,9 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
           {simple ? (m.edit ? <section hidden={simpleStep!=="cadrage"} className="card p-4"><StudioFraming edit={m.edit} disabled={saving||animationBusy||frozen||unsaved} videoUrl={data.videoUrl} onAutoOpen={()=>setSimpleStep("cadrage")} onApply={framing=>{void save({...m.edit!,framing});}}/></section> : simpleStep==="cadrage" ? <p className="card p-4 text-sm text-mut">Envoie d&apos;abord la vidéo.</p> : null) : null}
           {simple && simpleStep==="sous-titres" ? <section className="card p-4">{ready && m.edit ? <StudioSimpleCaptions edit={m.edit} disabled={saving||animationBusy||frozen||Boolean(proposal)} onChange={patch=>{if(m.edit)void save({...m.edit,...patch});}} /> : <p className="text-sm text-mut">Les sous-titres arrivent avec la transcription (étape Coupes).</p>}</section> : null}
           {simple && simpleStep==="animations" ? <section className="card space-y-3 p-4">
-            <button type="button" className="btn-red min-h-12 w-full" disabled={!ready||saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>applyStandardDraft(true)}>Appliquer le standard BeeRecos</button>
-            <p className="text-xs text-mut">Toujours les mêmes animations : grand mot d&apos;accroche, onglets, chiffres et étapes dits, mot à retenir, « Commente MOT », logo de fin.</p>
+            <button type="button" className="btn-red min-h-12 w-full" disabled={!ready||saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>applyStandardDraft(true)}>{template&&!useStandard?`Appliquer mon modèle « ${template.name} »`:"Appliquer le standard BeeRecos"}</button>
+            {template ? <label className="flex min-h-11 items-center gap-2 text-xs"><input type="checkbox" checked={useStandard} onChange={(e)=>setUseStandard(e.target.checked)} /> Utiliser plutôt le Standard BeeRecos v1</label> : null}
+            <p className="text-xs text-mut">{template&&!useStandard?"Les réglages de ton modèle (Styles et paramètres → Mon modèle d’animation), avec les mots que tu prononces.":"Toujours les mêmes animations : grand mot d'accroche, onglets, chiffres et étapes dits, mot à retenir, « Commente MOT », logo de fin."}</p>
             {standardNote ? <p role="status" className="whitespace-pre-line rounded-xl bg-brand/5 px-3 py-2 text-xs">{standardNote}</p> : null}
             <button type="button" className="btn-ghost min-h-11 w-full" disabled={!m.edit||saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>{setLibraryTab("animations");setLibraryOpen(true);}}>+ Ajouter une animation</button>
             <p className="text-xs text-mut">Elle se place à l&apos;endroit du curseur de lecture. Clique sur une animation pour changer son texte ou sa durée.</p>

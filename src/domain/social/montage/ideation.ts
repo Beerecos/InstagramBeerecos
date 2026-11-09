@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AccentSchema, type CaptionWord, type Edit } from "./edit";
 import { spokenNumbers } from "./suggest";
 import { KeptMotionSchema } from "./beemotion";
+import { AnimationTemplateSchema } from "./template";
 
 /**
  * IDÉATION DU STUDIO (lot S4, Video Agent Kit §7 : direction → storyboard → plan). Un montage porte un BRIEF en trois
@@ -140,6 +141,8 @@ export const StudioSettingsSchema = z.strictObject({
   rules: z.array(z.string().trim().min(3).max(300)).max(MAX_RULES).default([]),
   /** BeeMotion : « ON GARDE » de la direction (géré par l'action motion-keep, jamais par le formulaire des préférences). */
   keptMotions: z.array(KeptMotionSchema).max(500).optional(),
+  /** « Mon modèle » : base d'animation du montage (action template-save, jamais par le formulaire des préférences). */
+  animationTemplate: AnimationTemplateSchema.optional(),
 });
 export type StudioSettings = z.infer<typeof StudioSettingsSchema>;
 export const DEFAULT_SETTINGS: StudioSettings = { accent: "bleu", subtitles: true, zoomCoupes: false, captionStyle: {}, rules: [] };
