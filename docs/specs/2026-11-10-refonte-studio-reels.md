@@ -71,9 +71,22 @@ source_files: src/components/social/MontageStudio.tsx, src/components/social/stu
    - L'aperçu et sa validation, autrefois réservés au mode avancé, sont désormais accessibles en mode simple.
    - Le mode avancé reste disponible.
 
+3. **Storyboard IA en cartes** (branches `claude/studio-storyboard-cartes`, Studio et BeeMarketing).
+   - Étape Storyboard : une carte par séquence du transcript, avec :
+     - les temps dans la vidéo montée (un clic lit la séquence) ;
+     - le rôle (Accroche, Problème, Preuve, Chiffre, Appel à l'action…) ;
+     - la phrase dite et les effets posés ;
+     - le statut : Suggestion IA, Validé, Modifié ou Supprimé.
+   - Actions :
+     - **Garder** ;
+     - **Modifier** : consigne en langage naturel limitée à la séquence, proposition de Bee puis Appliquer ;
+     - **Régénérer** : autre mise en scène pour cette séquence seulement, sans réglage inventé ;
+     - **Supprimer** : coupe non destructive, avec **Restaurer**.
+   - Domaine pur : `storyboard-cards.ts`. Statuts enregistrés dans `edit.sceneMarks` (champ facultatif accepté par le serveur).
+   - Le storyboard IA du brief (idéation) reste disponible en mode avancé. Sa fusion dans ces cartes fera partie du lot « Améliorer avec l'IA ».
+
 ## Prochains lots (ordre de priorité de Cédric)
 
-1. **Storyboard IA unifié** : modèle `Scene` rattaché aux temps réels du montage, cartes par séquence (Garder, Modifier, Supprimer, Régénérer une seule séquence), statuts Suggestion IA / Validé / Modifié / Supprimé.
 2. **Sous-titres** : regroupement de 2 à 6 mots selon le style, préréglages Dynamic, Clean, Highlight, Punch, Minimal.
 3. **Auto Director** : changements de cadrage (100 / 110 / 115 / 125 %) aux moments forts, et intensité Sobre / Équilibré / Dynamique.
 4. **BeeStyles** : préréglages exprimés en configuration (comme « Mon modèle »), sans dupliquer le rendu.
