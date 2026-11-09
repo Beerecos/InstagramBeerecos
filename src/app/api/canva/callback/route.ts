@@ -5,8 +5,11 @@ import { canvaDeps, redirectUri, STATE_COOKIE, VERIFIER_COOKIE } from "@/server/
 
 /** Retour de Canva : contrôle de l'état anti-falsification, échange du code avec le vérificateur PKCE, enregistrement serveur. */
 export async function GET(request: NextRequest) {
-  const back = (status: string) => {
-    const res = NextResponse.redirect(new URL(`/settings?canva=${status}#canva`, request.url));
+  const back = (status: string, detail?: string) => {
+    const url = new URL(`/settings?canva=${status}#canva`, request.url);
+    // Raison renvoyée par Canva (code et description publics, jamais de jeton) : pour savoir quoi corriger.
+    if (detail) url.searchParams.set("canva_detail", detail.replace(/[^\p{L}\p{N} .,:;'’_()/-]/gu, "").slice(0, 200));
+    const res = NextResponse.redirect(url);
     res.cookies.delete({ name: STATE_COOKIE, path: "/api/canva" });
     res.cookies.delete({ name: VERIFIER_COOKIE, path: "/api/canva" });
     return res;
@@ -21,13 +24,14 @@ export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams;
   const expected = request.cookies.get(STATE_COOKIE)?.value;
   const verifier = request.cookies.get(VERIFIER_COOKIE)?.value;
-  if (q.get("error")) return back("refuse");
+  const err = q.get("error");
+  if (err) return back(err === "access_denied" ? "refuse" : "erreur-canva", [err, q.get("error_description")].filter(Boolean).join(" : "));
   if (!expected || !verifier || q.get("state") !== expected || !q.get("code")) return back("expire");
   try {
     await finishConnect(canvaDeps(), userId, { code: q.get("code")!, verifier, redirectUri: redirectUri(request) });
     return back("ok");
   } catch (e) {
     console.error("canva callback", e instanceof Error ? e.message : e);
-    return back("erreur");
+    return back("erreur", e instanceof Error ? e.message : undefined);
   }
 }
