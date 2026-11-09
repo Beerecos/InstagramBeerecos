@@ -8,11 +8,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight, ImagePlus, MessageCircle, Sparkles, Trash2, X } from "lucide-react";
-import { CAPTION_MAX, STATUS_LABELS, formatBlockers, formatOf, mentionsKeyword, normalizeKeyword, photoLimit, type PostFormat, type Publication } from "@/domain/instagram/publication";
+import { CAPTION_MAX, STATUS_LABELS, formatBlockers, formatOf, MEDIA_MAX, mentionsKeyword, normalizeKeyword, photoLimit, type PostFormat, type Publication } from "@/domain/instagram/publication";
 import { generateEditorialText } from "@/lib/social/editorial-api";
 import { INSPI_KEYWORD, storyBrief, storyLength, withInspiEnding } from "@/domain/instagram/story-caption";
 import { INSPIBEEZNESS_CAROUSEL_PROMPT, INSPIBEEZNESS_PROMPT_VERSION } from "@/domain/instagram/presets/inspibeezness";
 import { instagram, uploadPhoto } from "@/lib/instagram/api";
+import CanvaPanel from "@/components/post/canva-panel";
 import PublishButton from "./publish-dialog";
 import CarouselBuilder from "./carousel-builder";
 
@@ -229,6 +230,12 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
                 ) : null}
               </ul>
             </section>
+            {!locked ? <CanvaPanel disabled={working} room={MEDIA_MAX - photos.length} onAdd={(added, note) => {
+              if (!added.length) return;
+              // Plusieurs pages Canva : le post devient un carrousel (jamais de page perdue en silence).
+              if (format === "simple" && photos.length + added.length > 1) setFormat("carrousel");
+              setPhotos((p) => [...p, ...added]); setDirty(true); setNotice(note);
+            }} /> : null}
             <section aria-labelledby="ia-titre" className="space-y-2 rounded-xl border border-brand/20 bg-brand-soft/40 p-3">
               <h2 id="ia-titre" className="flex items-center gap-2 font-medium"><Sparkles aria-hidden size={16} className="text-brand" /> Écrire la légende avec l&apos;IA</h2>
               {format === "carrousel" ? (

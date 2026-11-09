@@ -36,6 +36,8 @@ export const serverEnvSchema = clientEnvSchema.extend({
   OPENAI_IMAGE_QUALITY: z.enum(["low", "medium", "high"]).optional().or(z.literal("").transform(() => undefined)),
 
   // LinkedIn (API officielle) : profil membre (w_member_social) et page entreprise (Community Management API)
+  CANVA_CLIENT_ID: optionalString,
+  CANVA_CLIENT_SECRET: optionalString,
   LINKEDIN_CLIENT_ID: optionalString,
   LINKEDIN_CLIENT_SECRET: optionalString,
   LINKEDIN_ORGANIZATION_URN: z
