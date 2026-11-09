@@ -63,6 +63,12 @@ export default function CanvaPanel({ disabled, room, onAdd }: { disabled: boolea
               ))}
             </ul>
           ) : null}
+          {chosen?.editUrl ? (
+            <p className="text-sm">
+              <a className="inline-flex min-h-11 items-center gap-1 text-brand underline" href={chosen.editUrl} target="_blank" rel="noreferrer">Modifier ce modèle dans Canva</a>
+              <span className="block text-xs text-mut">Mise en page, couleurs, zones : dans Canva. Les visuels suivants utilisent la version enregistrée.</span>
+            </p>
+          ) : null}
           {chosen && fields ? (
             textFields.length ? (
               <div className="space-y-2">

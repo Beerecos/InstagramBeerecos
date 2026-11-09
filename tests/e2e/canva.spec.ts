@@ -12,7 +12,7 @@ async function mock(page: Page, view: Record<string, unknown>) {
     const path = new URL(req.url()).pathname.replace("/api/canva", "");
     calls.push({ method: req.method(), path, body: req.postDataJSON?.() ?? null });
     if (path === "/connection") return route.fulfill({ json: view });
-    if (path === "/templates") return route.fulfill({ json: { templates: [{ id: "EAGgsOdRFIY", title: "Carrousel Linkedin", thumbnailUrl: PIXEL }] } });
+    if (path === "/templates") return route.fulfill({ json: { templates: [{ id: "EAGgsOdRFIY", title: "Carrousel Linkedin", thumbnailUrl: PIXEL, editUrl: "https://www.canva.com/brand/brand-templates/EAGgsOdRFIY" }] } });
     if (path === "/templates/EAGgsOdRFIY") return route.fulfill({ json: { fields: [{ name: "Thematique", type: "text" }, { name: "Texte 1", type: "text" }, { name: "Photo", type: "image" }] } });
     if (path === "/visuals") return route.fulfill({ json: { paths: ["u/a.jpg", "u/b.jpg"], previews: { "u/a.jpg": PIXEL, "u/b.jpg": PIXEL }, editUrl: "https://www.canva.com/design/D1/edit", designId: "D1", pages: 2, missing: ["Texte 1"] } });
     return route.fulfill({ status: 404, json: { error: "non simulé" } });
@@ -29,6 +29,9 @@ test("Post : créer le visuel avec Canva remplit le modèle et ajoute ses pages 
   await panel.getByRole("button", { name: "Choisir un modèle Canva" }).click();
   await panel.getByRole("button", { name: /Carrousel Linkedin/ }).click();
   await expect(panel.getByLabel("Thematique")).toBeVisible();
+  const modify = panel.getByRole("link", { name: "Modifier ce modèle dans Canva" });
+  await expect(modify).toHaveAttribute("href", "https://www.canva.com/brand/brand-templates/EAGgsOdRFIY");
+  await expect(modify).toHaveAttribute("target", "_blank");
   await expect(panel.getByText(/zones image du modèle gardent/)).toBeVisible();
   const create = panel.getByRole("button", { name: "Créer le visuel" });
   await expect(create).toBeDisabled();

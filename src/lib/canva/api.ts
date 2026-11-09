@@ -1,6 +1,6 @@
 // Client des routes Canva du Studio (/api/canva/*). Les jetons Canva restent sur le serveur.
 export type CanvaView = { appConfigured: boolean; connected: boolean; name: string | null; autofill: boolean | null; brandTemplates: boolean | null };
-export type CanvaTemplate = { id: string; title: string; thumbnailUrl: string | null };
+export type CanvaTemplate = { id: string; title: string; thumbnailUrl: string | null; editUrl: string | null };
 export type CanvaField = { name: string; type: "text" | "image" | "chart" | "sheet" };
 export type CanvaVisual = { paths: string[]; previews: Record<string, string>; editUrl: string | null; designId: string; pages: number; missing: string[] };
 

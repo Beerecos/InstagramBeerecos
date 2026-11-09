@@ -72,12 +72,18 @@ export async function capabilities(f: F, token: string): Promise<string[]> {
   return (await call<{ capabilities?: string[] }>(f, token, "/users/me/capabilities")).capabilities ?? [];
 }
 
-export type BrandTemplate = { id: string; title: string; thumbnailUrl: string | null };
+/** editUrl : ouverture du modèle dans Canva (seul endroit où sa mise en page se modifie ; l'API ne le permet pas). */
+export type BrandTemplate = { id: string; title: string; thumbnailUrl: string | null; editUrl: string | null };
 export async function listBrandTemplates(f: F, token: string, query = ""): Promise<BrandTemplate[]> {
   const q = new URLSearchParams({ dataset: "non_empty", limit: "50", sort_by: "modified_descending" });
   if (query.trim()) q.set("query", query.trim().slice(0, 100));
-  const d = await call<{ items?: { id: string; title?: string; thumbnail?: { url?: string } }[] }>(f, token, `/brand-templates?${q}`);
-  return (d.items ?? []).map((t) => ({ id: t.id, title: t.title ?? "Sans titre", thumbnailUrl: t.thumbnail?.url ?? null }));
+  const d = await call<{ items?: { id: string; title?: string; view_url?: string; thumbnail?: { url?: string } }[] }>(f, token, `/brand-templates?${q}`);
+  return (d.items ?? []).map((t) => ({ id: t.id, title: t.title ?? "Sans titre", thumbnailUrl: t.thumbnail?.url ?? null, editUrl: canvaUrl(t.view_url) }));
+}
+
+/** Lien Canva accepté seulement s'il pointe vers canva.com en https (jamais une adresse arbitraire dans l'interface). */
+export function canvaUrl(u: string | undefined | null): string | null {
+  try { const x = new URL(u ?? ""); return x.protocol === "https:" && (x.hostname === "www.canva.com" || x.hostname === "canva.com") ? x.toString() : null; } catch { return null; }
 }
 
 export type DatasetField = { name: string; type: "text" | "image" | "chart" | "sheet" };
