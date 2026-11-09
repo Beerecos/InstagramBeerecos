@@ -85,9 +85,19 @@ source_files: src/components/social/MontageStudio.tsx, src/components/social/stu
    - Domaine pur : `storyboard-cards.ts`. Statuts enregistrés dans `edit.sceneMarks` (champ facultatif accepté par le serveur).
    - Le storyboard IA du brief (idéation) reste disponible en mode avancé. Sa fusion dans ces cartes fera partie du lot « Améliorer avec l'IA ».
 
+4. **Styles de sous-titres** (branches `claude/studio-sous-titres`) : Dynamic, Clean, Highlight, Punch et Minimal.
+   - Ce sont des configurations (`caption-modes.ts`) rendues par le même moteur.
+   - Chaque style règle :
+     - le découpage, de 2 à 6 mots, coupé aux pauses et aux fins de phrase ;
+     - l'apparition des mots au rythme de la voix ;
+     - le karaoké ;
+     - les capitales ;
+     - la cartouche.
+   - Sans style choisi : rendu d'avant à l'identique.
+   - Choix dans l'étape Style ; les couleurs, la taille et la position restent réglables.
+
 ## Prochains lots (ordre de priorité de Cédric)
 
-2. **Sous-titres** : regroupement de 2 à 6 mots selon le style, préréglages Dynamic, Clean, Highlight, Punch, Minimal.
 3. **Auto Director** : changements de cadrage (100 / 110 / 115 / 125 %) aux moments forts, et intensité Sobre / Équilibré / Dynamique.
 4. **BeeStyles** : préréglages exprimés en configuration (comme « Mon modèle »), sans dupliquer le rendu.
 5. **✨ Améliorer avec l'IA** : une seule liste de suggestions horodatées, avec Appliquer, Ignorer et Tout appliquer.

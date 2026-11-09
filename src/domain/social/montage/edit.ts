@@ -1,3 +1,4 @@
+import { CAPTION_MODES } from "./caption-modes";
 import { z } from "zod";
 
 /**
@@ -75,6 +76,8 @@ export const CaptionStyleSchema = z.strictObject({
   top: z.number().int().min(900, "doit être à 900 px au moins (zone trop haute)").max(1700, "doit être à 1700 px au plus (zone trop basse)").optional(),
   maxWidth: z.number().int().min(400).max(1000).optional(),
   fontSize: z.number().int().min(32).max(120).optional(),
+  /** Style des sous-titres (caption-modes.ts) : absent = « Highlight », le rendu d'avant. */
+  mode: z.enum(CAPTION_MODES).optional(),
 });
 
 /**
