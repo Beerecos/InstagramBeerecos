@@ -1,5 +1,5 @@
 import { ACCENT, BASELINE_FONT, COLORS, DEFAULT_ACCENT, CAPTION_DEFAULTS, STUDIO_LOGO, REEL_HEIGHT, REEL_WIDTH, escapeHtml } from "./brand";
-import { captionPages, layout, parseEdit, remapCaptions, takeIndexAt, takeStrip, toOutputMs, totalMs, type CaptionWord, type Edit } from "./edit";
+import { captionPages, layout, parseEdit, PlacementSchema, remapCaptions, takeIndexAt, takeStrip, toOutputMs, totalMs, type CaptionWord, type Edit } from "./edit";
 import { ERROR_CSS, renderAnimation, type AnimationDef } from "./animations";
 import { ANIMATIONS } from "./registry";
 import { isBehind, usedMattes } from "./matte";
@@ -131,9 +131,9 @@ export function buildEditComposition(input: unknown, words: CaptionWord[], opts:
     if (edit.framing) {
       // Partie gardée d'une prise paysage (ou plus haute que le 9:16) : position de l'image dans le recadrage « cover ».
       const focus = edit.framing.focusX !== undefined || edit.framing.focusY !== undefined ? `; object-position: ${edit.framing.focusX ?? 50}% ${edit.framing.focusY ?? 50}%` : "";
-      return ` style="transform: translate(${edit.framing.x}px, ${edit.framing.y}px) scale(${edit.framing.scale * rhythmZoom}); transform-origin: 50% 50%${focus}"`;
+      return ` data-rhythm-zoom="${rhythmZoom}" style="transform: translate(${edit.framing.x}px, ${edit.framing.y}px) scale(${edit.framing.scale * rhythmZoom}); transform-origin: 50% 50%${focus}"`;
     }
-    return rhythmZoom !== 1 ? ` style="transform: scale(${rhythmZoom}); transform-origin: 50% 32%"` : "";
+    return ` data-rhythm-zoom="${rhythmZoom}"` + (rhythmZoom !== 1 ? ` style="transform: scale(${rhythmZoom}); transform-origin: 50% 32%"` : "");
   };
   segments.forEach((seg, i) => {
     const take = strip[takeIndexAt(strip, seg.fromMs)];
@@ -169,8 +169,8 @@ export function buildEditComposition(input: unknown, words: CaptionWord[], opts:
     const key = motionRegistryKey(c.name, c.version);
     const out = renderAnimation(key, c.props, { id: `a${i}`, start: s(start), duration: s(duration), accent, assetBase: base, media: rawMedia }, versioned);
     if (!out.error) css.add(versioned[key].css);
-    const p = c.placement;
-    const content = p ? `<div id="placement-${i}" style="position:absolute;inset:0;transform:translate(${p.x}px,${p.y}px) scale(${p.scale});transform-origin:50% 50%;opacity:${p.opacity}"><div id="motion-${i}" style="position:absolute;inset:0">${out.html}</div></div>` : out.html;
+    const p = PlacementSchema.parse(c.placement ?? {});
+    const content = `<div id="placement-${i}" style="position:absolute;inset:0;transform:translate(${p.x}px,${p.y}px) scale(${p.scale});transform-origin:50% 50%;opacity:${p.opacity}"><div id="motion-${i}" style="position:absolute;inset:0">${out.html}</div></div>`;
     clips.push(`      <div id="anim-${i}" class="clip anim-host${isBehind(c.name, registry) ? " behind" : ""}" data-start="${s(start)}" data-duration="${s(duration)}" data-track-index="2">${content}</div>`);
     tweens.push(...out.tweens);
     const fade = Math.min(.25, s(duration) / 3);

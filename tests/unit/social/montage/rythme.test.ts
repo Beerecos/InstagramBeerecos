@@ -20,11 +20,11 @@ describe("rythme du montage", () => {
 
   it("zoom alterné : un morceau sur deux en plan serré, rien sans coupe", () => {
     const html = buildEditComposition({ ...base, rythme: { zoomCoupes: true, zoom: 1.15, volumeSon: 0.35 } }, [], { assetBase: "." });
-    expect(html).toMatch(/id="take-0"[^>]*data-track-index="0"><\/video>/);
-    expect(html).toContain('data-track-index="0" style="transform: scale(1.15); transform-origin: 50% 32%"></video>');
-    expect(html).toMatch(/id="take-2"[^>]*data-track-index="0"><\/video>/);
+    expect(html).toMatch(/id="take-0"[^>]*data-track-index="0" data-rhythm-zoom="1"><\/video>/);
+    expect(html).toContain('data-track-index="0" data-rhythm-zoom="1.15" style="transform: scale(1.15); transform-origin: 50% 32%"></video>');
+    expect(html).toMatch(/id="take-2"[^>]*data-track-index="0" data-rhythm-zoom="1"><\/video>/);
     const single = buildEditComposition({ ...base, ranges: [{ fromMs: 0, toMs: 8000 }], rythme: { zoomCoupes: true, zoom: 1.1, volumeSon: 0.35 } }, [], { assetBase: "." });
-    expect(single).not.toContain("scale(");
+    expect(single).not.toMatch(/<video[^>]*style="[^"]*scale\(/);
   });
 
   it("son d'entrée de chaque animation : bibliothèque, embarqué au rendu", () => {
