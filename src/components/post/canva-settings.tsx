@@ -15,11 +15,13 @@ const RETURN: Record<string, string> = {
   "non-configure": "L'intégration Canva n'est pas encore configurée sur le serveur (voir le guide).",
   interdit: "Action réservée à l'administrateur.",
   erreur: "Canva a refusé la connexion : vérifie l'intégration (droits et adresse de retour), puis recommence.",
+  "erreur-canva": "Canva a renvoyé une erreur : vérifie dans l'intégration les droits cochés (scopes) et l'adresse de retour, puis recommence.",
 };
 
 export default function CanvaSettings() {
   const params = useSearchParams();
   const back = params.get("canva");
+  const detail = params.get("canva_detail");
   const [view, setView] = useState<CanvaView | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { canvaApi.connection().then(setView).catch((e: Error) => setError(e.message)); }, []);
@@ -29,7 +31,7 @@ export default function CanvaSettings() {
     <section id="canva" className="card scroll-mt-20 p-4" aria-labelledby="canva-titre">
       <h2 id="canva-titre" className="font-semibold">Canva</h2>
       <p className="mt-1 text-sm text-mut">Tes modèles de marque Canva remplis automatiquement avec les textes du post, puis ajoutés à ses photos. Rien n&apos;est publié sans ta validation.</p>
-      {back && RETURN[back] ? <p role="status" className={`mt-2 text-sm ${back === "ok" ? "text-acid-dim" : "text-amber-800"}`}>{RETURN[back]}</p> : null}
+      {back && RETURN[back] ? <p role="status" className={`mt-2 text-sm ${back === "ok" ? "text-acid-dim" : "text-amber-800"}`}>{RETURN[back]}{detail ? <span className="mt-1 block text-xs">Raison donnée par Canva : {detail}</span> : null}</p> : null}
       {error ? <p role="alert" className="mt-2 text-sm text-red-700">{error}</p> : null}
       {!view && !error ? <p role="status" className="mt-2 text-sm text-mut">Lecture…</p> : null}
       {view ? (
