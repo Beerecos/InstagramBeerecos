@@ -109,3 +109,15 @@ describe("Canva : créer le visuel d'un post", () => {
     expect(cleanTexts(fields, { A: "x".repeat(900), P: "pas du texte", Z: "?" })).toEqual({ texts: { A: "x".repeat(500) }, missing: ["B"] });
   });
 });
+
+describe("Canva : modifier un modèle", () => {
+  it("lien du modèle repris de Canva, seulement vers canva.com en https", async () => {
+    const { canvaUrl, listBrandTemplates } = await import("@/server/canva/api");
+    expect(canvaUrl("https://www.canva.com/brand/brand-templates/EAG")).toBe("https://www.canva.com/brand/brand-templates/EAG");
+    expect(canvaUrl("http://www.canva.com/x")).toBeNull();
+    expect(canvaUrl("https://evil.example/x")).toBeNull();
+    expect(canvaUrl("javascript:alert(1)")).toBeNull();
+    const f = (async () => json({ items: [{ id: "EAG", title: "Carrousel", view_url: "https://www.canva.com/brand/brand-templates/EAG", thumbnail: { url: "https://t.canva.test/x.jpg" } }] })) as typeof fetch;
+    expect(await listBrandTemplates(f, "AT")).toEqual([{ id: "EAG", title: "Carrousel", thumbnailUrl: "https://t.canva.test/x.jpg", editUrl: "https://www.canva.com/brand/brand-templates/EAG" }]);
+  });
+});
