@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { montage } from "@/lib/social/montage-api";
 import { MAX_RULES, type StudioSettings } from "@/domain/social/montage/ideation";
+import MonModeleEditor from "@/components/social/studio/MonModeleEditor";
 
 /**
  * STYLES ET PARAMÈTRES DU STUDIO (lot S4, Video Agent Kit §7 « Styles / préférences » et « Paramètres ») : réglages
@@ -92,6 +93,15 @@ export default function StudioSettingsPanel() {
         </ul>
         <p className="text-xs text-mut">Sans brand et forbidden-claims, Bee ne propose rien. Les clés restent dans les secrets Supabase : elles ne sont jamais affichées.</p>
       </section>
+      <div className="lg:col-span-2">
+        <MonModeleEditor saved={settings.animationTemplate ?? null} onSaved={(t) => {
+          const { animationTemplate: _old, ...rest } = settings; void _old;
+          const next = t ? { ...rest, animationTemplate: t } : rest;
+          setSettings(next);
+          // Le modèle ne fait pas partie du formulaire des préférences : il ne le marque pas « à enregistrer ».
+          setSaved((prev) => { try { const p = JSON.parse(prev) as StudioSettings; const { animationTemplate: _x, ...r } = p; void _x; return JSON.stringify(t ? { ...r, animationTemplate: t } : r); } catch { return prev; } });
+        }} />
+      </div>
     </div>
   );
 }

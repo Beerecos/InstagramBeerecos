@@ -13,6 +13,7 @@ import type { Brief, CtaObjective, Storyboard, StoryboardStatus, StudioSettings 
 import type { BlockIntent, Hook } from "@/domain/social/montage/narrative";
 import type { Reel, ScenePatch } from "@/domain/social/montage/reels";
 import type { MontagePost, PostInput } from "@/domain/social/montage/post";
+import type { AnimationTemplate } from "@/domain/social/montage/template";
 
 export const isMontageConfigured = Boolean(apiUrl);
 
@@ -118,6 +119,8 @@ export const montage = {
   /** Styles / préférences et Paramètres du Studio. */
   getSettings: () => call<{ settings: StudioSettings; services: { transcription: boolean; claude: boolean; rendu: boolean; ressources: boolean }; memory: string[] }>({ action: "settings-get" }),
   saveSettings: (settings: StudioSettings) => call<{ settings: StudioSettings }>({ action: "settings-save", settings }),
+  /** « Mon modèle » : enregistre la base d'animation du montage (null : retour au Standard BeeRecos v1). */
+  saveTemplate: (template: AnimationTemplate | null) => call<{ template: AnimationTemplate | null }>({ action: "template-save", template }),
   saveAnimations: (id: string, custom: CustomAnimation[]) => call<{ ok: true }>({ action: "animations", id, custom }),
   /** BeeMotion : « ON GARDE » enregistrés et usage réel de chaque motion. */
   motionLibrary: () => call<{ kept: KeptMotion[]; usage: Record<string, number> }>({ action: "motion-library" }),
