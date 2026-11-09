@@ -1,4 +1,5 @@
 import { ACCENT, BASELINE_FONT, COLORS, DEFAULT_ACCENT, CAPTION_DEFAULTS, STUDIO_LOGO, REEL_HEIGHT, REEL_WIDTH, escapeHtml } from "./brand";
+import { CAPTION_MODE, captionModeOf } from "./caption-modes";
 import { captionPages, layout, parseEdit, remapCaptions, takeIndexAt, takeStrip, toOutputMs, totalMs, type CaptionWord, type Edit } from "./edit";
 import { ERROR_CSS, renderAnimation, type AnimationDef } from "./animations";
 import { ANIMATIONS } from "./registry";
@@ -40,10 +41,13 @@ const BASE_CSS = `
 export function captionCss(style: Edit["captionStyle"] = {}): string {
   const top = style.top ?? CAPTION_DEFAULTS.top;
   const maxWidth = style.maxWidth ?? CAPTION_DEFAULTS.maxWidth;
-  const fontSize = style.fontSize ?? CAPTION_DEFAULTS.fontSize;
+  // Sans style choisi : rendu d'avant à l'identique (taille, graisse, cartouche).
+  const mode = style.mode ? CAPTION_MODE[style.mode] : null;
+  const fontSize = style.fontSize ?? mode?.fontSize ?? CAPTION_DEFAULTS.fontSize;
+  const extra = mode ? `font-weight: ${mode.weight}; ${mode.uppercase ? "text-transform: uppercase; letter-spacing: 0.01em;" : ""} ${mode.box ? "" : "background: none !important; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.75);"}` : "";
   return `
       .caption { position: absolute; z-index: 10; left: ${(REEL_WIDTH - maxWidth) / 2}px; width: ${maxWidth}px; top: ${top}px; min-height: ${CAPTION_DEFAULTS.height}px; display: flex; align-items: center; justify-content: center; }
-      .caption p { margin: 0; max-width: 100%; padding: 10px 22px; border-radius: 16px; background: ${style.backgroundColor ?? "rgba(0, 0, 0, 0.62)"}; color: ${style.color ?? "rgba(255, 255, 255, 0.6)"}; font-family: "${style.fontFamily ?? "Poppins"}"; font-size: ${fontSize}px; font-weight: 500; line-height: 1.25; text-align: center; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }`;
+      .caption p { margin: 0; max-width: 100%; padding: 10px 22px; border-radius: 16px; background: ${style.backgroundColor ?? "rgba(0, 0, 0, 0.62)"}; color: ${style.color ?? "rgba(255, 255, 255, 0.6)"}; font-family: "${style.fontFamily ?? "Poppins"}"; font-size: ${fontSize}px; font-weight: 500; line-height: 1.25; text-align: center; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; ${extra} }`;
 }
 
 function documentShell(o: { title: string; base: string; preview?: boolean; css: string; clips: string[]; tweens: string[]; durationS: number }): string {
@@ -186,11 +190,19 @@ export function buildEditComposition(input: unknown, words: CaptionWord[], opts:
 
   if (edit.subtitles) {
     css.add(captionCss(edit.captionStyle));
-    captionPages(remapCaptions(words, segments)).forEach((page, i) => {
-      const spans = page.words.map((w, j) => `<span id="c${i}-w${j}">${escapeHtml(w.text)}</span>`).join(" ");
+    const mode = CAPTION_MODE[captionModeOf(edit.captionStyle)];
+    const lit = edit.captionStyle.highlightColor ?? COLORS.white;
+    captionPages(remapCaptions(words, segments), { maxWords: mode.maxWords, maxChars: mode.maxChars }).forEach((page, i) => {
+      // Sans karaoké, toute la phrase est déjà à la couleur pleine (lisible d'un coup).
+      const plain = mode.karaoke ? "" : ` style="color: ${lit}"`;
+      const spans = page.words.map((w, j) => `<span id="c${i}-w${j}"${plain}>${escapeHtml(w.text)}</span>`).join(" ");
       clips.push(`      <div id="cap-${i}" class="clip caption" data-start="${s(page.startMs)}" data-duration="${s(Math.max(page.endMs - page.startMs, 100))}" data-track-index="1"><p>${spans}</p></div>`);
-      // Karaoké : chaque mot s'allume quand il est prononcé.
-      page.words.forEach((w, j) => tweens.push(`tl.to("#c${i}-w${j}", { color: "${edit.captionStyle.highlightColor ?? COLORS.white}", duration: 0.08, ease: "none" }, ${s(w.startMs)});`));
+      page.words.forEach((w, j) => {
+        // Apparition au moment où le mot est dit (le premier mot de la page est visible dès son début).
+        if (mode.reveal && j > 0) tweens.push(`tl.fromTo("#c${i}-w${j}", { opacity: 0 }, { opacity: 1, duration: 0.06, ease: "none" }, ${s(w.startMs)});`);
+        // Karaoké : chaque mot s'allume quand il est prononcé.
+        if (mode.karaoke) tweens.push(`tl.to("#c${i}-w${j}", { color: "${lit}", duration: 0.08, ease: "none" }, ${s(w.startMs)});`);
+      });
     });
   }
 

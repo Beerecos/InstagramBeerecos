@@ -1,10 +1,11 @@
 "use client";
 /**
- * Sous-titres en mode simple : afficher ou non, un style parmi quatre (aperçu réel des couleurs), une taille, une
- * position. Chaque clic s'applique tout de suite (enregistré, annulable avec « Annuler »).
+ * Sous-titres en mode simple : afficher ou non, un style (Dynamic, Clean, Highlight, Punch, Minimal), des couleurs
+ * parmi quatre (aperçu réel), une taille, une position. Chaque clic s'applique tout de suite (enregistré, annulable avec « Annuler »).
  */
 import type { Edit } from "@/domain/social/montage/edit";
 import { CAPTION_POSITIONS, CAPTION_PRESETS, CAPTION_SIZES, nearest, presetOf, withPosition, withPreset, withSize } from "@/domain/reels/caption-presets";
+import { CAPTION_MODE, CAPTION_MODES, captionModeOf } from "@/domain/social/montage/caption-modes";
 
 type Props = { edit: Edit; disabled: boolean; onChange: (patch: Pick<Edit, "subtitles" | "captionStyle">) => void };
 
@@ -25,6 +26,23 @@ export default function StudioSimpleCaptions({ edit, disabled, onChange }: Props
         <input type="checkbox" role="switch" checked={on} onChange={(e) => set(style, e.target.checked)} className="size-5 accent-[#2851FF]" />
       </label>
       {on ? <>
+        <div>
+          <p className="mb-2 text-sm font-medium">Style</p>
+          <div role="radiogroup" aria-label="Style des sous-titres" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {CAPTION_MODES.map((k) => {
+              const d = CAPTION_MODE[k];
+              const active = captionModeOf(style) === k;
+              // Choisir un style reprend sa taille par défaut (réglable ensuite avec « Taille »).
+              return (
+                <button key={k} type="button" role="radio" aria-checked={active} onClick={() => { const { fontSize: _f, ...rest } = style; void _f; set({ ...rest, mode: k }); }}
+                  className={`flex min-h-16 flex-col items-start justify-center rounded-xl border px-3 py-2 text-left transition ${active ? "border-brand ring-2 ring-brand/30" : "border-line hover:border-brand"}`}>
+                  <span className="text-sm font-semibold" style={{ textTransform: d.uppercase ? "uppercase" : undefined }}>{d.label}</span>
+                  <span className="text-xs text-mut">{d.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <div>
           <p className="mb-2 text-sm font-medium">Couleurs</p>
           <div role="radiogroup" aria-label="Couleurs des sous-titres" className="grid grid-cols-2 gap-2">

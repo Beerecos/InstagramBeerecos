@@ -211,6 +211,10 @@ test("studio simple : quatre étapes, couleurs des sous-titres en un clic, mode 
   await expect.poll(() => saved.at(-1)?.captionStyle.backgroundColor).toBe("#2851FF");
   await page.getByRole("radiogroup", { name: "Taille des sous-titres" }).filter({ visible: true }).getByRole("radio", { name: "Grand" }).click();
   await expect.poll(() => saved.at(-1)?.captionStyle.fontSize).toBe(64);
+  // Style des sous-titres : Punch reprend sa taille par défaut (la taille choisie avant est retirée).
+  await page.getByRole("radiogroup", { name: "Style des sous-titres" }).filter({ visible: true }).getByRole("radio", { name: /Punch/ }).click();
+  await expect.poll(() => saved.at(-1)?.captionStyle.mode).toBe("punch");
+  expect(saved.at(-1)?.captionStyle.fontSize).toBeUndefined();
 
   await expect(page.getByRole("button", { name: "+ Ajouter une animation" }).filter({ visible: true })).toBeVisible();
   // Standard v1 posé automatiquement (brouillon) : accroche reprise de ce qui est dit (onglet sans détourage), logo de fin.
