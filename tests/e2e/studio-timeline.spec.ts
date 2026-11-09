@@ -199,19 +199,19 @@ test("studio simple : quatre étapes, couleurs des sous-titres en un clic, mode 
   });
   await page.goto("/reels/m7");
   const steps = page.getByRole("navigation", { name: "Étapes du montage" }).filter({ visible: true });
-  for (const name of [/Cadrage/, /Coupes/, /Sous-titres/, /Animations/]) await expect(steps.getByRole("button", { name })).toBeVisible();
+  for (const name of [/Importer/, /Storyboard/, /Style/, /Aperçu/, /Publier/]) await expect(steps.getByRole("button", { name })).toBeVisible();
+  await expect(steps.getByRole("button", { name: /Storyboard/ })).toHaveAttribute("aria-current", "step");
   // Les outils avancés sont masqués.
   await expect(page.getByRole("button", { name: "⚡ Tout auto" }).filter({ visible: true })).toHaveCount(0);
   await expect(page.getByRole("complementary", { name: "Réglages de la sélection" }).filter({ visible: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Terminer →" }).filter({ visible: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Publier →" }).filter({ visible: true })).toBeVisible();
 
-  await steps.getByRole("button", { name: /Sous-titres/ }).click();
+  await steps.getByRole("button", { name: /Style/ }).click();
   await page.getByRole("radiogroup", { name: "Couleurs des sous-titres" }).filter({ visible: true }).getByRole("radio", { name: /Bleu BeeRecos/ }).click();
   await expect.poll(() => saved.at(-1)?.captionStyle.backgroundColor).toBe("#2851FF");
   await page.getByRole("radiogroup", { name: "Taille des sous-titres" }).filter({ visible: true }).getByRole("radio", { name: "Grand" }).click();
   await expect.poll(() => saved.at(-1)?.captionStyle.fontSize).toBe(64);
 
-  await steps.getByRole("button", { name: /Animations/ }).click();
   await expect(page.getByRole("button", { name: "+ Ajouter une animation" }).filter({ visible: true })).toBeVisible();
   // Standard v1 posé automatiquement (brouillon) : accroche reprise de ce qui est dit (onglet sans détourage), logo de fin.
   const list = page.getByRole("list", { name: "Animations du réel" }).filter({ visible: true });
@@ -220,6 +220,12 @@ test("studio simple : quatre étapes, couleurs des sous-titres en un clic, mode 
   // Posé et enregistré dès l'ouverture : les autres étapes ne sont pas bloquées.
   await expect.poll(() => saved.at(-1)?.custom.map((c) => c.name)).toEqual(["onglet", "logo-fin"]);
   expect(saved.at(-1)?.custom[0].props).toMatchObject({ texte: "BEERECOS", variante: "blanc" });
+
+  // Aperçu : modification en langage naturel et validation de la planche, sans passer en mode avancé.
+  await steps.getByRole("button", { name: /Aperçu/ }).click();
+  await expect(page.getByRole("region", { name: "Aperçu et validation" }).getByRole("heading", { name: "✨ Améliorer avec l'IA" })).toBeVisible();
+  await steps.getByRole("button", { name: /Importer/ }).click();
+  await expect(page.getByRole("region", { name: "Détourage" }).filter({ visible: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Mode avancé" }).filter({ visible: true }).click();
   await expect(page.getByRole("button", { name: "⚡ Tout auto" }).filter({ visible: true })).toBeVisible();

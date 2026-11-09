@@ -366,22 +366,38 @@ function useLibrary() {
 type MontageData = Awaited<ReturnType<typeof montage.get>>;
 
 /** Studio simple : les quatre étapes (et « Terminer »), en gros boutons. */
-const SIMPLE_STEPS = [
-  { key: "cadrage", label: "Cadrage", hint: "Choisir la partie gardée en 9:16" },
-  { key: "coupes", label: "Coupes", hint: "Retirer les passages en trop" },
-  { key: "sous-titres", label: "Sous-titres", hint: "Couleurs, taille, position" },
-  { key: "animations", label: "Animations", hint: "Titres, mots, cartes" },
-] as const;
-function SimpleSteps({ step, onStep, hasEdit, ready }: { step: string; onStep: (s: "cadrage" | "coupes" | "sous-titres" | "animations" | "terminer") => void; hasEdit: boolean; ready: boolean }) {
+/**
+ * Parcours du Studio (refonte 2026-11-09, « Tu parles. BeeMarketing monte. ») : cinq étapes au lieu des panneaux
+ * techniques. Chaque étape réutilise les outils existants (cadrage, coupes, sous-titres, animations, retours, planche,
+ * rendu, post) ; le mode avancé reste disponible pour le réglage fin.
+ */
+export type StudioStep = "importer" | "storyboard" | "style" | "apercu" | "publier";
+export const STUDIO_STEPS: { key: StudioStep; label: string; hint: string }[] = [
+  { key: "importer", label: "Importer", hint: "Ta vidéo, cadrage, détourage" },
+  { key: "storyboard", label: "Storyboard", hint: "Garder ou retirer les passages" },
+  { key: "style", label: "Style", hint: "Sous-titres et animations" },
+  { key: "apercu", label: "Aperçu", hint: "Retouches et validation" },
+  { key: "publier", label: "Publier", hint: "Vidéo finale et post" },
+];
+function SimpleSteps({ step, onStep, hasEdit, ready }: { step: StudioStep; onStep: (s: StudioStep) => void; hasEdit: boolean; ready: boolean }) {
+  const current = STUDIO_STEPS.findIndex((s) => s.key === step);
   return (
-    <nav aria-label="Étapes du montage" className="grid grid-cols-2 gap-2">
-      {SIMPLE_STEPS.map((s, i) => (
-        <button key={s.key} type="button" aria-current={step === s.key ? "step" : undefined} disabled={!hasEdit || (s.key === "sous-titres" && !ready)} onClick={() => onStep(s.key)}
-          className={`flex min-h-16 flex-col items-start justify-center rounded-2xl border px-3 py-2 text-left transition disabled:opacity-40 ${step === s.key ? "border-brand bg-brand text-white" : "border-line bg-white hover:border-brand"}`}>
-          <span className="text-sm font-semibold">{i + 1}. {s.label}</span>
-          <span className={`text-xs ${step === s.key ? "text-white/80" : "text-mut"}`}>{s.hint}</span>
-        </button>
-      ))}
+    <nav aria-label="Étapes du montage" className="-mx-1 overflow-x-auto px-1 pb-1">
+      <ol className="flex min-w-max items-center gap-1">
+        {STUDIO_STEPS.map((s, i) => {
+          const off = !hasEdit || (!ready && (s.key === "style" || s.key === "apercu"));
+          return (
+            <li key={s.key} className="flex items-center gap-1">
+              {i > 0 ? <span aria-hidden className="text-mut">→</span> : null}
+              <button type="button" aria-current={step === s.key ? "step" : undefined} disabled={off} onClick={() => onStep(s.key)} title={s.hint}
+                className={`flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-sm transition disabled:opacity-40 ${step === s.key ? "border-brand bg-brand font-semibold text-white" : i < current ? "border-brand/30 bg-brand/5 text-brand" : "border-line bg-white hover:border-brand"}`}>
+                <span className="tabular-nums">{i + 1}</span> {s.label}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="mt-1 text-xs text-mut">{STUDIO_STEPS[current]?.hint}</p>
     </nav>
   );
 }
@@ -421,7 +437,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   // Mode simple (par défaut) : 4 étapes (cadrage, coupes, sous-titres, animations) puis « Terminer ». Le mode avancé
   // garde tous les outils ; le choix est retenu sur cet appareil.
   const [simple,setSimpleMode]=useState(()=>{try{return typeof window==="undefined"||localStorage.getItem("ibr.studio.mode")!=="avance";}catch{return true;}});
-  const [simpleStep,setSimpleStep]=useState<"cadrage"|"coupes"|"sous-titres"|"animations"|"terminer">("coupes");
+  const [simpleStep,setSimpleStep]=useState<StudioStep>("storyboard");
   const switchMode=(next:boolean)=>{setSimpleMode(next);try{localStorage.setItem("ibr.studio.mode",next?"simple":"avance");}catch{/* stockage indisponible */}};
   const [libraryTab,setLibraryTab]=useState<"animations"|"effects"|"sounds">("animations");
   const [expanded,setExpanded]=useState(()=>typeof window==="undefined"||window.innerWidth>=768);
@@ -802,7 +818,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
         </> : null}
         {!simple || unsaved ? <button type="button" className="btn-ghost min-h-[44px] px-3 text-sm" disabled={!m.edit || !unsaved || Boolean(proposal) || saving || animationBusy || frozen} onClick={() => { void saveDraft().catch(() => {}); }}>Enregistrer le montage</button> : null}
         {simple
-          ? <button type="button" className="btn-red min-h-[44px] px-4 text-sm" disabled={!m.edit} onClick={() => setSimpleStep("terminer")}>Terminer →</button>
+          ? <button type="button" className="btn-red min-h-[44px] px-4 text-sm" disabled={!m.edit} onClick={() => setSimpleStep("publier")}>Publier →</button>
           : <button type="button" className="btn-red min-h-[40px] px-3 text-sm" disabled={!m.edit} onClick={() => {setPanel("rendu");setMonitorView("render");}}>Rendu</button>}
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" aria-pressed={!simple} onClick={()=>switchMode(!simple)} title={simple ? "Afficher tous les outils du studio" : "Revenir au studio simple"}>{simple ? "Mode avancé" : "Mode simple"}</button>
         <button type="button" className="btn-ghost min-h-[40px] px-3 text-sm" onClick={()=>setExpanded(!expanded)} title={expanded ? "Afficher le menu de l'application" : "Studio plein écran"}>{expanded ? "⤡" : "⤢"}</button>
@@ -854,9 +870,11 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
       <div className={`studio-workspace${simple ? " studio-simple" : ""}`} data-testid="studio-workspace">
         <aside aria-label="Outils du montage" className="studio-tools min-w-0 space-y-3">
           {simple ? <SimpleSteps step={simpleStep} onStep={setSimpleStep} hasEdit={Boolean(m.edit)} ready={ready} /> : null}
-          {simple ? (m.edit ? <section hidden={simpleStep!=="cadrage"} className="card p-4"><StudioFraming edit={m.edit} disabled={saving||animationBusy||frozen||unsaved} videoUrl={data.videoUrl} onAutoOpen={()=>setSimpleStep("cadrage")} onApply={framing=>{void save({...m.edit!,framing});}}/></section> : simpleStep==="cadrage" ? <p className="card p-4 text-sm text-mut">Envoie d&apos;abord la vidéo.</p> : null) : null}
-          {simple && simpleStep==="sous-titres" ? <section className="card p-4">{ready && m.edit ? <StudioSimpleCaptions edit={m.edit} disabled={saving||animationBusy||frozen||Boolean(proposal)} onChange={patch=>{if(m.edit)void save({...m.edit,...patch});}} /> : <p className="text-sm text-mut">Les sous-titres arrivent avec la transcription (étape Coupes).</p>}</section> : null}
-          {simple && simpleStep==="animations" ? <section className="card space-y-3 p-4">
+          {simple ? (m.edit ? <section hidden={simpleStep!=="importer"} className="card space-y-3 p-4"><StudioFraming edit={m.edit} disabled={saving||animationBusy||frozen||unsaved} videoUrl={data.videoUrl} onAutoOpen={()=>setSimpleStep("importer")} onApply={framing=>{void save({...m.edit!,framing});}}/></section> : simpleStep==="importer" ? <p className="card p-4 text-sm text-mut">Envoie d&apos;abord la vidéo.</p> : null) : null}
+          {simple && simpleStep==="importer" ? <TakesCard m={m} onChange={load} /> : null}
+          {simple && simpleStep==="importer" && m.edit ? <MattesCard m={m} onChange={load} /> : null}
+          {simple && simpleStep==="style" ? <section className="card p-4">{ready && m.edit ? <StudioSimpleCaptions edit={m.edit} disabled={saving||animationBusy||frozen||Boolean(proposal)} onChange={patch=>{if(m.edit)void save({...m.edit,...patch});}} /> : <p className="text-sm text-mut">Les sous-titres arrivent avec la transcription (étape Storyboard).</p>}</section> : null}
+          {simple && simpleStep==="style" ? <section className="card space-y-3 p-4">
             <button type="button" className="btn-red min-h-12 w-full" disabled={!ready||saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>applyStandardDraft(true)}>{template&&!useStandard?`Appliquer mon modèle « ${template.name} »`:"Appliquer le standard BeeRecos"}</button>
             {template ? <label className="flex min-h-11 items-center gap-2 text-xs"><input type="checkbox" checked={useStandard} onChange={(e)=>setUseStandard(e.target.checked)} /> Utiliser plutôt le Standard BeeRecos v1</label> : null}
             <p className="text-xs text-mut">{template&&!useStandard?"Les réglages de ton modèle (Styles et paramètres → Mon modèle d’animation), avec les mots que tu prononces.":"Toujours les mêmes animations : grand mot d'accroche, onglets, chiffres et étapes dits, mot à retenir, « Commente MOT », logo de fin."}</p>
@@ -870,13 +888,21 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             {selectedAnimation ? <StudioInspector animation={selectedAnimation} ranges={m.edit?.ranges ?? []} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChange={changeAnimation} onRemove={() => { changeDraft(draft.filter(a => a.id !== selectedAnimation.id)); setSelectedId(null); }} onTest={() => { seekSource(selectedAnimation.fromMs);player.current?.play(); }} /> : null}
             {unsaved && !proposal ? <button type="button" className="btn-red min-h-11 w-full" disabled={saving||animationBusy||frozen} onClick={()=>{void saveDraft().catch(()=>{});}}>Enregistrer mes animations</button> : null}
           </section> : null}
-          {simple && simpleStep==="terminer" ? <section className="card space-y-4 p-4">
+          {simple && simpleStep==="apercu" ? <section className="card space-y-4 p-4" aria-label="Aperçu et validation">
+            <h3 className="font-semibold">✨ Améliorer avec l&apos;IA</h3>
+            <p className="text-xs text-mut">Écris ce que tu veux changer (« zoom moins fort », « coupe le début », « mets BUSINESS derrière moi »). Bee propose, tu appliques.</p>
+            {ready ? <StudioFeedback montageId={m.id} disabled={saving || animationBusy || frozen || (!proposal && unsaved)} proposal={proposal} onProposal={setProposal} onApply={applyProposal} /> : <p className="text-sm text-mut">Disponible après la transcription.</p>}
+            <h3 className="font-semibold">Valider l&apos;aperçu</h3>
+            {m.edit ? <StudioContactSheet edit={m.edit} words={m.captions} videoUrl={data.videoUrl} takeUrls={data.takeUrls} library={lib.library ?? []} storyboardApproved={m.storyboardStatus === "approved"} briefKeyword={m.brief?.motCle ?? null} approved={Boolean(m.previewApproved)} approvedAt={m.previewApprovedAt}
+              unsaved={unsaved} disabled={saving || animationBusy || frozen} onApprove={async () => { await montage.approvePreview(m.id, m.updatedAt); load(); }} /> : null}
+          </section> : null}
+          {simple && simpleStep==="publier" ? <section className="card space-y-4 p-4">
             <h3 className="font-semibold">1. Créer la vidéo finale</h3>
-            {m.edit ? <MontagePublish m={m} disabled={unsaved || saving} showTransfer={false} showVideo={false} onChange={load} onOpenPlanche={() => switchMode(false)} /> : null}
+            {m.edit ? <MontagePublish m={m} disabled={unsaved || saving} showTransfer={false} showVideo={false} onChange={load} onOpenPlanche={() => setSimpleStep("apercu")} /> : null}
             <h3 className="font-semibold">2. Préparer le post</h3>
             <PostPanel m={m} />
           </section> : null}
-          {simple && simpleStep==="coupes" ? <p className="px-1 text-sm text-mut">Clique sur un mot ou sélectionne une phrase pour la retirer. Sur la timeline : ✂ coupe au curseur, et tu peux tirer les bords d&apos;un plan.</p> : null}
+          {simple && simpleStep==="storyboard" ? <p className="px-1 text-sm text-mut">Clique sur un mot ou sélectionne une phrase pour la retirer. Sur la timeline : ✂ coupe au curseur, et tu peux tirer les bords d&apos;un plan.</p> : null}
           <div hidden={simple} className="space-y-3">
           <div className="studio-tabs flex flex-wrap gap-1.5" role="group" aria-label="Outils de création">
             {PANELS.map((p) => (
@@ -911,7 +937,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             {panel === "rendu" && (m.edit ? <MontagePublish m={m} disabled={unsaved || saving} showTransfer={false} showVideo={false} onChange={load} onOpenPlanche={() => setPanel("planche")} /> : <p className="text-sm text-mut">Envoyez d&apos;abord la prise.</p>)}
           </section>
           </div>
-          {!simple || simpleStep==="coupes" ? <>
+          {!simple || simpleStep==="storyboard" ? <>
           {m.edit ? <StudioTrim key={m.updatedAt} edit={m.edit} durationMs={m.durationMs ?? 0} disabled={saving || animationBusy || frozen || unsaved} onSave={async e=>{await save(e);}} /> : null}
           {m.captions.length ? (
             <StudioTranscript words={m.captions} ranges={m.edit?.ranges ?? []} playheadMs={playSource} disabled={saving || animationBusy || frozen || unsaved} takeBreaks={breaks}
