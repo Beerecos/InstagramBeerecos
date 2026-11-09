@@ -96,3 +96,12 @@ describe("RLS connexion Canva", () => {
     await expect(db.query("insert into public.canva_connection (id, access_token, refresh_token, expires_at) values (2, 'a', 'b', now())")).rejects.toThrow(/check constraint/);
   });
 });
+
+describe("RLS choix des modèles Canva", () => {
+  it("les choix ne sont ni lus ni écrits par une session ; type post ou carrousel seulement", async () => {
+    await db.query("insert into public.canva_template_choices (template_id, title, kind) values ('EAGgsOdRFIY', 'Carrousel', 'carrousel') on conflict (template_id) do nothing");
+    await expect(asUser(db, CEDRIC, () => db.query("select * from public.canva_template_choices"))).rejects.toThrow(/permission denied/);
+    await expect(asUser(db, CEDRIC, () => db.query("insert into public.canva_template_choices (template_id, kind) values ('ABCDEF', 'post')"))).rejects.toThrow(/permission denied/);
+    await expect(db.query("insert into public.canva_template_choices (template_id, kind) values ('XYZ123', 'story')")).rejects.toThrow(/check constraint/);
+  });
+});

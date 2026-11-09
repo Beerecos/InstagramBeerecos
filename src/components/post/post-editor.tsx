@@ -230,7 +230,7 @@ export default function PostEditor({ id, initialFormat = "simple" }: { id: strin
                 ) : null}
               </ul>
             </section>
-            {!locked ? <CanvaPanel disabled={working} room={MEDIA_MAX - photos.length} onAdd={(added, note) => {
+            {!locked ? <CanvaPanel disabled={working} room={MEDIA_MAX - photos.length} format={format} onAdd={(added, note) => {
               if (!added.length) return;
               // Plusieurs pages Canva : le post devient un carrousel (jamais de page perdue en silence).
               if (format === "simple" && photos.length + added.length > 1) setFormat("carrousel");

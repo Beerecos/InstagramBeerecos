@@ -13,8 +13,16 @@ export type CanvaStore = {
   save(c: CanvaConnection, by: string | null): Promise<void>;
   remove(): Promise<void>;
 };
+export type TemplateKind = "post" | "carrousel";
+export type TemplateChoice = { id: string; title: string; kind: TemplateKind };
+/** Modèles retenus pour l'onglet Post (indépendants de la connexion). */
+export type ChoiceStore = {
+  list(): Promise<TemplateChoice[]>;
+  replace(choices: TemplateChoice[], by: string): Promise<void>;
+};
 export type CanvaDeps = {
   store: CanvaStore;
+  choices: ChoiceStore;
   app: { clientId?: string; clientSecret?: string };
   fetch: typeof fetch;
   /** Dépose un JPEG dans le stockage des photos du post et renvoie son chemin. */
@@ -76,8 +84,28 @@ export async function accessToken(deps: CanvaDeps): Promise<string> {
   return (await refreshing).accessToken;
 }
 
-export async function templates(deps: CanvaDeps, query = "") {
-  return canva.listBrandTemplates(deps.fetch, await accessToken(deps), query);
+/**
+ * Modèles de marque remplissables, avec le type choisi par Cédric (null : non retenu). `configured` : au moins un modèle
+ * retenu ; tant qu'aucun ne l'est, l'onglet Post les propose tous (comportement d'avant le choix).
+ */
+export async function templates(deps: CanvaDeps, query = ""): Promise<{ templates: (canva.BrandTemplate & { kind: TemplateKind | null })[]; configured: boolean }> {
+  const [list, chosen] = await Promise.all([canva.listBrandTemplates(deps.fetch, await accessToken(deps), query), deps.choices.list()]);
+  const kinds = new Map(chosen.map((c) => [c.id, c.kind]));
+  return { templates: list.map((t) => ({ ...t, kind: kinds.get(t.id) ?? null })), configured: chosen.length > 0 };
+}
+
+/** Enregistre la sélection (remplace la précédente). Identifiants contrôlés, doublons refusés. */
+export async function saveChoices(deps: CanvaDeps, userId: string, choices: TemplateChoice[]): Promise<TemplateChoice[]> {
+  const ids = new Set<string>();
+  for (const c of choices) {
+    if (!/^[\w-]{3,64}$/.test(c.id)) throw new CanvaError("Modèle Canva invalide.", 400);
+    if (c.kind !== "post" && c.kind !== "carrousel") throw new CanvaError("Type de modèle invalide (post ou carrousel).", 400);
+    if (ids.has(c.id)) throw new CanvaError("Modèle sélectionné deux fois.", 400);
+    ids.add(c.id);
+  }
+  const clean = choices.map((c) => ({ id: c.id, title: c.title.trim().slice(0, 255), kind: c.kind }));
+  await deps.choices.replace(clean, userId);
+  return clean;
 }
 
 export async function dataset(deps: CanvaDeps, templateId: string) {

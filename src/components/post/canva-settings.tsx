@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import { canvaApi, type CanvaView } from "@/lib/canva/api";
+import CanvaChoices from "@/components/post/canva-choices";
 
 const RETURN: Record<string, string> = {
   ok: "Canva est connecté.",
@@ -50,6 +51,7 @@ export default function CanvaSettings() {
               : <p className="text-amber-800">L&apos;intégration Canva n&apos;est pas encore configurée sur le serveur.</p>}
             {view.connected ? <button type="button" className="btn-ghost min-h-11 text-red-700" onClick={async () => { try { setView(await canvaApi.disconnect()); } catch (e) { setError((e as Error).message); } }}>Déconnecter</button> : null}
           </div>
+          {view.connected ? <CanvaChoices /> : null}
           <details className="rounded-xl border border-line p-3">
             <summary className="cursor-pointer font-medium">Guide : créer l&apos;intégration Canva (une seule fois)</summary>
             <ol className="mt-3 list-decimal space-y-2 pl-5">

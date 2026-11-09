@@ -1,6 +1,6 @@
 import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import type { CanvaStore } from "./service";
+import type { CanvaStore, ChoiceStore } from "./service";
 
 /** Connexion Canva (une ligne, clé secrète, serveur uniquement). Les jetons ne quittent jamais le serveur. */
 export function canvaStore(): CanvaStore {
@@ -19,6 +19,28 @@ export function canvaStore(): CanvaStore {
     async remove() {
       const { error } = await sb.from("canva_connection").delete().eq("id", 1);
       if (error) throw new Error(`Déconnexion de Canva : ${error.message}`);
+    },
+  };
+}
+
+/** Modèles retenus pour l'onglet Post (table serveur uniquement). */
+export function canvaChoiceStore(): ChoiceStore {
+  const sb = createSupabaseAdminClient();
+  return {
+    async list() {
+      const { data, error } = await sb.from("canva_template_choices").select("template_id, title, kind").order("updated_at", { ascending: true });
+      if (error) throw new Error(`Lecture des modèles Canva retenus : ${error.message}`);
+      return (data ?? []).map((r) => ({ id: r.template_id, title: r.title, kind: r.kind }));
+    },
+    async replace(choices, by) {
+      const keep = choices.map((c) => c.id);
+      if (choices.length) {
+        const { error } = await sb.from("canva_template_choices").upsert(choices.map((c) => ({ template_id: c.id, title: c.title, kind: c.kind, updated_by: by, updated_at: new Date().toISOString() })));
+        if (error) throw new Error(`Enregistrement des modèles Canva : ${error.message}`);
+      }
+      const del = sb.from("canva_template_choices").delete();
+      const { error } = keep.length ? await del.not("template_id", "in", `(${keep.map((k) => `"${k}"`).join(",")})`) : await del.neq("template_id", "");
+      if (error) throw new Error(`Mise à jour des modèles Canva : ${error.message}`);
     },
   };
 }

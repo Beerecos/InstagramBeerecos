@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { authorizeUrl, CanvaError, pkce, SCOPES } from "@/server/canva/api";
-import { accessToken, cleanTexts, createVisual, view, type CanvaConnection, type CanvaDeps } from "@/server/canva/service";
+import { accessToken, cleanTexts, createVisual, saveChoices, templates, view, type CanvaConnection, type CanvaDeps, type TemplateChoice } from "@/server/canva/service";
 
 const NOW = Date.parse("2026-11-09T10:00:00Z");
 const conn = (extra: Partial<CanvaConnection> = {}): CanvaConnection => ({ displayName: "Compte Canva", accessToken: "AT", refreshToken: "RT", expiresAt: new Date(NOW + 3_600_000).toISOString(), scopes: [...SCOPES], capabilities: ["autofill", "brand_template"], ...extra });
@@ -28,9 +28,11 @@ function fakeCanva(over: Partial<Record<string, (init?: RequestInit) => Response
 
 function deps(c: CanvaConnection | null, f: typeof fetch) {
   let stored = c;
+  let chosen: TemplateChoice[] = [];
   const uploads: string[] = [];
   const d: CanvaDeps = {
     store: { get: async () => stored, save: async (n) => { stored = n; }, remove: async () => { stored = null; } },
+    choices: { list: async () => chosen, replace: async (c) => { chosen = c; } },
     app: { clientId: "cid", clientSecret: "secret" }, fetch: f, now: () => NOW,
     upload: async (userId) => { const p = `${userId}/img${uploads.length}.jpg`; uploads.push(p); return p; },
     poll: { intervalMs: 1, timeoutMs: 1000, sleep: async () => {} },
@@ -119,5 +121,30 @@ describe("Canva : modifier un modèle", () => {
     expect(canvaUrl("javascript:alert(1)")).toBeNull();
     const f = (async () => json({ items: [{ id: "EAG", title: "Carrousel", view_url: "https://www.canva.com/brand/brand-templates/EAG", thumbnail: { url: "https://t.canva.test/x.jpg" } }] })) as typeof fetch;
     expect(await listBrandTemplates(f, "AT")).toEqual([{ id: "EAG", title: "Carrousel", thumbnailUrl: "https://t.canva.test/x.jpg", editUrl: "https://www.canva.com/brand/brand-templates/EAG" }]);
+  });
+});
+
+describe("Canva : choisir les modèles du Studio (post ou carrousel)", () => {
+  const list = () => fakeCanva({ "/brand-templates?": () => json({ items: [{ id: "EAGcar", title: "Carrousel", view_url: "https://www.canva.com/brand/brand-templates/EAGcar" }, { id: "EAGpost", title: "Post citation" }] }) }).f;
+
+  it("sans choix : tous les modèles proposés, aucun type", async () => {
+    const r = await templates(deps(conn(), list()).d);
+    expect(r.configured).toBe(false);
+    expect(r.templates.map((t) => [t.id, t.kind])).toEqual([["EAGcar", null], ["EAGpost", null]]);
+  });
+
+  it("les choix enregistrés donnent le type de chaque modèle ; un modèle non retenu reste à null", async () => {
+    const { d } = deps(conn(), list());
+    await saveChoices(d, "u1", [{ id: "EAGcar", title: "Carrousel", kind: "carrousel" }]);
+    const r = await templates(d);
+    expect(r.configured).toBe(true);
+    expect(r.templates.map((t) => [t.id, t.kind])).toEqual([["EAGcar", "carrousel"], ["EAGpost", null]]);
+  });
+
+  it("refuse un identifiant invalide, un type inconnu ou un doublon", async () => {
+    const { d } = deps(conn(), list());
+    await expect(saveChoices(d, "u1", [{ id: "../x", title: "", kind: "post" }])).rejects.toMatchObject({ status: 400 });
+    await expect(saveChoices(d, "u1", [{ id: "EAGcar", title: "", kind: "story" as never }])).rejects.toMatchObject({ status: 400 });
+    await expect(saveChoices(d, "u1", [{ id: "EAGcar", title: "", kind: "post" }, { id: "EAGcar", title: "", kind: "carrousel" }])).rejects.toMatchObject({ status: 400 });
   });
 });

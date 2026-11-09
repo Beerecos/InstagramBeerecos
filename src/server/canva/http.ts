@@ -6,7 +6,7 @@ import { ForbiddenError, requirePermission } from "@/server/auth/dal";
 import type { Permission } from "@/domain/roles";
 import { CanvaError } from "./api";
 import type { CanvaDeps } from "./service";
-import { canvaStore } from "./store";
+import { canvaChoiceStore, canvaStore } from "./store";
 
 export const STATE_COOKIE = "ibr_canva_state";
 export const VERIFIER_COOKIE = "ibr_canva_pkce";
@@ -26,7 +26,7 @@ async function upload(userId: string, bytes: ArrayBuffer): Promise<string> {
 }
 
 export function canvaDeps(): CanvaDeps {
-  return { store: canvaStore(), app: canvaApp(), fetch, upload };
+  return { store: canvaStore(), choices: canvaChoiceStore(), app: canvaApp(), fetch, upload };
 }
 
 /** Garde commune des routes Canva : session + permission, base configurée, erreurs lisibles (jamais de jeton renvoyé). */

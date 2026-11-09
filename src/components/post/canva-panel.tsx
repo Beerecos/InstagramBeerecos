@@ -6,13 +6,17 @@
 import { useEffect, useState } from "react";
 import { Palette } from "lucide-react";
 import { canvaApi, type CanvaField, type CanvaTemplate, type CanvaView } from "@/lib/canva/api";
+import type { PostFormat } from "@/domain/instagram/publication";
 
 export type CanvaPhoto = { path: string; url: string };
 
-export default function CanvaPanel({ disabled, room, onAdd }: { disabled: boolean; room: number; onAdd: (photos: CanvaPhoto[], note: string) => void }) {
+export default function CanvaPanel({ disabled, room, format, onAdd }: { disabled: boolean; room: number; format: PostFormat; onAdd: (photos: CanvaPhoto[], note: string) => void }) {
   const [view, setView] = useState<CanvaView | null>(null);
   const [open, setOpen] = useState(false);
-  const [templates, setTemplates] = useState<CanvaTemplate[] | null>(null);
+  const [all, setAll] = useState<{ templates: CanvaTemplate[]; configured: boolean } | null>(null);
+  // Modèles retenus dans Paramètres → Canva pour ce format (post ou carrousel) ; sans sélection, tous.
+  const wanted = format === "carrousel" ? "carrousel" : "post";
+  const templates = all ? (all.configured ? all.templates.filter((t) => t.kind === wanted) : all.templates) : null;
   const [chosen, setChosen] = useState<CanvaTemplate | null>(null);
   const [fields, setFields] = useState<CanvaField[] | null>(null);
   const [texts, setTexts] = useState<Record<string, string>>({});
@@ -25,7 +29,7 @@ export default function CanvaPanel({ disabled, room, onAdd }: { disabled: boolea
     setBusy(label); setError(null);
     try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : "Canva indisponible."); } finally { setBusy(null); }
   };
-  const openPanel = () => { setOpen(true); if (!templates) void run("Lecture de tes modèles Canva…", async () => setTemplates((await canvaApi.templates()).templates)); };
+  const openPanel = () => { setOpen(true); if (!all) void run("Lecture de tes modèles Canva…", async () => setAll(await canvaApi.templates())); };
   const choose = (t: CanvaTemplate) => { setChosen(t); setFields(null); setTexts({}); setEditUrl(null); void run("Lecture des zones du modèle…", async () => setFields((await canvaApi.fields(t.id)).fields)); };
   const textFields = (fields ?? []).filter((f) => f.type === "text");
   const create = () => chosen && run("Canva crée le visuel (quelques secondes)…", async () => {
@@ -48,7 +52,8 @@ export default function CanvaPanel({ disabled, room, onAdd }: { disabled: boolea
         <button type="button" className="btn-ghost min-h-11" disabled={disabled || room <= 0} onClick={openPanel}>Choisir un modèle Canva</button>
       ) : (
         <div className="space-y-3">
-          {templates && !templates.length ? <p className="text-sm text-mut">Aucun modèle de marque avec des zones remplissables dans ton Canva.</p> : null}
+          {templates && !templates.length ? <p className="text-sm text-mut">{all?.configured ? `Aucun modèle « ${wanted === "post" ? "Post" : "Carrousel"} » retenu. ` : "Aucun modèle de marque avec des zones remplissables dans ton Canva. "}<a className="text-brand underline" href="/settings#canva-modeles">Choisir mes modèles</a></p> : null}
+          {all && !all.configured && all.templates.length ? <p className="text-xs text-mut">Tous tes modèles sont proposés. <a className="text-brand underline" href="/settings#canva-modeles">Choisir ceux du Studio (post ou carrousel)</a></p> : null}
           {templates?.length ? (
             <ul aria-label="Modèles Canva" className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {templates.map((t) => (
