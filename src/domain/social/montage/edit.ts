@@ -145,6 +145,12 @@ export const EditSchema = z.strictObject({
   rythme: RythmeSchema.optional(),
   /** Style Motion (2026-10-25) : absent = rendu d'avant. */
   style: MotionStyleSchema.optional(),
+  /**
+   * Storyboard en cartes (refonte du Studio, 2026-11-10) : statut décidé par l'utilisateur pour une séquence, repérée
+   * par son début dans la prise (ms, temps source). Absent = toutes les cartes en « Suggestion IA ».
+   */
+  sceneMarks: z.record(z.string().regex(/^\d{1,9}$/), z.enum(["validated", "modified"]))
+    .refine((m) => Object.keys(m).length <= 200, "200 séquences au plus").optional(),
   /** Optional official BeeRecos logo, kept separate from timed animation cards. */
   logo: z.strictObject({
     width: z.number().int().min(150).max(360).default(220),

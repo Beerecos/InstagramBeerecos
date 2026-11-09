@@ -20,6 +20,7 @@ import StudioTranscript, { type WordSelection } from "@/components/social/studio
 import StudioCaptions from "@/components/social/studio/StudioCaptions";
 import StudioFeedback, { type Proposal } from "@/components/social/studio/StudioFeedback";
 import StudioContactSheet from "@/components/social/studio/StudioContactSheet";
+import StudioStoryboardCards from "@/components/social/studio/StudioStoryboardCards";
 import StudioMedia from "@/components/social/studio/StudioMedia";
 import StudioIdeation from "@/components/social/studio/StudioIdeation";
 import StudioSettingsPanel from "@/components/social/studio/StudioSettingsPanel";
@@ -902,6 +903,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             <h3 className="font-semibold">2. Préparer le post</h3>
             <PostPanel m={m} />
           </section> : null}
+          {simple && simpleStep==="storyboard" && m.edit ? <StudioStoryboardCards m={m} disabled={saving||animationBusy||frozen||unsaved||Boolean(proposal)} onSave={async e=>{await save(e);}} onSeek={ms=>player.current?.seek(ms/1000)} onApplyProposal={applyProposal} /> : null}
           {simple && simpleStep==="storyboard" ? <p className="px-1 text-sm text-mut">Clique sur un mot ou sélectionne une phrase pour la retirer. Sur la timeline : ✂ coupe au curseur, et tu peux tirer les bords d&apos;un plan.</p> : null}
           <div hidden={simple} className="space-y-3">
           <div className="studio-tabs flex flex-wrap gap-1.5" role="group" aria-label="Outils de création">
