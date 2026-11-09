@@ -83,3 +83,16 @@ describe("RLS publication LinkedIn", () => {
     await expect(asUser(db, CEDRIC, () => db.query("insert into public.ig_publications (kind, linkedin_text) values ('post', $1)", ["x".repeat(3001)]))).rejects.toThrow(/check/);
   });
 });
+
+describe("RLS connexion Canva", () => {
+  it("les jetons Canva restent inaccessibles aux sessions (lecture, écriture, suppression)", async () => {
+    await db.query("insert into public.canva_connection (access_token, refresh_token, expires_at) values ('SECRET', 'REFRESH', now() + interval '4 hours') on conflict (id) do nothing");
+    await expect(asUser(db, CEDRIC, () => db.query("select * from public.canva_connection"))).rejects.toThrow(/permission denied/);
+    await expect(asUser(db, CEDRIC, () => db.query("update public.canva_connection set access_token = 'x'"))).rejects.toThrow(/permission denied/);
+    await expect(asUser(db, CEDRIC, () => db.query("delete from public.canva_connection"))).rejects.toThrow(/permission denied/);
+  });
+
+  it("une seule connexion Canva", async () => {
+    await expect(db.query("insert into public.canva_connection (id, access_token, refresh_token, expires_at) values (2, 'a', 'b', now())")).rejects.toThrow(/check constraint/);
+  });
+});
