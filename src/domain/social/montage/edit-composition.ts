@@ -1,5 +1,6 @@
 import { ACCENT, BASELINE_FONT, COLORS, DEFAULT_ACCENT, CAPTION_DEFAULTS, STUDIO_LOGO, REEL_HEIGHT, REEL_WIDTH, escapeHtml } from "./brand";
 import { CAPTION_MODE, captionModeOf } from "./caption-modes";
+import { fixBrandWords } from "./brand-words";
 import { directorShots, shotAt, type Shot } from "./director";
 import { studioSequences } from "./studio-sequences";
 import { captionPages, layout, parseEdit, remapCaptions, takeIndexAt, takeStrip, toOutputMs, totalMs, type CaptionWord, type Edit } from "./edit";
@@ -111,7 +112,9 @@ export function duckPieces(atMs: number, durationMs: number, speech: { fromMs: n
   return pieces;
 }
 
-export function buildEditComposition(input: unknown, words: CaptionWord[], opts: EditCompositionOptions): string {
+export function buildEditComposition(input: unknown, rawWords: CaptionWord[], opts: EditCompositionOptions): string {
+  // Nom de la marque toujours écrit BeeRecos dans les sous-titres (même si la transcription a entendu « Biroco »).
+  const words = fixBrandWords(rawWords);
   const parsed = parseEdit(input);
   if (!parsed.ok) throw new Error(`edit.json invalide :\n${parsed.errors.join("\n")}`);
   const edit = parsed.edit;
