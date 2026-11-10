@@ -33,6 +33,7 @@ import StudioLibraryDialog from "@/components/social/studio/StudioLibraryDialog"
 import StudioFraming from "@/components/social/studio/StudioFraming";
 import StudioSimpleCaptions from "@/components/social/studio/StudioSimpleCaptions";
 import StudioDirector from "@/components/social/studio/StudioDirector";
+import StudioBeeStyles from "@/components/social/studio/StudioBeeStyles";
 import { ANIMATIONS } from "@/domain/social/montage/registry";
 import { removeSequence } from "@/domain/social/montage/sequence-edit";
 import { studioSequences } from "@/domain/social/montage/studio-sequences";
@@ -54,6 +55,7 @@ import { layout, MAX_STRIP_MS, MAX_TAKES, takeBreaks, takeStrip, toOutputMs, typ
 import { checkStudioEdit, cutSource, outputToSourceMs, restoreSource, wordSpan } from "@/domain/social/montage/studio";
 import { MATTE_COMMAND, MATTE_MAX_BYTES, matteAt } from "@/domain/social/montage/matte";
 import { applyStandard } from "@/domain/social/montage/standard";
+import { BEE_STYLE, swapWordAnimation, WORD_ANIMATIONS, WORD_LABEL, wordText, type BeeStyle, type WordAnimation } from "@/domain/social/montage/bee-styles";
 import type { AnimationTemplate } from "@/domain/social/montage/template";
 
 /**
@@ -460,7 +462,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   const [standardNote, setStandardNote] = useState<string | null>(null);
   // « Mon modèle » (réglages du Studio) : utilisé à la place du Standard BeeRecos v1 quand il existe.
   const [template, setTemplate] = useState<AnimationTemplate | null | undefined>(undefined); // undefined : pas encore lu
-  const [useStandard, setUseStandard] = useState(false);
+  const useStandard = false;
   useEffect(() => { montage.getSettings().then((r) => setTemplate(r.settings.animationTemplate ?? null)).catch(() => setTemplate(null)); }, []);
   /** Prompteur du Reel lié (lot S7) : texte chargé à l'ouverture. */
   const [prompteur, setPrompteur] = useState<Reel | null>(null);
@@ -719,19 +721,20 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   const ready = Boolean(m.edit && m.captions.length);
   standardRef.current = (replace: boolean) => applyStandardDraft(replace);
   /** Dynamique « BeeRecos Standard v1 » : mêmes animations, mêmes réglages, posées depuis ce qui est dit (brouillon à relire). */
-  const applyStandardDraft = (replace: boolean, standardOnly = useStandard) => {
+  const applyStandardDraft = (replace: boolean, standardOnly = useStandard, style?: BeeStyle) => {
     if (!m.edit || !ready || frozen || saving || animationBusy || proposal) return;
     if (!replace && draft.length) return;
     const chosen = standardOnly ? null : template ?? null;
-    if (replace && draft.length && !window.confirm(chosen ? `Remplacer les animations actuelles par ton modèle « ${chosen.name} » ?` : "Remplacer les animations actuelles par le standard BeeRecos ?")) return;
+    const look = style ? BEE_STYLE[style] : null;
+    if (replace && draft.length && !window.confirm(look ? `Remplacer les animations actuelles par le style « ${look.label} » ?` : chosen ? `Remplacer les animations actuelles par ton modèle « ${chosen.name} » ?` : "Remplacer les animations actuelles par le standard BeeRecos ?")) return;
     const edit = m.edit;
     const end = edit.ranges[edit.ranges.length - 1]?.toMs ?? 0;
-    const r = applyStandard(scenes, { endMs: end, keyword: m.reel?.keyword ?? null, matteAt: (ms) => matteAt(edit, ms), words: keptWords(m.captions, edit.ranges), ...(chosen ? { template: chosen } : {}) });
+    const r = applyStandard(scenes, { endMs: end, keyword: m.reel?.keyword ?? null, matteAt: (ms) => matteAt(edit, ms), words: keptWords(m.captions, edit.ranges), ...(chosen ? { template: chosen } : {}), ...(look ? { look: look.look, styleName: look.label } : {}) });
     // À l'ouverture : enregistré tout de suite (sinon le brouillon bloquerait le cadrage et les sous-titres) ; modifiable
     // ensuite comme toute animation, et rien n'est rendu sans l'aperçu validé. Sur le bouton : brouillon à relire.
     if (replace) changeDraft(r.custom);
     else { const placed = withAnimationIds(r.custom); setDraft(placed); void saveDraft(placed).catch(() => {}); }
-    setStandardNote(`${chosen ? `Mon modèle « ${chosen.name} »` : "Standard BeeRecos"} appliqué : ${r.custom.length} animation(s). ${replace ? "Vérifie dans l’aperçu, ajuste si besoin, puis enregistre." : "Enregistré : vérifie dans l’aperçu et ajuste si besoin."}${r.warnings.length ? `\n${r.warnings.join("\n")}` : ""}`);
+    setStandardNote(`${look ? `Style « ${look.label} »` : chosen ? `Mon modèle « ${chosen.name} »` : "Standard BeeRecos"} appliqué : ${r.custom.length} animation(s). ${replace ? "Vérifie dans l’aperçu, ajuste si besoin, puis enregistre." : "Enregistré : vérifie dans l’aperçu et ajuste si besoin."}${r.warnings.length ? `\n${r.warnings.join("\n")}` : ""}`);
   };
   const unsaved = Boolean(proposal) || JSON.stringify(logo)!==JSON.stringify(m.edit?.logo) || JSON.stringify(draft) !== JSON.stringify(m.edit?.custom ?? []) || JSON.stringify(animationChoices) !== JSON.stringify(m.edit?.animationChoices);
   pendingEdits.current = unsaved;
@@ -878,14 +881,16 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
           {simple && simpleStep==="style" ? <section className="card p-4">{ready && m.edit ? <StudioSimpleCaptions edit={m.edit} disabled={saving||animationBusy||frozen||Boolean(proposal)} onChange={patch=>{if(m.edit)void save({...m.edit,...patch});}} /> : <p className="text-sm text-mut">Les sous-titres arrivent avec la transcription (étape Storyboard).</p>}</section> : null}
           {simple && simpleStep==="style" && ready && m.edit ? <section className="card p-4"><StudioDirector edit={m.edit} disabled={saving||animationBusy||frozen||Boolean(proposal)} onChange={patch=>{if(m.edit)void save({...m.edit,...patch});}} /></section> : null}
           {simple && simpleStep==="style" ? <section className="card space-y-3 p-4">
-            <button type="button" className="btn-red min-h-12 w-full" disabled={!ready||saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>applyStandardDraft(true)}>{template&&!useStandard?`Appliquer mon modèle « ${template.name} »`:"Appliquer le standard BeeRecos"}</button>
-            {template ? <label className="flex min-h-11 items-center gap-2 text-xs"><input type="checkbox" checked={useStandard} onChange={(e)=>setUseStandard(e.target.checked)} /> Utiliser plutôt le Standard BeeRecos v1</label> : null}
-            <p className="text-xs text-mut">{template&&!useStandard?"Les réglages de ton modèle (Styles et paramètres → Mon modèle d’animation), avec les mots que tu prononces.":"Toujours les mêmes animations : grand mot d'accroche, onglets, chiffres et étapes dits, mot à retenir, « Commente MOT », logo de fin."}</p>
+            <StudioBeeStyles custom={draft} disabled={!ready||saving||animationBusy||frozen||Boolean(proposal)} onPick={(k)=>applyStandardDraft(true,true,k)} />
+            {template ? <button type="button" className="btn-ghost min-h-11 w-full" disabled={!ready||saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>applyStandardDraft(true,false)}>Appliquer mon modèle « {template.name} »</button> : null}
             {standardNote ? <p role="status" className="whitespace-pre-line rounded-xl bg-brand/5 px-3 py-2 text-xs">{standardNote}</p> : null}
             <button type="button" className="btn-ghost min-h-11 w-full" disabled={!m.edit||saving||animationBusy||frozen||Boolean(proposal)} onClick={()=>{setLibraryTab("animations");setLibraryOpen(true);}}>+ Ajouter une animation</button>
             <p className="text-xs text-mut">Elle se place à l&apos;endroit du curseur de lecture. Clique sur une animation pour changer son texte ou sa durée.</p>
             {draft.length ? <ul aria-label="Animations du réel" className="space-y-1">{draft.map((a)=><li key={a.id} className="flex items-center gap-2">
               <button type="button" aria-pressed={a.id===selectedId} className="btn-ghost min-h-11 min-w-0 flex-1 truncate text-left text-sm" onClick={()=>{setSelectedId(a.id??null);seekSource(a.fromMs);}}>{ANIMATIONS[a.name]?.label ?? a.name} · {sec(toOutputMs(segments,a.fromMs))}</button>
+              {wordText(a)!==null && a.name!=="titre-derriere" ? <select aria-label={`Changer l'animation « ${wordText(a)} »`} value={a.name} disabled={saving||animationBusy||frozen} onChange={(e)=>changeDraft(draft.map(x=>x.id===a.id?swapWordAnimation(x,e.target.value as WordAnimation):x))} className="min-h-11 rounded-lg border border-line bg-white px-2 text-sm">
+                {WORD_ANIMATIONS.map(n=><option key={n} value={n}>{WORD_LABEL[n]}</option>)}
+              </select> : null}
               <button type="button" aria-label={`Retirer ${ANIMATIONS[a.name]?.label ?? a.name}`} className="btn-ghost min-h-11 min-w-11 text-red-700" disabled={saving||animationBusy||frozen} onClick={()=>{changeDraft(draft.filter(x=>x.id!==a.id));if(selectedId===a.id)setSelectedId(null);}}>✕</button>
             </li>)}</ul> : <p className="text-sm text-mut">Aucune animation pour l&apos;instant.</p>}
             {selectedAnimation ? <StudioInspector animation={selectedAnimation} ranges={m.edit?.ranges ?? []} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChange={changeAnimation} onRemove={() => { changeDraft(draft.filter(a => a.id !== selectedAnimation.id)); setSelectedId(null); }} onTest={() => { seekSource(selectedAnimation.fromMs);player.current?.play(); }} /> : null}

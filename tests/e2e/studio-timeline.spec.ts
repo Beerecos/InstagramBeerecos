@@ -231,6 +231,15 @@ test("studio simple : quatre étapes, couleurs des sous-titres en un clic, mode 
   // Posé et enregistré dès l'ouverture : les autres étapes ne sont pas bloquées.
   await expect.poll(() => saved.at(-1)?.custom.map((c) => c.name)).toEqual(["onglet", "logo-fin"]);
   expect(saved.at(-1)?.custom[0].props).toMatchObject({ texte: "BEERECOS", variante: "blanc" });
+  // BeeStyles : un clic change les animations posées (sans détourage), puis chaque mot peut changer d'animation.
+  page.once("dialog", (d) => void d.accept());
+  await page.getByRole("radiogroup", { name: "Style des animations" }).filter({ visible: true }).getByRole("radio", { name: /Punch/ }).click();
+  await expect(list.getByRole("button", { name: /^Mot impact ·/ })).toBeVisible();
+  await expect(page.getByRole("radiogroup", { name: "Style des animations" }).filter({ visible: true }).getByRole("radio", { name: /Punch/ })).toHaveAttribute("aria-checked", "true");
+  await list.getByRole("combobox", { name: "Changer l'animation « BEERECOS »" }).selectOption("titre-profondeur");
+  await page.getByRole("button", { name: "Enregistrer mes animations" }).filter({ visible: true }).click();
+  await expect.poll(() => saved.at(-1)?.custom.map((c) => c.name)).toEqual(["titre-profondeur", "logo-fin"]);
+  expect(saved.at(-1)?.custom[0].props).toEqual({ texte: "BEERECOS" });
 
   // Aperçu : modification en langage naturel et validation de la planche, sans passer en mode avancé.
   await steps.getByRole("button", { name: /Aperçu/ }).click();
