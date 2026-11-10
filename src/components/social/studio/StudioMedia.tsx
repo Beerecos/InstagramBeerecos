@@ -139,6 +139,7 @@ export default function StudioMedia({ library, onRefresh, editor }: Props) {
             <input type="checkbox" checked={rythme.zoomCoupes} disabled={disabled} onChange={(e) => setRythme({ zoomCoupes: e.target.checked })} />
             Zoom alterné à chaque coupe (plan large, plan serré)
           </label>
+          {rythme.director ? <p className="text-xs text-mut">Auto Director actif (étape Style) : il remplace le zoom alterné.</p> : null}
           <label className="flex items-center gap-2 text-xs text-mut">Plan serré
             <select value={String(rythme.zoom)} disabled={disabled || !rythme.zoomCoupes} onChange={(e) => setRythme({ zoom: Number(e.target.value) })} className="rounded-lg border border-line bg-white px-2 py-1 text-sm">
               {[1.05, 1.1, 1.15, 1.2].map((z) => <option key={z} value={String(z)}>{Math.round(z * 100)} %</option>)}

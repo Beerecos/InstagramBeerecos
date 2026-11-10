@@ -1,5 +1,7 @@
 import { ACCENT, BASELINE_FONT, COLORS, DEFAULT_ACCENT, CAPTION_DEFAULTS, STUDIO_LOGO, REEL_HEIGHT, REEL_WIDTH, escapeHtml } from "./brand";
 import { CAPTION_MODE, captionModeOf } from "./caption-modes";
+import { directorShots, shotAt, type Shot } from "./director";
+import { studioSequences } from "./studio-sequences";
 import { captionPages, layout, parseEdit, remapCaptions, takeIndexAt, takeStrip, toOutputMs, totalMs, type CaptionWord, type Edit } from "./edit";
 import { ERROR_CSS, renderAnimation, type AnimationDef } from "./animations";
 import { ANIMATIONS } from "./registry";
@@ -130,20 +132,42 @@ export function buildEditComposition(input: unknown, words: CaptionWord[], opts:
   // de son temps propre (temps de la bande moins le début de la prise).
   const strip = takeStrip(edit);
   // Zoom alterné : plan large, plan serré, plan large… à chaque coupe (centré sur le visage, en haut du cadre).
+  // Auto Director : plans calculés sur les scènes du transcript (à la place du zoom alterné quand il est choisi).
+  const director = edit.rythme?.director;
+  const shots: Shot[] = director && words.length ? directorShots(studioSequences(words, edit.ranges), director) : [];
+  const shotTransform = (shot: Shot | null, rhythmZoom: number) => {
+    const zoom = (shot?.zoom ?? 1) * rhythmZoom, off = shot?.offsetX ?? 0;
+    return edit.framing
+      ? { x: edit.framing.x + off, y: edit.framing.y, scale: edit.framing.scale * zoom, origin: "50% 50%" }
+      : { x: off, y: 0, scale: zoom, origin: "50% 32%" };
+  };
   const frame = (i: number) => {
-    const rhythmZoom = edit.rythme?.zoomCoupes && segments.length > 1 && i % 2 === 1 ? edit.rythme.zoom : 1;
+    const rhythmZoom = !director && edit.rythme?.zoomCoupes && segments.length > 1 && i % 2 === 1 ? edit.rythme.zoom : 1;
+    const shot = shots.length ? shotAt(shots, segments[i].fromMs) : null;
     if (edit.framing) {
       // Partie gardée d'une prise paysage (ou plus haute que le 9:16) : position de l'image dans le recadrage « cover ».
       const focus = edit.framing.focusX !== undefined || edit.framing.focusY !== undefined ? `; object-position: ${edit.framing.focusX ?? 50}% ${edit.framing.focusY ?? 50}%` : "";
-      return ` style="transform: translate(${edit.framing.x}px, ${edit.framing.y}px) scale(${edit.framing.scale * rhythmZoom}); transform-origin: 50% 50%${focus}"`;
+      const t = shotTransform(shot, rhythmZoom);
+      return ` style="transform: translate(${t.x}px, ${t.y}px) scale(${t.scale}); transform-origin: 50% 50%${focus}"`;
     }
+    if (shot && (shot.zoom !== 1 || shot.offsetX !== 0)) return ` style="transform: translate(${shot.offsetX}px, 0px) scale(${shot.zoom}); transform-origin: 50% 32%"`;
     return rhythmZoom !== 1 ? ` style="transform: scale(${rhythmZoom}); transform-origin: 50% 32%"` : "";
+  };
+  /** Changements de plan à l'intérieur d'un morceau (coupe nette, comme une autre caméra). */
+  const shotCuts = (selector: string, i: number) => {
+    const seg = segments[i];
+    for (const shot of shots) {
+      if (shot.atMs <= seg.fromMs || shot.atMs >= seg.toMs) continue;
+      const t = shotTransform(shot, 1);
+      tweens.push(`tl.set("${selector}", { x: ${t.x}, y: ${t.y}, scale: ${t.scale}, transformOrigin: "${t.origin}" }, ${s(F(shot.atMs))});`);
+    }
   };
   segments.forEach((seg, i) => {
     const take = strip[takeIndexAt(strip, seg.fromMs)];
     clips.push(
       `      <video id="take-${i}" class="take" src="${media(take.file)}" data-start="${s(seg.atMs)}" data-duration="${s(seg.toMs - seg.fromMs)}" data-media-start="${s(seg.fromMs - take.fromMs)}" data-has-audio="true" data-volume="${edit.voiceGain}" data-track-index="0"${frame(i)}></video>`,
     );
+    shotCuts(`#take-${i}`, i);
   });
 
   // Détourage (lot S5) : un calque par morceau dont la prise a un titre derrière le sujet, calé sur le même temps de la
@@ -161,6 +185,8 @@ export function buildEditComposition(input: unknown, words: CaptionWord[], opts:
       `      <div id="mw-${i}" class="matte-wrap"><video id="matte-${i}" class="take" src="${media(matte)}" data-start="${s(seg.atMs)}" data-duration="${s(seg.toMs - seg.fromMs)}" data-media-start="${s(seg.fromMs - take.fromMs)}" data-has-audio="false" muted playsinline data-track-index="4"${frame(i)}></video></div>`,
     );
     for (const w of windows) tweens.push(`tl.set("#mw-${i}", { opacity: 1 }, ${s(w.from)});`, `tl.set("#mw-${i}", { opacity: 0 }, ${s(w.to)});`);
+    // Le détourage suit exactement les mêmes plans que la prise.
+    shotCuts(`#matte-${i}`, i);
   });
 
   // Chaque animation se rend dans la version figée à l'enregistrement (BeeMotion) ; sans version, la version courante.
