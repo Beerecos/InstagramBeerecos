@@ -1,6 +1,7 @@
 // Client du montage en ligne (fonction serveur `montage`, route /admin). Les contrôles (rôles, format, taille,
 // présence de la prise) sont faits côté serveur ; l'interface affiche leur résultat.
 import type { StudioSourceRef, StudioSourceTransfer } from "@/domain/social/studio-sources";
+import { fixBrandWords } from "@/domain/social/montage/brand-words";
 import type { KeptMotion } from "@/domain/social/montage/beemotion";
 import { apiUrl } from "./api-config";
 import { getAccessToken } from "./supabase";
@@ -74,7 +75,11 @@ export const montage = {
   /** Corbeille (Instagram BeeRecos) : suppression récupérable, aucun fichier effacé. */
   archive: (id: string) => call<{ archivedAt: string }>({ action: "archive", id }),
   restore: (id: string) => call<{ restored: boolean }>({ action: "restore", id }),
-  get: (id: string) => call<{ montage: MontageDetail; videoUrl: string | null; takeUrls?: Record<string, string>; mediaUrls?: Record<string, string>; matteUrls?: Record<string, string> }>({ action: "get", id }),
+  // Sous-titres, storyboard et animations lisent « BeeRecos » même si la transcription a entendu « Biroco ».
+  get: async (id: string) => {
+    const r = await call<{ montage: MontageDetail; videoUrl: string | null; takeUrls?: Record<string, string>; mediaUrls?: Record<string, string>; matteUrls?: Record<string, string> }>({ action: "get", id });
+    return r.montage?.captions ? { ...r, montage: { ...r.montage, captions: fixBrandWords(r.montage.captions) } } : r;
+  },
   create: (p: { title: string; fileName: string; size: number; reelId?: string; aiSource?: StudioSourceTransfer }) => call<{ id: string; uploadUrl: string }>({ action: "create", ...p }),
   uploaded: (id: string, p: { durationMs: number; islands: { fromMs: number; toMs: number }[] | null }) => call<{ ok: true }>({ action: "uploaded", id, ...p }),
   /** Plusieurs prises (lot S3 bis), avant la transcription : dépôt d'une prise de plus, puis enregistrement. */
