@@ -2,6 +2,7 @@ import { INNER_W, MASCOT, textEm } from "./render";
 import type { Plan } from "./schedule";
 import type { EditorialScene, Storyboard } from "./schema";
 import { SAFE, H } from "./tokens";
+import { END_VIDEO } from "../montage/brand";
 
 /**
  * QA AUTOMATIQUE avant rendu : contrôles mesurés (oui/non), pas d'avis. Une erreur bloque le rendu ; un avertissement
@@ -81,6 +82,8 @@ export function qaStoryboard(sb: Storyboard, plan: Plan): QaIssue[] {
     if (last.endMs - built < 1500) add("warning", "cta-hold", "L'appel à l'action n'est pas tenu assez longtemps.", last.scene.id);
   }
   // 8. Durée totale d'un Reel éditorial.
-  if (plan.durationMs > 45000) add("warning", "duration", "Plus de 45 s : vise 20 à 35 s.");
+  // Réel IA : environ 30 s au total, écran de fin (7,8 s) compris.
+  const total = plan.durationMs + END_VIDEO.durationMs;
+  if (total > 36000) add("warning", "duration", `${Math.round(total / 1000)} s avec l'écran de fin : vise environ 30 s (raccourcis les phrases d'Audrey).`);
   return out;
 }

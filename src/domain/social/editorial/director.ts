@@ -93,12 +93,12 @@ export function finalize(raw: unknown, source: string): Storyboard {
 
 /** Consigne pour l'IA (même contrat de sortie que le découpage déterministe). */
 export function directorBrief(script: string, opts: { keyword?: string | null; testimonials?: { quote: string; author: string }[]; rating?: number | null; idea?: boolean } = {}): string {
-  return `AI MOTION DIRECTOR — Reel « Editorial Impact » BeeRecos (1080×1920, ~25 à 40 s), voix off d'Audrey.
+  return `AI MOTION DIRECTOR — Reel « Editorial Impact » BeeRecos (1080×1920), voix off d'Audrey. DURÉE : environ 30 s au total, dont 7,8 s d'écran de fin ajouté automatiquement — ton contenu dure donc 20 à 24 s, soit 50 à 60 mots de voix au total.
 Tu es scénariste, directeur artistique et monteur. ${opts.idea ? "On te donne une IDÉE : écris d'abord la voix off (tutoiement, phrases courtes, ≈ 155 mots/min) en prenant BeeRecos pour référence — uniquement ce que dit la base de connaissances BeeRecos fournie (réseau d'affaires, clubs, recommandation, offres, cibles, FAQ) —, puis éditorialise-la." : "On te donne le texte de la voix : garde ses phrases et éditorialise-le."} Tu ne fais PAS des sous-titres : décide de ce qui devient énorme (chiffre), une affirmation, une liste de capsules, une rupture humaine, des témoignages, puis l'appel à l'action.
 Structure : HOOK (problème, curiosité ou provocation) → valeur (1 à 3 scènes, une idée par scène) → rupture humaine si elle sert le propos → CTA.
 Règles :
-- Chaque scène a "voice" : la phrase exacte dite par Audrey (8 à 30 mots), différente du texte à l'écran, qui reste court.
-- 4 à 7 scènes. Première scène = accroche (hook-stat si un chiffre est dit, sinon statement en question). Dernière = cta.
+- Chaque scène a "voice" : la phrase exacte dite par Audrey (6 à 15 mots), différente du texte à l'écran, qui reste court. Total de toutes les voix : 50 à 60 mots.
+- 4 à 5 scènes. Première scène = accroche (hook-stat si un chiffre est dit, sinon statement en question). Dernière = cta.
 - Lignes courtes en CAPITALES (2 à 4 mots, 16 caractères maximum par ligne), 1 à 4 lignes par scène. Supprime le remplissage. Écris toujours « BeeRecos ».
 - Aucun chiffre, nom, témoignage ou note qui ne soit dans le texte ou fourni ci-dessous. Pas de scène testimonials sans témoignages fournis.
 - Fonds alternés (dark, brand, dark, light, light, dark…), jamais trois fois le même à la suite. Scène human sur fond light.
