@@ -12,7 +12,8 @@ describe("projet de rendu d'un montage", () => {
     expect(p.html).toContain('src="./prise.mp4"');
     expect(p.files).toContain("brand/beerecos-logo-transparent.png");
     expect(p.html).toContain('src="./brand/beerecos-logo-transparent.png"');
-    expect(p.html).toContain('src="./brand/beerecos-baseline.webp"');
+    expect(p.html).toContain('src="./brand/beerecos-video-fin.mp4"');
+    expect(p.files).toContain("brand/beerecos-video-fin.mp4");
     expect(p.html).toContain('src="./gsap-3.14.2.min.js"');
     expect(p.html).not.toMatch(/https?:\/\//);
     expect([...p.zip.slice(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04]);

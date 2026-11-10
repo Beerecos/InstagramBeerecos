@@ -27,7 +27,7 @@ export type BigWordStyle = z.infer<typeof BigWordStyle>;
 export const AUTO_ANIMATIONS = ["onglet", "chiffre", "liste", "mot-cle", "logo-fin"] as const;
 export type AutoAnimation = (typeof AUTO_ANIMATIONS)[number];
 export const AUTO_LABEL: Record<AutoAnimation, string> = {
-  onglet: "Onglet sur les idées fortes", chiffre: "Chiffres prononcés", liste: "Étapes énumérées", "mot-cle": "Pastille « Commente MOT »", "logo-fin": "Logo BeeRecos de fin",
+  onglet: "Onglet sur les idées fortes", chiffre: "Chiffres prononcés", liste: "Étapes énumérées", "mot-cle": "Pastille « Commente MOT »", "logo-fin": "Vidéo de fin BeeRecos",
 };
 
 export const AnimationTemplateSchema = z.strictObject({
