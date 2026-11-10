@@ -43,6 +43,9 @@ export default function StudioSimpleCaptions({ edit, disabled, onChange }: Props
             })}
           </div>
         </div>
+        <details className="group rounded-xl border border-line px-3 py-2">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-sm font-medium">Couleurs, taille et position <span aria-hidden className="text-mut transition group-open:rotate-180">▾</span></summary>
+          <div className="space-y-4 pb-2 pt-2">
         <div>
           <p className="mb-2 text-sm font-medium">Couleurs</p>
           <div role="radiogroup" aria-label="Couleurs des sous-titres" className="grid grid-cols-2 gap-2">
@@ -70,6 +73,8 @@ export default function StudioSimpleCaptions({ edit, disabled, onChange }: Props
             {CAPTION_POSITIONS.map((s) => <button key={s.key} type="button" role="radio" aria-checked={position === s.key} onClick={() => set(withPosition(style, s.key))} className={choice(position === s.key)}>{s.label}</button>)}
           </div>
         </div>
+          </div>
+        </details>
       </> : null}
     </fieldset>
   );
