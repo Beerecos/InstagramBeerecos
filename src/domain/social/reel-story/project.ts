@@ -1,4 +1,5 @@
 import { FONT_FILES, LOGOS, PICTOGRAM } from "./brand";
+import { END_VIDEO } from "../montage/brand";
 import { buildStoryComposition } from "./composition";
 import { buildSoundtrack, encodeWav } from "./soundtrack";
 import type { StorySpec } from "./spec";
@@ -19,6 +20,7 @@ export const PROJECT_ASSETS: string[] = [
   LOGOS.endBaseline.file,
   PICTOGRAM.blue,
   PICTOGRAM.white,
+  END_VIDEO.file,
 ];
 
 export type RenderProject = { zip: Uint8Array; files: string[]; html: string };
@@ -42,7 +44,7 @@ export async function buildRenderProject(spec: StorySpec, loadAsset: (path: stri
 export async function buildStudioProject(spec: StudioSpec, video: Uint8Array, loadAsset: (path: string) => Promise<Uint8Array>): Promise<RenderProject> {
   const html = buildStudioComposition(spec, { assetBase: ".", videoSrc: "studio.mp4" });
   const entries: ZipEntry[] = [{ path: "index.html", data: new TextEncoder().encode(html) }, { path: "studio.mp4", data: video }];
-  for (const path of PROJECT_ASSETS.filter((p) => !p.includes("logo"))) {
+  for (const path of PROJECT_ASSETS.filter((p) => !p.includes("logo") && p !== END_VIDEO.file)) {
     const data = await loadAsset(path);
     if (!data?.length) throw new Error(`Ressource de rendu introuvable : ${path}`);
     entries.push({ path, data });
