@@ -92,13 +92,14 @@ export function finalize(raw: unknown, source: string): Storyboard {
 }
 
 /** Consigne pour l'IA (même contrat de sortie que le découpage déterministe). */
-export function directorBrief(script: string, opts: { keyword?: string | null; testimonials?: { quote: string; author: string }[]; rating?: number | null; idea?: boolean } = {}): string {
-  return `AI MOTION DIRECTOR — Reel « Editorial Impact » BeeRecos (1080×1920), voix off d'Audrey. DURÉE : environ 30 s au total, dont 7,8 s d'écran de fin ajouté automatiquement — ton contenu dure donc 20 à 24 s, soit 50 à 60 mots de voix au total.
-Tu es scénariste, directeur artistique et monteur. ${opts.idea ? "On te donne une IDÉE : écris d'abord la voix off (tutoiement, phrases courtes, ≈ 155 mots/min) en prenant BeeRecos pour référence — uniquement ce que dit la base de connaissances BeeRecos fournie (réseau d'affaires, clubs, recommandation, offres, cibles, FAQ) —, puis éditorialise-la." : "On te donne le texte de la voix : garde ses phrases et éditorialise-le."} Tu ne fais PAS des sous-titres : décide de ce qui devient énorme (chiffre), une affirmation, une liste de capsules, une rupture humaine, des témoignages, puis l'appel à l'action.
-Structure : HOOK (problème, curiosité ou provocation) → valeur (1 à 3 scènes, une idée par scène) → rupture humaine si elle sert le propos → CTA.
+export function directorBrief(script: string, opts: { keyword?: string | null; testimonials?: { quote: string; author: string }[]; rating?: number | null; idea?: boolean; facts?: { date: string; text: string; source: string }[] } = {}): string {
+  return `AI MOTION DIRECTOR — Reel « Editorial Impact » BeeRecos (1080×1920), voix off d'Audrey. DURÉE : environ 30 s de contenu (la vidéo de fin BeeRecos est ajoutée automatiquement après), soit 70 à 75 mots de voix au total.
+Tu es scénariste, directeur artistique et monteur. ${opts.idea ? "On te donne une IDÉE : écris d'abord la voix off (tutoiement, phrases courtes, ≈ 155 mots/min) puis éditorialise-la." : "On te donne le texte de la voix : garde ses phrases et éditorialise-le."} Tu ne fais PAS des sous-titres : décide de ce qui devient énorme (chiffre), une affirmation, une liste de capsules, une rupture humaine, des témoignages, puis l'appel à l'action.
+FORMAT : le Réel est GÉNÉRIQUE — des affirmations fortes ou des tips concrets utiles à tout chef d'entreprise sur l'idée donnée, pas une publicité. N'écris JAMAIS « BeeRecos » (ni club, réunion, adhésion) avant la dernière scène.
+Structure : HOOK (affirmation ou problème qui arrête le scroll) → 3 à 4 scènes de valeur (une affirmation ou un tip par scène ; capsules pour une liste de tips) → CTA : la SEULE scène qui parle de BeeRecos, en faisant le lien avec l'idée (ce que BeeRecos apporte, d'après la base de connaissances).
 Règles :
-- Chaque scène a "voice" : la phrase exacte dite par Audrey (6 à 15 mots), différente du texte à l'écran, qui reste court. Total de toutes les voix : 50 à 60 mots.
-- 4 à 5 scènes. Première scène = accroche (hook-stat si un chiffre est dit, sinon statement en question). Dernière = cta.
+- Chaque scène a "voice" : la phrase exacte dite par Audrey (8 à 18 mots), différente du texte à l'écran, qui reste court. Total de toutes les voix : 70 à 75 mots.
+- 5 à 6 scènes. Première scène = accroche (hook-stat si un chiffre est dit, sinon statement en question). Dernière = cta.
 - Lignes courtes en CAPITALES (2 à 4 mots, 16 caractères maximum par ligne), 1 à 4 lignes par scène. Supprime le remplissage. Écris toujours « BeeRecos ».
 - Aucun chiffre, nom, témoignage ou note qui ne soit dans le texte ou fourni ci-dessous. Pas de scène testimonials sans témoignages fournis.
 - Fonds alternés (dark, brand, dark, light, light, dark…), jamais trois fois le même à la suite. Scène human sur fond light.
@@ -108,7 +109,10 @@ Types (tous avec "voice") : hook-stat {lead?, stat:{value,suffix,decimals}, line
 Réponds UNIQUEMENT par un objet JSON : {"preset":"editorial-impact","intensity":4,"bpm":120,"sfx":"normal","scenes":[{"id":"s1","type":"…","background":"…","layout":"left",…}]}
 ${opts.testimonials?.length ? `\nTÉMOIGNAGES FOURNIS (seuls autorisés, 12 à 20 mots chacun, raccourcis sans changer le sens) :\n${opts.testimonials.map((t) => `- « ${t.quote} » — ${t.author}`).join("\n")}` : ""}${opts.rating ? `\nNOTE FOURNIE : ${opts.rating} / 5` : ""}
 
-${opts.idea ? "IDÉE" : "TEXTE"} :
+${opts.facts?.length ? `FAITS TROUVÉS SUR LE WEB (sources vérifiées) — sers-t'en pour l'accroche ou la preuve, puis fais le lien avec BeeRecos ; ce sont les seuls chiffres autorisés en plus de l'idée, recopiés tels quels, et la source va dans le "micro" de la scène (ex. « Source : Ifop, 2024 ») :
+${opts.facts.map((f) => `- ${f.date ? `${f.date} : ` : ""}${f.text} (${f.source})`).join("\n")}
+
+` : ""}${opts.idea ? "IDÉE" : "TEXTE"} :
 ${script.trim()}`;
 }
 

@@ -13,9 +13,11 @@ test("Réel IA : idée + mascotte → structure Hook → CTA, garder, modifier, 
   let reply: string = JSON.stringify(withVoice);
   const briefs: string[] = [];
   const tts: string[] = [];
+  const research: Record<string, unknown>[] = [];
   let zipBytes = 0;
   await mockBee(page, {
     "": (body) => { briefs.push(String(body.brief ?? "")); return { text: reply }; },
+    "research-facts": (body) => { research.push(body); return { facts: [{ date: "2024", text: "500 dirigeants interrogés sur la recommandation.", source: "Étude test", url: "https://etude.test/recommandation" }], text: "", dropped: 0 }; },
     tts: (body) => { tts.push(String(body.text)); return { duration: 2.4, receiptId: "a".repeat(64), audioBase64: "bXAz", words: [] }; },
     "upload-url": () => ({ jobId: "11111111-1111-4111-8111-111111111111", uploadUrl: "https://upload.test/projet.zip" }),
     jobs: () => ({ jobs: [] }),
@@ -31,6 +33,10 @@ test("Réel IA : idée + mascotte → structure Hook → CTA, garder, modifier, 
 
   const board = page.getByRole("list", { name: "Storyboard" });
   await expect(board.getByRole("listitem")).toHaveCount(5);
+  expect(research[0]).toMatchObject({ action: "research-facts", kind: "reel" });
+  expect(briefs[0]).toContain("FAITS TROUVÉS SUR LE WEB");
+  await expect(page.getByText("Sources trouvées sur le web (1)")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Étude test" })).toHaveAttribute("href", "https://etude.test/recommandation");
   expect(briefs[0]).toContain("IDÉE :");
   expect(briefs[0]).toContain(IDEA);
   const first = board.getByRole("listitem").first();
@@ -76,7 +82,7 @@ test("Réel IA : un chiffre absent de l'idée bloque la validation", async ({ pa
   await page.goto("/reels/nouveau/ia");
   await page.getByLabel("Mon idée").fill(IDEA);
   await page.getByRole("button", { name: "Structurer ma vidéo (Hook → CTA)" }).click();
-  await expect(page.getByText(/Chiffre absent de ton idée : 300/)).toBeVisible();
+  await expect(page.getByText(/Chiffre absent de ton idée et des sources trouvées : 300/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Valider la structure" })).toBeDisabled();
 });
 

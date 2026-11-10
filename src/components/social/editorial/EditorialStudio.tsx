@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Check, Copy, Lock, LockOpen, Pencil, Sparkles, Trash2 } from "lucide-react";
 import ReelPreview, { type ReelPreviewHandle } from "@/components/social/ReelPreview";
-import { generateEditorialText } from "@/lib/social/editorial-api";
+import { generateEditorialText, researchCarouselFacts, type ResearchFact } from "@/lib/social/editorial-api";
 import { getRender, startRender, type RenderJob } from "@/lib/social/reel-render-client";
 import { specFingerprint } from "@/domain/social/spec-fingerprint";
 import type { StorySpec } from "@/domain/social/reel-story";
@@ -94,6 +94,9 @@ export default function EditorialStudio() {
   const [mascot, setMascot] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [sb, setSb] = useState<Storyboard | null>(null);
+  const [facts, setFacts] = useState<ResearchFact[]>([]);
+  const [webSearch, setWebSearch] = useState(true);
+  const [busyLabel, setBusyLabel] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("idea");
   const [editing, setEditing] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -134,7 +137,9 @@ export default function EditorialStudio() {
     try { return renderEditorial(sb, { assetBase: `${window.location.origin}/hyperframes`, preview: true }, plan); } catch { return null; }
   }, [sb, plan, step]);
   const qa = useMemo(() => (sb && plan ? qaStoryboard(sb, plan) : []), [sb, plan]);
-  const invented = useMemo(() => (sb ? inventedNumbers(sb, idea) : []), [sb, idea]);
+  // Source des chiffres autorisés : l'idée + les faits trouvés sur le web (pages réellement consultées).
+  const factSource = [idea, ...facts.map((f) => `${f.date} ${f.text}`)].join("\n");
+  const invented = useMemo(() => (sb ? inventedNumbers(sb, factSource) : []), [sb, factSource]);
 
   /** Remplace la structure en gardant les scènes gardées (verrouillées) à leur place. */
   const adopt = (next: Storyboard) => {
@@ -144,18 +149,31 @@ export default function EditorialStudio() {
   };
 
   const structure = async () => {
-    if (idea.trim().length < 10) { setError("Écris ton idée en une ou deux phrases."); return; }
+    if (idea.trim().length < 3) { setError("Écris ton idée (quelques mots suffisent)."); return; }
     setBusy(true); setError(null); setNote(null); setEditing(null);
     const opts = { intensity: sb?.intensity ?? 4, keyword: keyword.trim() || null, mascot, idea: true };
+    // 1. Recherche web sur l'idée (facultative) : faits récents et sourcés, que l'IA relie ensuite à BeeRecos.
+    let found: ResearchFact[] = [];
+    let searchNote = "";
+    if (webSearch) {
+      setBusyLabel("L'IA cherche des informations sur le web…");
+      try { found = (await researchCarouselFacts(idea.trim().slice(0, 200), "reel")).facts.slice(0, 6); searchNote = found.length ? `${found.length} fait(s) sourcé(s) trouvé(s) sur le web. ` : "Aucun fait fiable trouvé sur le web : structure écrite avec la base BeeRecos. "; }
+      catch { searchNote = "Recherche web indisponible : structure écrite avec la base BeeRecos. "; }
+    }
+    setFacts(found);
+    const source = [idea, ...found.map((f) => `${f.date} ${f.text}`)].join("\n");
+    // 2. Structure Hook → CTA par l'IA (base de connaissances BeeRecos + faits trouvés).
+    setBusyLabel("L'IA écrit ta structure (jusqu'à une minute)…");
     try {
-      const raw = await generateEditorialText({ channel: "reel", workspaceId: null, brief: directorBrief(idea, opts) });
-      const r = parseDirector(raw, idea, opts);
-      adopt(r.storyboard);
-      setNote(r.source === "ai" ? "Structure proposée par l'IA : modifie une carte ou valide." : "Réponse de l'IA inutilisable : structure construite à partir de ton texte. Modifie-la ou relance.");
+      const raw = await generateEditorialText({ channel: "reel", workspaceId: null, brief: directorBrief(idea, { ...opts, facts: found }) });
+      const r = parseDirector(raw, source, opts);
+      // Réponse illisible : la structure de secours part de l'idée seule (jamais des faits bruts).
+      adopt(r.source === "ai" ? r.storyboard : directFromScript(idea, opts));
+      setNote(searchNote + (r.source === "ai" ? "Structure proposée par l'IA : modifie une carte ou valide." : "Réponse de l'IA inutilisable : structure construite à partir de ton texte. Modifie-la ou relance."));
     } catch (e) {
       adopt(directFromScript(idea, opts));
-      setNote(`IA indisponible (${e instanceof Error ? e.message : "erreur"}) : structure construite à partir de ton texte.`);
-    } finally { setBusy(false); setStep("structure"); }
+      setNote(`${searchNote}IA indisponible (${e instanceof Error ? e.message : "erreur"}) : structure construite à partir de ton texte.`);
+    } finally { setBusy(false); setBusyLabel(null); setStep("structure"); }
   };
 
   const update = (fn: (s: Storyboard) => Storyboard) => setSb((cur) => {
@@ -183,6 +201,9 @@ export default function EditorialStudio() {
           <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium">
             <input type="checkbox" className="size-5 accent-[#2851FF]" checked={mascot} onChange={(e) => toggleMascot(e.target.checked)} /> Mascotte BeeRecos
           </label>
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium">
+            <input type="checkbox" className="size-5 accent-[#2851FF]" checked={webSearch} onChange={(e) => setWebSearch(e.target.checked)} /> Chercher sur le web
+          </label>
           <details className="text-sm">
             <summary className="cursor-pointer text-mut">Options</summary>
             <div className="mt-2 grid gap-3 sm:grid-cols-3">
@@ -202,7 +223,7 @@ export default function EditorialStudio() {
           </details>
         </div>
         <button type="button" className="btn-red min-h-12 px-6 text-base" onClick={structure} disabled={busy}>
-          <Sparkles aria-hidden size={18} />{busy ? "L'IA structure ta vidéo…" : sb ? "Proposer une autre structure" : "Structurer ma vidéo (Hook → CTA)"}
+          <Sparkles aria-hidden size={18} />{busy ? (busyLabel ?? "L'IA structure ta vidéo…") : sb ? "Proposer une autre structure" : "Structurer ma vidéo (Hook → CTA)"}
         </button>
         {sb && sb.scenes.some((s) => s.locked) ? <p className="text-xs text-mut">Les cartes gardées ne changent pas.</p> : null}
         {note ? <p role="status" className="text-sm text-mut">{note}</p> : null}
@@ -228,7 +249,7 @@ export default function EditorialStudio() {
                   </div>
                   <p className="mt-2 text-sm font-semibold">{screenText(s)}</p>
                   <p className="mt-1 text-sm text-ink-2"><span className="text-mut">Audrey dit :</span> {s.voice ?? <em className="text-mut">aucune phrase</em>}</p>
-                  {nums ? <p role="alert" className="mt-1 text-sm text-red-700">⚠️ Chiffre absent de ton idée : {nums.numbers.join(", ")}. Corrige la phrase ou ajoute la source dans ton idée.</p> : null}
+                  {nums ? <p role="alert" className="mt-1 text-sm text-red-700">⚠️ Chiffre absent de ton idée et des sources trouvées : {nums.numbers.join(", ")}. Corrige la phrase ou ajoute la source dans ton idée.</p> : null}
                   {editing === i ? <SceneEditor s={s} i={i} n={sb.scenes.length} onChange={(x) => setScene(i, x)} onMove={(d) => move(i, d)}
                     onDuplicate={() => update((cur) => ({ ...cur, scenes: [...cur.scenes.slice(0, i + 1), { ...s, id: `${s.id}-${Date.now().toString(36)}`.slice(0, 40), locked: false }, ...cur.scenes.slice(i + 1)] }))}
                     onDelete={() => { setEditing(null); update((cur) => ({ ...cur, scenes: cur.scenes.filter((_, k) => k !== i) })); }} /> : null}
@@ -236,6 +257,13 @@ export default function EditorialStudio() {
               );
             })}
           </ol>
+          {facts.length ? (
+            <details className="rounded-xl border border-line bg-white p-3 text-sm" open>
+              <summary className="cursor-pointer font-semibold">Sources trouvées sur le web ({facts.length})</summary>
+              <ul className="mt-2 space-y-1">{facts.map((f) => <li key={f.url + f.text}>{f.date ? `${f.date} : ` : ""}{f.text} — <a className="text-brand underline" href={f.url} target="_blank" rel="noreferrer">{f.source}</a></li>)}</ul>
+              <p className="mt-2 text-xs text-mut">Vérifie chaque chiffre avant de valider : seuls ceux de ces pages (ou de ton idée) sont acceptés.</p>
+            </details>
+          ) : null}
           <QaList qa={qa} sb={sb} />
           <button type="button" className="btn-red min-h-12 px-6 text-base" disabled={blocking} onClick={() => { setEditing(null); setStep("preview"); }}>
             <Check aria-hidden size={18} /> Valider la structure

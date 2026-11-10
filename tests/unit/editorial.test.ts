@@ -156,11 +156,31 @@ describe("Editorial Impact — QA", () => {
     expect(codes).toContain("cta");
   });
   it("Réel IA d'environ 30 s : la consigne le demande, la QA signale un Réel trop long", () => {
-    expect(directorBrief("idée", { idea: true })).toContain("environ 30 s au total");
+    expect(directorBrief("idée", { idea: true })).toContain("environ 30 s de contenu (la vidéo de fin BeeRecos est ajoutée automatiquement après)");
     const s = sb();
     expect(qaStoryboard(s, planStoryboard(s)).map((i) => i.code)).not.toContain("duration");
     const long = { ...s, scenes: s.scenes.map((x) => ({ ...x, voice: Array(40).fill("mot").join(" ") })) } as Storyboard;
     expect(qaStoryboard(long, planStoryboard(long)).find((i) => i.code === "duration")?.message).toMatch(/vise environ 30 s/);
+  });
+  it("faits du web : donnés à l'IA avec leur source ; leurs chiffres deviennent autorisés", () => {
+    const facts = [{ date: "2024", text: "87 % des dirigeants font confiance au bouche-à-oreille.", source: "Ifop" }];
+    const b = directorBrief("la recommandation", { idea: true, facts });
+    expect(b).toContain("FAITS TROUVÉS SUR LE WEB");
+    expect(b).toContain("2024 : 87 % des dirigeants font confiance au bouche-à-oreille. (Ifop)");
+    expect(directorBrief("la recommandation", { idea: true })).not.toContain("FAITS TROUVÉS");
+    const s = { ...sb(), scenes: sb().scenes.map((x, i) => ({ ...x, voice: i === 0 ? "87 % des dirigeants se fient au bouche-à-oreille." : "Bonjour." })) } as Storyboard;
+    expect(inventedNumbers(s, "la recommandation")).toHaveLength(1);
+    expect(inventedNumbers(s, ["la recommandation", "2024 87 % des dirigeants font confiance au bouche-à-oreille."].join("\n"))).toEqual([]);
+  });
+  it("Réel générique : consigne affirmations/tips, BeeRecos seulement dans le CTA (QA le signale sinon)", () => {
+    const b = directorBrief("la recommandation", { idea: true });
+    expect(b).toContain("GÉNÉRIQUE");
+    expect(b).toContain("N'écris JAMAIS « BeeRecos »");
+    // L'exemple met « CHEZ BeeRecos » dans la scène 2 : signalé ; dans le CTA : accepté.
+    const s = sb();
+    expect(qaStoryboard(s, planStoryboard(s)).filter((i) => i.code === "brand-early").map((i) => i.sceneId)).toEqual([s.scenes[1].id]);
+    const ok = { ...s, scenes: s.scenes.map((x, i) => (i === 1 && x.type === "statement" ? { ...x, lines: ["TU NE VIENS PAS", "CHERCHER DES", "CARTES DE VISITE."], micro: undefined } : x)) } as Storyboard;
+    expect(qaStoryboard(ok, planStoryboard(ok)).map((i) => i.code)).not.toContain("brand-early");
   });
   it("signale un texte répété", () => {
     const s = sb();
