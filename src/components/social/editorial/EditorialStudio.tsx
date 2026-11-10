@@ -1,9 +1,9 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Copy, Lock, LockOpen, Sparkles, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Copy, Lock, LockOpen, Pencil, Sparkles, Trash2 } from "lucide-react";
 import ReelPreview, { type ReelPreviewHandle } from "@/components/social/ReelPreview";
 import { generateEditorialText } from "@/lib/social/editorial-api";
-import { directFromScript, directorBrief, parseDirector } from "@/domain/social/editorial/director";
+import { directFromScript, directorBrief, inventedNumbers, parseDirector } from "@/domain/social/editorial/director";
 import { planStoryboard, type Plan } from "@/domain/social/editorial/schedule";
 import { renderEditorial } from "@/domain/social/editorial/render";
 import { qaStoryboard } from "@/domain/social/editorial/qa";
@@ -12,8 +12,9 @@ import { END_VIDEO } from "@/domain/social/montage/brand";
 import { SCENE_LABEL, StoryboardSchema, TRANSITIONS, type EditorialScene, type Storyboard } from "@/domain/social/editorial/schema";
 
 /**
- * « GÉNÉRER MON REEL » — preset EDITORIAL IMPACT. Script → AI Motion Director (repli : découpage déterministe) →
- * storyboard en cartes modifiables → aperçu identique au rendu. Rien n'est publié ici.
+ * Réel IA ultra simple (demande de Cédric, 2026-11-10) — preset EDITORIAL IMPACT, mascotte en option :
+ * 1. mon idée (+ case mascotte) → 2. l'IA propose la structure Hook → CTA (texte à l'écran + phrase d'Audrey),
+ * je modifie ou je valide → 3. aperçu (même écran de fin que les Reels) → je modifie ou je valide. Rien n'est publié ici.
  */
 const BG_LABEL = { dark: "Sombre", light: "Clair", brand: "Bleu BeeRecos" } as const;
 const TR_LABEL: Record<(typeof TRANSITIONS)[number], string> = { "wipe-lr": "Balayage →", "wipe-rl": "Balayage ←", cut: "Coupe sèche", none: "Aucune" };
@@ -36,13 +37,26 @@ function linesOf(s: EditorialScene): { key: string; label: string; value: string
     case "cta": return [{ key: "lines", label: "Texte (une ligne par ligne)", value: s.lines.join("\n") }, { key: "sub", label: "Consigne (ex. Commente MOT…)", value: s.sub ?? "" }, { key: "button", label: "Bouton", value: s.button }];
   }
 }
+/** Rôle de la scène dans la structure Hook → CTA (affiché sur la carte). */
+const role = (s: EditorialScene, i: number, n: number) => (i === 0 ? "Accroche" : i === n - 1 || s.type === "cta" ? "Appel à l'action" : s.type === "human" ? "Rupture" : "Valeur");
+/** Texte à l'écran, résumé en une ligne. */
+function screenText(s: EditorialScene): string {
+  switch (s.type) {
+    case "hook-stat": return [s.lead, String(s.stat.value).replace(".", ",") + (s.stat.suffix ?? ""), ...s.lines, s.accent].filter(Boolean).join(" ");
+    case "statement": return s.lines.join(" ");
+    case "pills": return `${s.title} ${s.pills.join(" · ")}`;
+    case "human": return `${s.question.join(" ")} ${s.answer}`;
+    case "testimonials": return s.title;
+    case "cta": return `${s.lines.join(" ")} · ${s.button}`;
+  }
+}
 function withField(s: EditorialScene, key: string, v: string): EditorialScene {
   const list = v.split("\n").map((x) => x.trim()).filter(Boolean);
   const opt = v.trim() || undefined;
   if (key === "stat" && s.type === "hook-stat") { const n = Number(v.replace(",", ".")); return Number.isFinite(n) ? { ...s, stat: { ...s.stat, value: n, decimals: /[.,]/.test(v) ? 1 : 0 } } : s; }
   if (key === "accentWords") return { ...s, accentWords: v.split(",").map((x) => x.trim()).filter(Boolean) } as EditorialScene;
   if (["lines", "pills", "question"].includes(key)) return { ...s, [key]: list } as EditorialScene;
-  if (["lead", "accent", "micro", "sub"].includes(key)) return { ...s, [key]: opt } as EditorialScene;
+  if (["lead", "accent", "micro", "sub", "voice"].includes(key)) return { ...s, [key]: opt } as EditorialScene;
   return { ...s, [key]: v } as EditorialScene;
 }
 
@@ -70,10 +84,15 @@ function Timeline({ plan, at, onSeek }: { plan: Plan; at: number; onSeek: (s: nu
   );
 }
 
+type Step = "idea" | "structure" | "preview";
+
 export default function EditorialStudio() {
-  const [script, setScript] = useState("");
+  const [idea, setIdea] = useState("");
+  const [mascot, setMascot] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [sb, setSb] = useState<Storyboard | null>(null);
+  const [step, setStep] = useState<Step>("idea");
+  const [editing, setEditing] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,31 +101,32 @@ export default function EditorialStudio() {
 
   const plan = useMemo(() => (sb ? planStoryboard(sb) : null), [sb]);
   const html = useMemo(() => {
-    if (!sb || !plan || typeof window === "undefined") return null;
+    if (!sb || !plan || step !== "preview" || typeof window === "undefined") return null;
     try { return renderEditorial(sb, { assetBase: `${window.location.origin}/hyperframes`, preview: true }, plan); } catch { return null; }
-  }, [sb, plan]);
+  }, [sb, plan, step]);
   const qa = useMemo(() => (sb && plan ? qaStoryboard(sb, plan) : []), [sb, plan]);
+  const invented = useMemo(() => (sb ? inventedNumbers(sb, idea) : []), [sb, idea]);
 
-  /** Remplace le storyboard en gardant les scènes verrouillées à leur place. */
+  /** Remplace la structure en gardant les scènes gardées (verrouillées) à leur place. */
   const adopt = (next: Storyboard) => {
     if (!sb) return setSb(next);
     const scenes = next.scenes.map((s, i) => (sb.scenes[i]?.locked ? sb.scenes[i] : s));
-    setSb(StoryboardSchema.parse({ ...next, intensity: sb.intensity, sfx: sb.sfx, scenes }));
+    setSb(StoryboardSchema.parse({ ...next, intensity: sb.intensity, sfx: sb.sfx, mascot, scenes }));
   };
 
-  const generate = async () => {
-    if (script.trim().length < 20) { setError("Colle ton script (quelques phrases au moins)."); return; }
-    setBusy(true); setError(null); setNote(null);
-    const opts = { intensity: sb?.intensity ?? 4, keyword: keyword.trim() || null };
+  const structure = async () => {
+    if (idea.trim().length < 10) { setError("Écris ton idée en une ou deux phrases."); return; }
+    setBusy(true); setError(null); setNote(null); setEditing(null);
+    const opts = { intensity: sb?.intensity ?? 4, keyword: keyword.trim() || null, mascot, idea: true };
     try {
-      const raw = await generateEditorialText({ channel: "instagram", workspaceId: null, brief: directorBrief(script, opts) });
-      const r = parseDirector(raw, script, opts);
+      const raw = await generateEditorialText({ channel: "instagram", workspaceId: null, brief: directorBrief(idea, opts) });
+      const r = parseDirector(raw, idea, opts);
       adopt(r.storyboard);
-      setNote(r.source === "ai" ? "Storyboard proposé par l'IA : modifie chaque carte librement." : "Réponse de l'IA inutilisable : storyboard construit automatiquement à partir du script.");
+      setNote(r.source === "ai" ? "Structure proposée par l'IA : modifie une carte ou valide." : "Réponse de l'IA inutilisable : structure construite à partir de ton texte. Modifie-la ou relance.");
     } catch (e) {
-      adopt(directFromScript(script, opts));
-      setNote(`IA indisponible (${e instanceof Error ? e.message : "erreur"}) : storyboard construit automatiquement à partir du script.`);
-    } finally { setBusy(false); }
+      adopt(directFromScript(idea, opts));
+      setNote(`IA indisponible (${e instanceof Error ? e.message : "erreur"}) : structure construite à partir de ton texte.`);
+    } finally { setBusy(false); setStep("structure"); }
   };
 
   const update = (fn: (s: Storyboard) => Storyboard) => setSb((cur) => {
@@ -117,104 +137,166 @@ export default function EditorialStudio() {
   });
   const setScene = (i: number, s: EditorialScene) => update((cur) => ({ ...cur, scenes: cur.scenes.map((x, k) => (k === i ? s : x)) }));
   const move = (i: number, d: -1 | 1) => update((cur) => { const a = [...cur.scenes]; const j = i + d; if (j < 0 || j >= a.length) return cur; [a[i], a[j]] = [a[j], a[i]]; return { ...cur, scenes: a }; });
-  const seekScene = (i: number) => { const p = plan?.scenes[i]; if (p) preview.current?.seek(p.startMs / 1000 + 0.05); };
+  const toggleMascot = (v: boolean) => { setMascot(v); if (sb) update((cur) => ({ ...cur, mascot: v })); };
+  const blocking = qa.some((q) => q.level === "error") || invented.length > 0;
+
 
   return (
     <div className="social-studio space-y-6">
-      <section className="rounded-2xl border border-line bg-white p-5">
-        <h1 className="font-display text-2xl font-semibold">Reel éditorial</h1>
-        <p className="mt-1 text-sm text-mut">Preset « Editorial Impact » : gros titres, chiffres animés, capsules, balayages bleus, sons calés sur le rythme. Colle ton script ; l&apos;IA décide de ce qui devient énorme.</p>
-        <label className="mt-4 block text-xs font-medium" htmlFor="ei-script">Script ou transcription</label>
-        <textarea id="ei-script" className={`${field} min-h-36`} value={script} onChange={(e) => setScript(e.target.value)} placeholder="Colle ici le texte de ta vidéo." />
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          <label className="block text-xs font-medium">Mot-clé du CTA (facultatif)
-            <input className={field} value={keyword} onChange={(e) => setKeyword(e.target.value.toUpperCase())} placeholder="Ex. RÉSEAU" maxLength={20} />
-          </label>
-          <label className="block text-xs font-medium">Intensité : {sb?.intensity ?? 4} / 5
-            <input type="range" min={1} max={5} step={1} className="mt-3 w-full accent-[#2851FF]" value={sb?.intensity ?? 4} disabled={!sb}
-              onChange={(e) => update((cur) => ({ ...cur, intensity: Number(e.target.value) }))} aria-describedby="ei-int" />
-            <span id="ei-int" className="mt-1 block font-normal text-mut">1 = posé · 5 = très rythmé</span>
-          </label>
-          <label className="block text-xs font-medium">Effets sonores
-            <select className={field} value={sb?.sfx ?? "normal"} disabled={!sb} onChange={(e) => update((cur) => ({ ...cur, sfx: e.target.value as Storyboard["sfx"] }))}>
-              {Object.entries(SFX_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </label>
+      <section className="space-y-3 rounded-2xl border border-line bg-white p-5" aria-labelledby="ia-titre">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 id="ia-titre" className="font-display text-2xl font-semibold">Réel IA</h1>
+          <Steps step={step} />
         </div>
-        <button type="button" className="btn-red mt-4 min-h-12 px-6 text-base" onClick={generate} disabled={busy}>
-          <Sparkles aria-hidden size={18} />{busy ? "Génération…" : sb ? "RÉGÉNÉRER (cartes verrouillées gardées)" : "GÉNÉRER MON REEL"}
+        <label className="block text-xs font-medium" htmlFor="ei-idea">Mon idée</label>
+        <textarea id="ei-idea" className={`${field} min-h-24`} value={idea} onChange={(e) => setIdea(e.target.value)} placeholder="Ex. : pourquoi venir visiter un club BeeRecos avant d'adhérer" />
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium">
+            <input type="checkbox" className="size-5 accent-[#2851FF]" checked={mascot} onChange={(e) => toggleMascot(e.target.checked)} /> Mascotte BeeRecos
+          </label>
+          <details className="text-sm">
+            <summary className="cursor-pointer text-mut">Options</summary>
+            <div className="mt-2 grid gap-3 sm:grid-cols-3">
+              <label className="block text-xs font-medium">Mot-clé du CTA
+                <input className={field} value={keyword} onChange={(e) => setKeyword(e.target.value.toUpperCase())} placeholder="Ex. RÉSEAU" maxLength={20} />
+              </label>
+              <label className="block text-xs font-medium">Intensité : {sb?.intensity ?? 4} / 5
+                <input type="range" min={1} max={5} step={1} className="mt-3 w-full accent-[#2851FF]" value={sb?.intensity ?? 4} disabled={!sb}
+                  onChange={(e) => update((cur) => ({ ...cur, intensity: Number(e.target.value) }))} />
+              </label>
+              <label className="block text-xs font-medium">Effets sonores
+                <select className={field} value={sb?.sfx ?? "normal"} disabled={!sb} onChange={(e) => update((cur) => ({ ...cur, sfx: e.target.value as Storyboard["sfx"] }))}>
+                  {Object.entries(SFX_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </label>
+            </div>
+          </details>
+        </div>
+        <button type="button" className="btn-red min-h-12 px-6 text-base" onClick={structure} disabled={busy}>
+          <Sparkles aria-hidden size={18} />{busy ? "L'IA structure ta vidéo…" : sb ? "Proposer une autre structure" : "Structurer ma vidéo (Hook → CTA)"}
         </button>
-        {note ? <p role="status" className="mt-2 text-sm text-mut">{note}</p> : null}
-        {error ? <p role="alert" className="mt-2 text-sm text-red-700">{error}</p> : null}
+        {sb && sb.scenes.some((s) => s.locked) ? <p className="text-xs text-mut">Les cartes gardées ne changent pas.</p> : null}
+        {note ? <p role="status" className="text-sm text-mut">{note}</p> : null}
+        {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
       </section>
 
-      {sb && plan ? (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_1fr]">
-          <div className="lg:sticky lg:top-4 lg:self-start">
-            <div className="mx-auto aspect-[9/16] w-full max-w-[360px] overflow-hidden rounded-2xl bg-black">
-              {html ? <ReelPreview ref={preview} html={html} title="Aperçu du Reel éditorial" onTimeUpdate={setAt} preservePosition /> : null}
-            </div>
-            <Timeline plan={plan} at={at} onSeek={(s) => preview.current?.seek(s)} />
-            <div className="mt-4 rounded-xl border border-line p-3" aria-live="polite">
-              <p className="text-sm font-semibold">Contrôle qualité</p>
-              {qa.length === 0 ? <p className="mt-1 text-sm text-mut">✅ Aucun problème détecté.</p> : (
-                <ul className="mt-1 space-y-1 text-sm">{qa.map((q, i) => <li key={i} className={q.level === "error" ? "text-red-700" : "text-ink-2"}>{q.level === "error" ? "⚠️" : "🟡"} {q.sceneId ? `Scène ${sb.scenes.findIndex((s) => s.id === q.sceneId) + 1} : ` : ""}{q.message}</li>)}</ul>
-              )}
-            </div>
-          </div>
-
+      {sb && plan && step === "structure" ? (
+        <section aria-labelledby="structure-titre" className="space-y-3">
+          <h2 id="structure-titre" className="font-display text-xl font-semibold">Ma structure</h2>
           <ol className="space-y-3" aria-label="Storyboard">
             {sb.scenes.map((s, i) => {
               const p = plan.scenes[i];
+              const nums = invented.find((x) => x.sceneId === s.id);
               return (
-                <li key={s.id} className="rounded-2xl border border-line bg-white p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button type="button" className="text-left" onClick={() => seekScene(i)}>
-                      <span className="text-xs text-mut">Scène {i + 1} · {((p.endMs - p.startMs) / 1000).toFixed(1)} s</span>
-                      <span className="block font-semibold">{SCENE_LABEL[s.type]}</span>
-                    </button>
+                <li key={s.id} className={`rounded-2xl border bg-white p-4 ${s.locked ? "border-brand" : "border-line"}`}>
+                  <div className="flex flex-wrap items-start gap-3">
+                    <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">{role(s, i, sb.scenes.length)}</span>
+                    <span className="text-xs text-mut">{SCENE_LABEL[s.type]} · {((p.endMs - p.startMs) / 1000).toFixed(1)} s</span>
                     <div className="ml-auto flex gap-1">
-                      <button type="button" className="btn-ghost min-h-[36px] px-2" aria-label="Monter" onClick={() => move(i, -1)} disabled={i === 0}><ArrowUp size={16} aria-hidden /></button>
-                      <button type="button" className="btn-ghost min-h-[36px] px-2" aria-label="Descendre" onClick={() => move(i, 1)} disabled={i === sb.scenes.length - 1}><ArrowDown size={16} aria-hidden /></button>
-                      <button type="button" className="btn-ghost min-h-[36px] px-2" aria-label="Dupliquer" disabled={sb.scenes.length >= 10}
-                        onClick={() => update((cur) => ({ ...cur, scenes: [...cur.scenes.slice(0, i + 1), { ...s, id: `${s.id}-${Date.now().toString(36)}`.slice(0, 40), locked: false }, ...cur.scenes.slice(i + 1)] }))}><Copy size={16} aria-hidden /></button>
-                      <button type="button" className="btn-ghost min-h-[36px] px-2" aria-label={s.locked ? "Déverrouiller" : "Verrouiller"} aria-pressed={!!s.locked} onClick={() => setScene(i, { ...s, locked: !s.locked })}>{s.locked ? <Lock size={16} aria-hidden /> : <LockOpen size={16} aria-hidden />}</button>
-                      <button type="button" className="btn-ghost min-h-[36px] px-2" aria-label="Supprimer" disabled={sb.scenes.length <= 2} onClick={() => update((cur) => ({ ...cur, scenes: cur.scenes.filter((_, k) => k !== i) }))}><Trash2 size={16} aria-hidden /></button>
+                      <button type="button" className="btn-ghost min-h-[36px] px-3 text-xs" aria-pressed={!!s.locked} onClick={() => setScene(i, { ...s, locked: !s.locked })}>{s.locked ? <><Lock size={14} aria-hidden /> Gardée</> : <><LockOpen size={14} aria-hidden /> Garder</>}</button>
+                      <button type="button" className="btn-ghost min-h-[36px] px-3 text-xs" aria-expanded={editing === i} onClick={() => setEditing(editing === i ? null : i)}><Pencil size={14} aria-hidden /> Modifier</button>
                     </div>
                   </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                    <label className="block text-xs font-medium">Mise en page
-                      <select className={field} value={s.layout} onChange={(e) => setScene(i, { ...s, layout: e.target.value } as EditorialScene)}>
-                        {LAYOUTS[s.type].map((l) => <option key={l} value={l}>{LAYOUT_LABEL[l]}</option>)}
-                      </select>
-                    </label>
-                    <label className="block text-xs font-medium">Fond
-                      <select className={field} value={s.background} onChange={(e) => setScene(i, { ...s, background: e.target.value as EditorialScene["background"] })}>
-                        {Object.entries(BG_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                      </select>
-                    </label>
-                    <label className="block text-xs font-medium">Transition vers la suite
-                      <select className={field} value={s.transitionOut} disabled={i === sb.scenes.length - 1} onChange={(e) => setScene(i, { ...s, transitionOut: e.target.value as EditorialScene["transitionOut"] })}>
-                        {TRANSITIONS.map((t) => <option key={t} value={t}>{TR_LABEL[t]}</option>)}
-                      </select>
-                    </label>
-                  </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    {linesOf(s).map((f) => (
-                      <label key={`${s.id}-${f.key}-${f.value}`} className="block text-xs font-medium">{f.label}
-                        {f.value.includes("\n") || ["lines", "pills", "question"].includes(f.key)
-                          ? <textarea className={`${field} min-h-20`} defaultValue={f.value} onBlur={(e) => e.target.value !== f.value && setScene(i, withField(s, f.key, e.target.value))} />
-                          : <input className={field} defaultValue={f.value} onBlur={(e) => e.target.value !== f.value && setScene(i, withField(s, f.key, e.target.value))} />}
-                      </label>
-                    ))}
-                  </div>
+                  <p className="mt-2 text-sm font-semibold">{screenText(s)}</p>
+                  <p className="mt-1 text-sm text-ink-2"><span className="text-mut">Audrey dit :</span> {s.voice ?? <em className="text-mut">aucune phrase</em>}</p>
+                  {nums ? <p role="alert" className="mt-1 text-sm text-red-700">⚠️ Chiffre absent de ton idée : {nums.numbers.join(", ")}. Corrige la phrase ou ajoute la source dans ton idée.</p> : null}
+                  {editing === i ? <SceneEditor s={s} i={i} n={sb.scenes.length} onChange={(x) => setScene(i, x)} onMove={(d) => move(i, d)}
+                    onDuplicate={() => update((cur) => ({ ...cur, scenes: [...cur.scenes.slice(0, i + 1), { ...s, id: `${s.id}-${Date.now().toString(36)}`.slice(0, 40), locked: false }, ...cur.scenes.slice(i + 1)] }))}
+                    onDelete={() => { setEditing(null); update((cur) => ({ ...cur, scenes: cur.scenes.filter((_, k) => k !== i) })); }} /> : null}
                 </li>
               );
             })}
           </ol>
-        </div>
+          <QaList qa={qa} sb={sb} />
+          <button type="button" className="btn-red min-h-12 px-6 text-base" disabled={blocking} onClick={() => { setEditing(null); setStep("preview"); }}>
+            <Check aria-hidden size={18} /> Valider la structure
+          </button>
+          {blocking ? <p className="text-xs text-red-700">Corrige les points signalés pour valider.</p> : null}
+        </section>
       ) : null}
-      {sb ? <p className="text-xs text-mut">Le chiffre d&apos;une accroche doit être dit dans le script ; aucun témoignage ni note n&apos;est ajouté sans source. Rien n&apos;est publié depuis cette page.</p> : null}
+
+      {sb && plan && step === "preview" ? (
+        <section aria-labelledby="apercu-titre" className="grid gap-6 lg:grid-cols-[minmax(0,360px)_1fr]">
+          <div>
+            <h2 id="apercu-titre" className="sr-only">Aperçu</h2>
+            <div className="mx-auto aspect-[9/16] w-full max-w-[360px] overflow-hidden rounded-2xl bg-black">
+              {html ? <ReelPreview ref={preview} html={html} title="Aperçu du Réel IA" onTimeUpdate={setAt} preservePosition /> : null}
+            </div>
+            <Timeline plan={plan} at={at} onSeek={(sec) => preview.current?.seek(sec)} />
+          </div>
+          <div className="space-y-3">
+            <p className="text-sm">Aperçu muet : durées estimées sur la voix d&apos;Audrey. La vidéo se termine par le même écran de fin que les Reels.</p>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">🟡 Compilation avec la voix d&apos;Audrey : prochaine mise à jour. Tu peux déjà relire et ajuster la structure.</div>
+            <QaList qa={qa} sb={sb} />
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="btn-ghost min-h-11" onClick={() => setStep("structure")}><Pencil size={16} aria-hidden /> Modifier la structure</button>
+            </div>
+            <p className="text-xs text-mut">Aucun chiffre ni témoignage ajouté sans source. Rien n&apos;est publié depuis cette page.</p>
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function Steps({ step }: { step: Step }) {
+  return (
+    <ol className="flex flex-wrap gap-2 text-xs font-medium" aria-label="Étapes">
+      {(["idea", "structure", "preview"] as const).map((k, i) => (
+        <li key={k} aria-current={step === k ? "step" : undefined} className={`rounded-full px-3 py-1 ${step === k ? "bg-brand text-white" : "bg-black/[0.05] text-mut"}`}>{i + 1}. {k === "idea" ? "Mon idée" : k === "structure" ? "Ma structure" : "Aperçu"}</li>
+      ))}
+    </ol>
+  );
+}
+
+function QaList({ qa, sb }: { qa: ReturnType<typeof qaStoryboard>; sb: Storyboard }) {
+  return (
+    <div className="rounded-xl border border-line bg-white p-3" aria-live="polite">
+      <p className="text-sm font-semibold">Contrôle qualité</p>
+      {qa.length === 0 ? <p className="mt-1 text-sm text-mut">✅ Aucun problème détecté.</p> : (
+        <ul className="mt-1 space-y-1 text-sm">{qa.map((q, i) => <li key={i} className={q.level === "error" ? "text-red-700" : "text-ink-2"}>{q.level === "error" ? "⚠️" : "🟡"} {q.sceneId ? `Scène ${sb.scenes.findIndex((s) => s.id === q.sceneId) + 1} : ` : ""}{q.message}</li>)}</ul>
+      )}
+    </div>
+  );
+}
+
+/** Modification détaillée d'une carte (mise en page, fond, transition, textes, voix, ordre). */
+function SceneEditor({ s, i, n, onChange, onMove, onDuplicate, onDelete }: { s: EditorialScene; i: number; n: number; onChange: (s: EditorialScene) => void; onMove: (d: -1 | 1) => void; onDuplicate: () => void; onDelete: () => void }) {
+  const fields = [{ key: "voice", label: "Audrey dit (voix off)", value: s.voice ?? "" }, ...linesOf(s)];
+  return (
+    <div className="mt-3 space-y-3 border-t border-line pt-3">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="block text-xs font-medium">Mise en page
+          <select className={field} value={s.layout} onChange={(e) => onChange({ ...s, layout: e.target.value } as EditorialScene)}>
+            {LAYOUTS[s.type].map((l) => <option key={l} value={l}>{LAYOUT_LABEL[l]}</option>)}
+          </select>
+        </label>
+        <label className="block text-xs font-medium">Fond
+          <select className={field} value={s.background} onChange={(e) => onChange({ ...s, background: e.target.value as EditorialScene["background"] })}>
+            {Object.entries(BG_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        </label>
+        <label className="block text-xs font-medium">Transition vers la suite
+          <select className={field} value={s.transitionOut} disabled={i === n - 1} onChange={(e) => onChange({ ...s, transitionOut: e.target.value as EditorialScene["transitionOut"] })}>
+            {TRANSITIONS.map((t) => <option key={t} value={t}>{TR_LABEL[t]}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {fields.map((f) => (
+          <label key={`${s.id}-${f.key}-${f.value}`} className={`block text-xs font-medium ${f.key === "voice" ? "sm:col-span-2" : ""}`}>{f.label}
+            {f.key === "voice" || f.value.includes("\n") || ["lines", "pills", "question"].includes(f.key)
+              ? <textarea className={`${field} min-h-20`} defaultValue={f.value} onBlur={(e) => e.target.value !== f.value && onChange(withField(s, f.key, e.target.value))} />
+              : <input className={field} defaultValue={f.value} onBlur={(e) => e.target.value !== f.value && onChange(withField(s, f.key, e.target.value))} />}
+          </label>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-1">
+        <button type="button" className="btn-ghost min-h-[36px] px-2" aria-label="Monter" onClick={() => onMove(-1)} disabled={i === 0}><ArrowUp size={16} aria-hidden /></button>
+        <button type="button" className="btn-ghost min-h-[36px] px-2" aria-label="Descendre" onClick={() => onMove(1)} disabled={i === n - 1}><ArrowDown size={16} aria-hidden /></button>
+        <button type="button" className="btn-ghost min-h-[36px] px-2" aria-label="Dupliquer" onClick={onDuplicate} disabled={n >= 10}><Copy size={16} aria-hidden /></button>
+        <button type="button" className="btn-ghost min-h-[36px] px-2" aria-label="Supprimer" onClick={onDelete} disabled={n <= 2}><Trash2 size={16} aria-hidden /></button>
+      </div>
     </div>
   );
 }

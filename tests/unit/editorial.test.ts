@@ -3,9 +3,9 @@ import sample from "../fixtures/editorial-sample.json";
 import { beatTicks, snap, snapToBeat, snapToHalfBeat } from "@/domain/social/editorial/beat";
 import { bezier, EASE } from "@/domain/social/editorial/easings";
 import { StoryboardSchema, type Storyboard } from "@/domain/social/editorial/schema";
-import { baseGap, planStoryboard, SFX_PEAK_MS } from "@/domain/social/editorial/schedule";
+import { baseGap, planStoryboard, SFX_PEAK_MS, voiceMs } from "@/domain/social/editorial/schedule";
 import { brandCase, fit, renderEditorial, textEm, INNER_W } from "@/domain/social/editorial/render";
-import { directFromScript, editorialLines, finalize, parseDirector } from "@/domain/social/editorial/director";
+import { directFromScript, directorBrief, editorialLines, finalize, inventedNumbers, parseDirector } from "@/domain/social/editorial/director";
 import { qaStoryboard } from "@/domain/social/editorial/qa";
 
 const sb = () => StoryboardSchema.parse(sample);
@@ -159,5 +159,40 @@ describe("Editorial Impact — QA", () => {
     const s = sb();
     const dup = { ...s, scenes: [s.scenes[1], { ...s.scenes[1], id: "s9" }, s.scenes[4]] } as Storyboard;
     expect(qaStoryboard(dup, planStoryboard(dup)).map((i) => i.code)).toContain("duplicate");
+  });
+});
+
+describe("Studio IA simple — voix d'Audrey et mascotte", () => {
+  const withVoice = () => ({ ...sb(), scenes: sb().scenes.map((x, i) => ({ ...x, voice: i === 1 ? "Chez BeeRecos tu ne viens pas chercher des cartes de visite, tu viens construire ton réseau d'apporteurs d'affaires, chaque semaine, avec des chefs d'entreprise." : "Une phrase courte." })) }) as Storyboard;
+  it("une scène dure au moins le temps de la phrase d'Audrey (estimée, puis réelle)", () => {
+    const s = withVoice();
+    const plan = planStoryboard(s);
+    const p = plan.scenes[1];
+    expect(p.voiceMs).toBe(voiceMs(s, s.scenes[1]));
+    expect(p.endMs - p.voiceAtMs!).toBeGreaterThanOrEqual(p.voiceMs! + 250);
+    const real = planStoryboard({ ...s, voiceDurations: { [s.scenes[1].id]: 12 } });
+    expect(real.scenes[1].endMs - real.scenes[1].voiceAtMs!).toBeGreaterThanOrEqual(12250);
+  });
+  it("mascotte : présente seulement si cochée, le texte lui laisse la place", () => {
+    expect(renderEditorial(sb(), { assetBase: "/hf" })).not.toContain("beerecos-mascotte.webp");
+    const html = renderEditorial({ ...sb(), mascot: true }, { assetBase: "/hf" });
+    expect(html).toContain('src="/hf/brand/beerecos-mascotte.webp"');
+    expect(html).toContain('class="with-bee"');
+  });
+  it("idée → consigne d'écriture de la voix, structure Hook → CTA", () => {
+    const b = directorBrief("Pourquoi visiter un club avant d'adhérer", { idea: true });
+    expect(b).toContain("IDÉE :");
+    expect(b).toContain("HOOK");
+    expect(b).toContain('"voice"');
+  });
+  it("découpage déterministe : chaque scène porte sa phrase, la mascotte suit la case", () => {
+    const d = directFromScript("Tu connais 500 personnes ? Chez BeeRecos on se recommande. Commente RÉSEAU.", { mascot: true });
+    expect(d.mascot).toBe(true);
+    expect(d.scenes.every((x) => x.voice)).toBe(true);
+  });
+  it("chiffre de la voix absent de l'idée : signalé", () => {
+    const s = { ...sb(), scenes: sb().scenes.map((x, i) => ({ ...x, voice: i === 0 ? "Plus de 300 entrepreneurs nous rejoignent." : "Bonjour." })) } as Storyboard;
+    expect(inventedNumbers(s, "Pourquoi rejoindre un club")).toEqual([{ sceneId: s.scenes[0].id, numbers: ["300"] }]);
+    expect(inventedNumbers(s, "300 entrepreneurs")).toEqual([]);
   });
 });

@@ -22,7 +22,7 @@ const PUB_TONE: Record<Publication["status"], string> = {
 
 type Choice = { href: string; title: string; text: string; points: string[]; icon: typeof Bot; art: string };
 const CHOICES: Choice[] = [
-  { href: "/reels/nouveau/ia", title: "Réel IA", text: "Une vidéo créée à partir d'un script, sans tournage.", points: ["Script, voix et animations", "Ouvre le Studio"], icon: Bot, art: "bg-brand text-white" },
+  { href: "/reels/nouveau/ia", title: "Réel IA", text: "Ton idée devient une vidéo, sans tournage.", points: ["Idée, structure, voix d'Audrey", "Mascotte en option"], icon: Bot, art: "bg-brand text-white" },
   { href: "/reels/nouveau/video", title: "Réel filmé", text: "Ta vidéo déjà tournée, montée dans le Studio.", points: ["Coupes, sous-titres, effets", "Ouvre le Studio"], icon: Upload, art: "bg-black text-white" },
   { href: "/post/nouveau", title: "Post", text: "Une photo ou un carrousel de 2 à 10 photos, avec sa légende.", points: ["Post simple ou carrousel, au choix", "Légende écrite avec l'IA"], icon: ImageIcon, art: "bg-brand-soft text-brand" },
 ];

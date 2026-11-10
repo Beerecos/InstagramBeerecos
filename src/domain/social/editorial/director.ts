@@ -39,7 +39,7 @@ const BG_CYCLE = ["dark", "brand", "dark", "light", "light", "dark", "brand", "d
 const TRANSITIONS = ["wipe-lr", "wipe-rl", "wipe-lr", "cut", "wipe-lr", "wipe-rl", "wipe-lr", "wipe-lr"] as const;
 
 /** Découpage déterministe : toujours un storyboard valide, jamais un fait inventé. */
-export function directFromScript(script: string, opts: { intensity?: number; keyword?: string | null } = {}): Storyboard {
+export function directFromScript(script: string, opts: { intensity?: number; keyword?: string | null; mascot?: boolean } = {}): Storyboard {
   const all = sentences(script).filter((x) => x.length > 2);
   const scenes: EditorialScene[] = [];
   const ctaIdx = all.findLastIndex((x) => CTA_RE.test(x));
@@ -47,27 +47,29 @@ export function directFromScript(script: string, opts: { intensity?: number; key
   const body = all.filter((_, i) => i !== ctaIdx);
   const id = () => `s${scenes.length + 1}`;
   body.slice(0, 6).forEach((sent, i) => {
+    const voice = brandCase(sent).slice(0, 260);
     const num = numberIn(sent);
     const items = listItems(sent);
     if (i === 0 && num) {
       const before = sent.slice(0, num.index).trim(), after = sent.slice(num.index + num.raw.length).trim();
       const rest = editorialLines(after, 3);
-      scenes.push({ id: id(), type: "hook-stat", background: "dark", layout: "left", transitionOut: "wipe-lr", ...(before ? { lead: editorialLines(before, 1)[0] } : {}), stat: { value: num.value, prefix: "", suffix: num.suffix.trim() ? num.suffix : "", decimals: num.decimals }, lines: rest.slice(0, -1).slice(0, 2), ...(rest.length ? { accent: rest[rest.length - 1] } : {}) });
+      scenes.push({ id: id(), voice, type: "hook-stat", background: "dark", layout: "left", transitionOut: "wipe-lr", ...(before ? { lead: editorialLines(before, 1)[0] } : {}), stat: { value: num.value, prefix: "", suffix: num.suffix.trim() ? num.suffix : "", decimals: num.decimals }, lines: rest.slice(0, -1).slice(0, 2), ...(rest.length ? { accent: rest[rest.length - 1] } : {}) });
     } else if (items.length >= 3 && items.length <= 6 && items.every((x) => x.split(" ").length <= 6)) {
       const [title, ...pills] = items;
-      scenes.push({ id: id(), type: "pills", background: "dark", layout: "left", transitionOut: "wipe-lr", title: editorialLines(title, 1)[0], pills: pills.slice(0, 5).map((p) => brandCase(p.charAt(0).toUpperCase() + p.slice(1)).slice(0, 32)) });
+      scenes.push({ id: id(), voice, type: "pills", background: "dark", layout: "left", transitionOut: "wipe-lr", title: editorialLines(title, 1)[0], pills: pills.slice(0, 5).map((p) => brandCase(p.charAt(0).toUpperCase() + p.slice(1)).slice(0, 32)) });
     } else if (HUMAN_RE.test(sent) && sent.includes("?")) {
       const [q, a] = sent.split("?");
-      scenes.push({ id: id(), type: "human", background: "light", layout: "left", transitionOut: "wipe-lr", question: editorialLines(q + " ?", 3), answer: (editorialLines(a || q, 1)[0] ?? "").slice(0, 40) || "ENSEMBLE." });
+      scenes.push({ id: id(), voice, type: "human", background: "light", layout: "left", transitionOut: "wipe-lr", question: editorialLines(q + " ?", 3), answer: (editorialLines(a || q, 1)[0] ?? "").slice(0, 40) || "ENSEMBLE." });
     } else {
       const lines = editorialLines(sent, 4);
       const accent = STRONG.find((w) => lines.join(" ").toLowerCase().includes(w));
-      scenes.push({ id: id(), type: "statement", background: "dark", layout: "left", transitionOut: "wipe-lr", lines, accentWords: accent ? [accent.toUpperCase()] : [] });
+      scenes.push({ id: id(), voice, type: "statement", background: "dark", layout: "left", transitionOut: "wipe-lr", lines, accentWords: accent ? [accent.toUpperCase()] : [] });
     }
   });
   const keyword = opts.keyword?.toUpperCase() ?? (cta?.match(/comment(?:e|ez)\s+«?\s*([A-ZÀ-Ýa-zà-ÿ]+)/i)?.[1]?.toUpperCase() ?? null);
-  scenes.push({ id: id(), type: "cta", background: "dark", layout: "left", transitionOut: "none", lines: ["ALORS,", "ON SE VOIT", "AU CLUB ?"], ...(cta ? { sub: brandCase(cta).slice(0, 60) } : keyword ? { sub: `Commente ${keyword} pour recevoir ton invitation.` } : {}), button: "DÉCOUVRIR UN CLUB", brand: true });
-  return finalize({ preset: "editorial-impact", intensity: opts.intensity ?? 4, bpm: 120, sfx: "normal", scenes }, script);
+  const ctaVoice = cta ? brandCase(cta).slice(0, 260) : keyword ? `Commente ${keyword} pour recevoir ton invitation.` : undefined;
+  scenes.push({ id: id(), ...(ctaVoice ? { voice: ctaVoice } : {}), type: "cta", background: "dark", layout: "left", transitionOut: "none", lines: ["ALORS,", "ON SE VOIT", "AU CLUB ?"], ...(cta ? { sub: brandCase(cta).slice(0, 60) } : keyword ? { sub: `Commente ${keyword} pour recevoir ton invitation.` } : {}), button: "DÉCOUVRIR UN CLUB", brand: true });
+  return finalize({ preset: "editorial-impact", intensity: opts.intensity ?? 4, bpm: 120, sfx: "normal", mascot: opts.mascot ?? false, scenes }, script);
 }
 
 /** Règles appliquées à tout storyboard (IA ou déterministe) : fonds alternés, transitions variées, chiffres vérifiés. */
@@ -90,30 +92,42 @@ export function finalize(raw: unknown, source: string): Storyboard {
 }
 
 /** Consigne pour l'IA (même contrat de sortie que le découpage déterministe). */
-export function directorBrief(script: string, opts: { keyword?: string | null; testimonials?: { quote: string; author: string }[]; rating?: number | null } = {}): string {
-  return `AI MOTION DIRECTOR — Reel « Editorial Impact » BeeRecos (1080×1920, ~20 à 30 s).
-Tu es directeur artistique et monteur. Tu ne fais PAS des sous-titres : tu éditorialises. À partir du texte, décide de ce qui devient énorme (chiffre), de ce qui devient une affirmation, une liste de capsules, une rupture humaine, des témoignages, puis l'appel à l'action.
+export function directorBrief(script: string, opts: { keyword?: string | null; testimonials?: { quote: string; author: string }[]; rating?: number | null; idea?: boolean } = {}): string {
+  return `AI MOTION DIRECTOR — Reel « Editorial Impact » BeeRecos (1080×1920, ~25 à 40 s), voix off d'Audrey.
+Tu es scénariste, directeur artistique et monteur. ${opts.idea ? "On te donne une IDÉE : écris d'abord la voix off (tutoiement, phrases courtes, ≈ 155 mots/min), puis éditorialise-la." : "On te donne le texte de la voix : garde ses phrases et éditorialise-le."} Tu ne fais PAS des sous-titres : décide de ce qui devient énorme (chiffre), une affirmation, une liste de capsules, une rupture humaine, des témoignages, puis l'appel à l'action.
+Structure : HOOK (problème, curiosité ou provocation) → valeur (1 à 3 scènes, une idée par scène) → rupture humaine si elle sert le propos → CTA.
 Règles :
+- Chaque scène a "voice" : la phrase exacte dite par Audrey (8 à 30 mots), différente du texte à l'écran, qui reste court.
 - 4 à 7 scènes. Première scène = accroche (hook-stat si un chiffre est dit, sinon statement en question). Dernière = cta.
 - Lignes courtes en CAPITALES (2 à 4 mots, 16 caractères maximum par ligne), 1 à 4 lignes par scène. Supprime le remplissage. Écris toujours « BeeRecos ».
 - Aucun chiffre, nom, témoignage ou note qui ne soit dans le texte ou fourni ci-dessous. Pas de scène testimonials sans témoignages fournis.
 - Fonds alternés (dark, brand, dark, light, light, dark…), jamais trois fois le même à la suite. Scène human sur fond light.
 - transitionOut : "wipe-lr" le plus souvent, "wipe-rl" parfois, "cut" rarement ; la dernière scène "none".
 - Bouton du CTA : DÉCOUVRIR UN CLUB, PARTICIPER À UNE RÉUNION, RECEVOIR MON INVITATION ou EN SAVOIR PLUS, selon le texte.${opts.keyword ? `\n- Mot-clé du CTA : « Commente ${opts.keyword.toUpperCase()} ».` : ""}
-Types : hook-stat {lead?, stat:{value,suffix,decimals}, lines[], accent?}, statement {lines[], accentWords[], micro?}, pills {title, pills[2-5]}, human {question[], answer, micro?}, testimonials {title, cards[{quote,author}], rating?}, cta {lines[], sub?, button, brand:true}.
+Types (tous avec "voice") : hook-stat {lead?, stat:{value,suffix,decimals}, lines[], accent?}, statement {lines[], accentWords[], micro?}, pills {title, pills[2-5]}, human {question[], answer, micro?}, testimonials {title, cards[{quote,author}], rating?}, cta {lines[], sub?, button, brand:true}.
 Réponds UNIQUEMENT par un objet JSON : {"preset":"editorial-impact","intensity":4,"bpm":120,"sfx":"normal","scenes":[{"id":"s1","type":"…","background":"…","layout":"left",…}]}
 ${opts.testimonials?.length ? `\nTÉMOIGNAGES FOURNIS (seuls autorisés, 12 à 20 mots chacun, raccourcis sans changer le sens) :\n${opts.testimonials.map((t) => `- « ${t.quote} » — ${t.author}`).join("\n")}` : ""}${opts.rating ? `\nNOTE FOURNIE : ${opts.rating} / 5` : ""}
 
-TEXTE :
+${opts.idea ? "IDÉE" : "TEXTE"} :
 ${script.trim()}`;
 }
 
 /** Réponse de l'IA → storyboard validé ; en cas d'échec, le découpage déterministe. */
-export function parseDirector(raw: string, script: string, opts: { intensity?: number; keyword?: string | null } = {}): { storyboard: Storyboard; source: "ai" | "rules" } {
+export function parseDirector(raw: string, script: string, opts: { intensity?: number; keyword?: string | null; mascot?: boolean } = {}): { storyboard: Storyboard; source: "ai" | "rules" } {
   try {
     const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "");
-    return { storyboard: finalize({ ...json, intensity: opts.intensity ?? json.intensity ?? 4 }, script), source: "ai" };
+    // Chiffre à l'écran : seulement s'il est dans l'idée ou le texte fourni (finalize) ; voix : voir inventedNumbers.
+    return { storyboard: finalize({ ...json, intensity: opts.intensity ?? json.intensity ?? 4, mascot: opts.mascot ?? false }, script), source: "ai" };
   } catch {
     return { storyboard: directFromScript(script, opts), source: "rules" };
   }
+}
+
+/** Chiffres de la voix off absents du texte fourni : affichés à corriger (aucun chiffre inventé ne part en vidéo). */
+export function inventedNumbers(sb: Storyboard, source: string): { sceneId: string; numbers: string[] }[] {
+  const said = new Set((source.match(/\d+(?:[.,]\d+)?/g) ?? []).map((d) => d.replace(",", ".")));
+  return sb.scenes.flatMap((s) => {
+    const numbers = (s.voice?.match(/\d+(?:[.,]\d+)?/g) ?? []).filter((d) => !said.has(d.replace(",", ".")));
+    return numbers.length ? [{ sceneId: s.id, numbers }] : [];
+  });
 }

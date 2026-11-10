@@ -8,7 +8,8 @@ import { z } from "zod";
 const line = z.string().trim().min(1).max(40);
 const bg = z.enum(["dark", "light", "brand"]);
 export const TRANSITIONS = ["wipe-lr", "wipe-rl", "cut", "none"] as const;
-const common = { id: z.string().min(1).max(40), background: bg, transitionOut: z.enum(TRANSITIONS).default("wipe-lr"), locked: z.boolean().optional() };
+/** `voice` : la phrase dite par Audrey sur cette scène (le texte à l'écran reste court et éditorialisé). */
+const common = { id: z.string().min(1).max(40), background: bg, transitionOut: z.enum(TRANSITIONS).default("wipe-lr"), locked: z.boolean().optional(), voice: z.string().trim().max(260).optional() };
 
 export const HookStatScene = z.strictObject({
   ...common, type: z.literal("hook-stat"), layout: z.enum(["center", "left", "full"]).default("center"),
@@ -49,6 +50,12 @@ export const StoryboardSchema = z.strictObject({
   sfx: z.enum(["off", "subtle", "normal", "impact"]).default("normal"),
   /** Musique de la bibliothèque (licence vérifiée à l'ajout) ; absente = sans musique. */
   music: z.strictObject({ file: z.string().regex(/^[\w.-]+\.(mp3|wav|m4a|aac|ogg)$/i), volume: z.number().min(0).max(1).default(0.35) }).optional(),
+  /** Mascotte officielle BeeRecos (case à cocher du Studio IA). */
+  mascot: z.boolean().default(false),
+  /** Débit d'Audrey (92 % conseillé, comme le style Motion). */
+  voiceSpeed: z.number().min(0.8).max(1.25).default(0.92),
+  /** Voix générées (durées réelles, en secondes) : remplacent l'estimation quand elles existent. */
+  voiceDurations: z.record(z.string(), z.number().positive().max(60)).optional(),
   scenes: z.array(SceneSchema).min(2).max(10),
 });
 export type Storyboard = z.infer<typeof StoryboardSchema>;

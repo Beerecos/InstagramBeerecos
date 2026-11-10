@@ -12,7 +12,7 @@ export type Anim = "mask" | "accent" | "counter" | "pill" | "cardIn" | "cardOut"
 export type SfxName = "editorialWhoosh" | "softHit" | "microPop" | "uiClick" | "cardSlide" | "cardDrop" | "digitalTick" | "softRiser" | "softDowner";
 export type PlanEvent = { atMs: number; el: string; anim: Anim; durMs: number; dir?: 1 | -1 };
 export type AudioEvent = { atMs: number; sfx: SfxName; gain: number; priority: number };
-export type PlannedScene = { scene: EditorialScene; index: number; startMs: number; endMs: number; events: PlanEvent[] };
+export type PlannedScene = { scene: EditorialScene; index: number; startMs: number; endMs: number; events: PlanEvent[]; voiceAtMs?: number; voiceMs?: number };
 export type Transition = { atMs: number; kind: "wipe-lr" | "wipe-rl" | "cut"; from: EditorialScene["background"]; to: EditorialScene["background"]; durMs: number };
 export type Plan = { scenes: PlannedScene[]; transitions: Transition[]; audio: AudioEvent[]; durationMs: number; bpm: number; intensity: Intensity };
 
@@ -108,6 +108,14 @@ function sceneEvents(s: EditorialScene, g: number, bpm: number, audio: (at: numb
   }
 }
 
+/** Durée de la phrase d'Audrey : réelle si la voix est générée, sinon estimée (≈ 155 mots/min × débit). */
+export function voiceMs(sb: Storyboard, scene: EditorialScene): number {
+  if (!scene.voice?.trim()) return 0;
+  const real = sb.voiceDurations?.[scene.id];
+  if (real) return Math.round(real * 1000);
+  return Math.round((words(scene.voice) / (155 / 60) / sb.voiceSpeed) * 1000) + 200;
+}
+
 export function planStoryboard(sb: Storyboard): Plan {
   const intensity = sb.intensity as Intensity, bpm = sb.bpm, g = baseGap(intensity, bpm);
   const audioRaw: AudioEvent[] = [];
@@ -119,10 +127,15 @@ export function planStoryboard(sb: Storyboard): Plan {
     const local: AudioEvent[] = [];
     const { events, hold } = sceneEvents(scene, g, bpm, (at, sfx, priority, gain = 1) => local.push({ atMs: at, sfx, priority, gain }));
     const shifted = events.map((e) => ({ ...e, atMs: e.atMs + cursor + offset }));
+    // La voix d'Audrey commence avec le contenu ; la scène dure au moins le temps de sa phrase (+ un souffle).
+    const vMs = voiceMs(sb, scene);
     const lastEnd = Math.max(...shifted.map((e) => e.atMs + e.durMs), cursor + offset);
-    // Fin de scène calée sur un temps entier (le centre du wipe tombe sur le beat).
-    const endMs = snapToBeat(lastEnd + hold, { bpm, tolerance: beatMs(bpm) }) || lastEnd + hold;
-    scenes.push({ scene, index, startMs: cursor, endMs: Math.max(endMs, lastEnd + 300), events: shifted });
+    const minEnd = vMs ? cursor + offset + vMs + 250 : 0;
+    const target = Math.max(lastEnd + hold, minEnd);
+    // Fin de scène calée sur un temps entier (le centre du wipe tombe sur le beat), jamais avant la fin de la voix.
+    let endMs = snapToBeat(target, { bpm, tolerance: beatMs(bpm) }) || target;
+    if (endMs < minEnd) endMs = Math.ceil(minEnd / beatMs(bpm)) * beatMs(bpm);
+    scenes.push({ scene, index, startMs: cursor, endMs: Math.max(endMs, lastEnd + 300), events: shifted, ...(vMs ? { voiceAtMs: cursor + offset, voiceMs: vMs } : {}) });
     audioRaw.push(...local.map((a) => ({ ...a, atMs: a.atMs + cursor + offset })));
     const next = sb.scenes[index + 1];
     if (next) {
