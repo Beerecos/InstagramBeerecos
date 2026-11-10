@@ -216,7 +216,10 @@ export function buildEditComposition(input: unknown, rawWords: CaptionWord[], op
 
   if (edit.logo) {
     const logo = edit.logo;
-    clips.push(`<img id="studio-logo" src="${escapeHtml(base)}/${STUDIO_LOGO.file}" alt="BeeRecos" data-start="0" data-duration="${s(totalMs(segments))}" data-track-index="6" style="position:absolute;right:${logo.right}px;bottom:${logo.bottom}px;width:${logo.width}px;height:auto;opacity:${logo.opacity};z-index:12;object-fit:contain" />`);
+    // Logo dans un cercle blanc (demande de Cédric, 2026-11-10) : lisible sur toute image ; la largeur réglée est le
+    // diamètre du cercle, le logo officiel (intact, proportions conservées) occupe 70 % de sa largeur, centré.
+    clips.push(`<div id="studio-logo" class="clip logo-cercle" data-start="0" data-duration="${s(totalMs(segments))}" data-track-index="6" style="position:absolute;right:${logo.right}px;bottom:${logo.bottom}px;width:${logo.width}px;height:${logo.width}px;opacity:${logo.opacity};z-index:12"><img src="${escapeHtml(base)}/${STUDIO_LOGO.file}" alt="BeeRecos" /></div>`);
+    css.add(".logo-cercle { box-sizing: border-box; border-radius: 50%; background: #ffffff; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); display: flex; align-items: center; justify-content: center; } .logo-cercle img { width: 70%; height: auto; object-fit: contain; }");
   }
 
   if (edit.subtitles) {
