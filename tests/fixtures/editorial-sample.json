@@ -1,0 +1,7 @@
+{ "preset": "editorial-impact", "intensity": 4, "bpm": 120, "sfx": "normal", "scenes": [
+  { "id": "s1", "type": "hook-stat", "background": "dark", "layout": "left", "lead": "TU CONNAIS", "stat": { "value": 500, "suffix": "" }, "lines": ["PERSONNES."], "accent": "QUI TE RECOMMANDE ?", "transitionOut": "wipe-lr" },
+  { "id": "s2", "type": "statement", "background": "brand", "layout": "left", "lines": ["CHEZ BEERECOS,", "TU NE VIENS PAS", "CHERCHER DES", "CARTES DE VISITE."], "accentWords": [], "micro": "Tu viens construire ton réseau d'apporteurs d'affaires.", "transitionOut": "wipe-rl" },
+  { "id": "s3", "type": "pills", "background": "dark", "layout": "left", "title": "CHAQUE SEMAINE :", "pills": ["Une réunion de club", "Des recommandations", "Des chefs d'entreprise", "Un message clair"], "transitionOut": "wipe-lr" },
+  { "id": "s4", "type": "human", "background": "light", "layout": "left", "question": ["ET CE QUI FAIT", "LA DIFFÉRENCE ?"], "answer": "LA CONFIANCE.", "micro": "On recommande les gens qu'on connaît.", "transitionOut": "wipe-lr" },
+  { "id": "s5", "type": "cta", "background": "dark", "layout": "left", "lines": ["ALORS,", "TU OSERAIS", "TOI AUSSI ?"], "sub": "Commente RÉSEAU pour recevoir ton invitation.", "button": "DÉCOUVRIR UN CLUB", "brand": true }
+] }
