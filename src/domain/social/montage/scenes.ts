@@ -126,13 +126,65 @@ function prefill(id: string, scene: Scene, keyword: string | null): { values: Re
     case "chiffre": {
       const m = /(\d[\d\s]*(?:[.,]\d+)?)\s*(%|€)?/.exec(scene.text);
       if (!m) return null;
-      return { values: { valeur: m[1].replace(/\s/g, "").replace(",", "."), apres: m[2] ?? "", legende: "" }, note: "Légende à écrire : reprendre ce qui est dit." };
+      // Légende : les mots dits juste après le chiffre (« 500 personnes » → « personnes »), à ajuster si besoin.
+      const after = firstWords(scene.text.slice(m.index + m[0].length).trim(), 4) || firstWords(scene.text, 4);
+      return { values: { valeur: m[1].replace(/\s/g, "").replace(",", "."), apres: m[2] ?? "", legende: after }, note: "Légende reprise de ce qui est dit : ajuste-la si besoin." };
     }
-    default: {
-      const fields = fieldsOf(ANIMATIONS[id]);
-      return { values: Object.fromEntries(fields.map((f) => [f.key, ""])), note: "Réglages à compléter." };
-    }
+    default: return fromSpeech(id, scene, pivot);
   }
+}
+
+/** Morceaux courts de ce qui est dit dans la scène (séparés aux pauses de ponctuation), pour les listes. */
+function chunks(text: string, n: number): string[] {
+  const parts = text.split(/[.,;:!?…]+|\s(?:et|puis|ensuite|enfin)\s/i).map((p) => p.trim()).filter((p) => p.split(/\s+/).length >= 1);
+  const out = parts.length >= 2 ? parts : text.split(/\s+/).reduce<string[]>((acc, w, i) => { if (i % 3 === 0) acc.push(w); else acc[acc.length - 1] += ` ${w}`; return acc; }, []);
+  return out.slice(0, n).map((p) => firstWords(p, 4));
+}
+
+/**
+ * Pré-remplissage générique (2026-11-10 : « l'animation ne fonctionne pas », carte posée avec des champs vides) :
+ * chaque texte obligatoire reçoit un morceau de ce qui est dit (jamais un texte d'exemple du catalogue), chaque liste
+ * 2 à 3 morceaux de la phrase ; les réglages de style (choix, nombres facultatifs) gardent leur valeur par défaut.
+ * Les textes trop longs sont raccourcis à la limite de l'animation. Renvoie null si le résultat reste invalide.
+ */
+function fromSpeech(id: string, scene: Scene, pivot: string | undefined): { values: Record<string, string>; note?: string } | null {
+  const def = ANIMATIONS[id];
+  if (!def) return null;
+  const words = scene.text.replace(/[«»"]/g, "").trim().split(/\s+/).filter(Boolean);
+  const example = (def.example ?? {}) as Record<string, unknown>;
+  const values: Record<string, string> = {};
+  let used = 0;
+  for (const f of fieldsOf(def)) {
+    if (f.kind === "list") {
+      // Listes d'icônes (identifiants du catalogue) : décoratives, on garde celles de l'exemple.
+      const ex = example[f.key];
+      if (Array.isArray(ex) && ex.every((x) => typeof x === "string" && /^[a-z-]+$/.test(x))) { values[f.key] = ex.join("\n"); continue; }
+      values[f.key] = chunks(scene.text, Math.max(2, Math.min(3, Array.isArray(ex) ? ex.length : 3))).join("\n");
+      continue;
+    }
+    if (f.kind !== "text" || f.optional) continue;
+    if (typeof example[f.key] !== "string") continue;
+    const text = used === 0 ? (pivot ?? firstWords(words.join(" "), 3)).toUpperCase() : firstWords(words.slice(used === 1 ? 3 : 7).join(" ") || words.join(" "), 4);
+    values[f.key] = text;
+    used++;
+  }
+  // Raccourcir aux limites de l'animation, puis vérifier.
+  for (let round = 0; round < 4; round++) {
+    const props: Record<string, unknown> = Object.fromEntries(Object.entries(values).map(([k, v]) => [k, fieldsOf(def).find((f) => f.key === k)?.kind === "list" ? v.split("\n").filter(Boolean) : v]));
+    const r = def.props.safeParse(props);
+    if (r.success) return { values };
+    let changed = false;
+    for (const issue of r.error.issues) {
+      const [key, index] = issue.path as (string | number)[];
+      if (issue.code !== "too_big" || typeof key !== "string" || typeof (issue as { maximum?: unknown }).maximum !== "number") continue;
+      const max = Number((issue as { maximum: number }).maximum);
+      if (typeof index === "number") { const items = values[key].split("\n"); items[index] = items[index].slice(0, max).trim(); values[key] = items.join("\n"); }
+      else values[key] = values[key].slice(0, max).trim();
+      changed = true;
+    }
+    if (!changed) break;
+  }
+  return null;
 }
 
 /**

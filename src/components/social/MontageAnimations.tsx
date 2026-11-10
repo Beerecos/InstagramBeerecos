@@ -148,10 +148,8 @@ const MontageAnimations = forwardRef<MontageAnimationsHandle, Props>(function Mo
     choose([...new Set([...(choices ?? []), c.motion.id])]);
     const rendered = renderAnimation(next.name, next.props, { id: "zz9", start: 0, duration: (toMs - fromMs) / 1000, accent: "#2851FF" }, ANIMATIONS);
     const issues = [rendered.error, ...checkTimeline([...others, next]), ...behindErrors({ ...m.edit, custom: [next] }, ANIMATIONS), ...Object.values(props).flatMap((v) => (Array.isArray(v) ? v : [v]).flatMap((text) => typeof text === "string" ? charteIssues(text) : []))].filter(Boolean);
-    if (studioMode && !advanced && fromIndex === undefined && rendered.error && toMs - fromMs >= 500 && !checkTimeline([...others, next]).length && !behindErrors({ ...m.edit, custom: [next] }, ANIMATIONS).length) {
-      onDraft(sorted([...others, next])); if(!advanced)onPlaced?.(next);
-      setAnchor(null); setError("Carte ajoutée au brouillon : complétez ses champs dans les réglages à droite avant d’enregistrer."); return;
-    }
+    // Jamais de carte incomplète dans le montage (elle s'afficherait en bandeau d'erreur, et serait enregistrée toute
+    // seule) : le formulaire s'ouvre avec ce qui a pu être pré-rempli, à compléter avant l'ajout.
     if (toMs - fromMs < 500 || issues.length) {
       if (fromIndex !== undefined) {
         setAnchor(null); setError("Déplacement impossible : la carte reste sur sa scène d’origine. " + issues.join(" ")); return;
