@@ -155,6 +155,13 @@ describe("Editorial Impact — QA", () => {
     expect(codes).toContain("overflow");
     expect(codes).toContain("cta");
   });
+  it("Réel IA d'environ 30 s : la consigne le demande, la QA signale un Réel trop long", () => {
+    expect(directorBrief("idée", { idea: true })).toContain("environ 30 s au total");
+    const s = sb();
+    expect(qaStoryboard(s, planStoryboard(s)).map((i) => i.code)).not.toContain("duration");
+    const long = { ...s, scenes: s.scenes.map((x) => ({ ...x, voice: Array(40).fill("mot").join(" ") })) } as Storyboard;
+    expect(qaStoryboard(long, planStoryboard(long)).find((i) => i.code === "duration")?.message).toMatch(/vise environ 30 s/);
+  });
   it("signale un texte répété", () => {
     const s = sb();
     const dup = { ...s, scenes: [s.scenes[1], { ...s.scenes[1], id: "s9" }, s.scenes[4]] } as Storyboard;
