@@ -1,6 +1,7 @@
 import { currentVoiceAsset } from "./audrey";
 import { FONT_FAMILY, FRAME, LOGOS, SAFE } from "./brand";
-import { escapeHtml, fitBlock } from "./composition";
+import { endTotal, endVideoClip, escapeHtml, fitBlock } from "./composition";
+import { END_VIDEO } from "../montage/brand";
 import { fitSize } from "./metrics";
 import {
   parseMotionSpec, RHYTHM, sceneDurations, sceneStarts, sceneWords, wordTime,
@@ -172,7 +173,9 @@ export function buildMotionComposition(input: MotionSpec, opts: MotionCompositio
     add(`tl.set("#bee", { autoAlpha: 0 }, ${out});`);
     add(`tl.fromTo("#bee-float", { y: 0 }, { y: -7, duration: 0.6, ease: "sine.inOut", repeat: ${Math.max(1, Math.floor(out / 0.6) - 1)}, yoyo: true }, 0);`);
   }
-  add(`tl.set({}, {}, ${total});`);
+  // Même fin que les Reels (2026-11-10) : vidéo de fin officielle BeeRecos après la dernière scène.
+  add(`tl.set("#end-video", { autoAlpha: 1 }, ${total});`);
+  add(`tl.set({}, {}, ${endTotal(total)});`);
 
   const voices = spec.scenes.map((s, i) => {
     const a = spec.assets?.voice?.[s.id];
@@ -247,7 +250,7 @@ export function buildMotionComposition(input: MotionSpec, opts: MotionCompositio
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-width="${W}" data-height="${H}" data-duration="${total}" data-fps="${FRAME.fps}">
+    <div id="root" data-composition-id="main" data-start="0" data-width="${W}" data-height="${H}" data-duration="${endTotal(total)}" data-fps="${FRAME.fps}">
       ${scenesHtml.join("\n      ")}
       <div id="caps" aria-hidden="true">${capHtml}</div>
       ${mascot ? `<div id="bee" aria-hidden="true"><div id="bee-float"><div id="bee-lean"><div id="bee-hop"><div id="bee-body">
@@ -255,6 +258,7 @@ export function buildMotionComposition(input: MotionSpec, opts: MotionCompositio
         ${["l", "r"].map((e) => `<div class="bee-eye ${e}" data-layout-ignore><div class="bee-lid"><svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M14 52 Q50 74 86 52" fill="none" stroke="#14246E" stroke-width="7" stroke-linecap="round" /></svg></div></div>`).join("")}
       </div></div></div></div></div>` : ""}
       ${opts.soundtrackSrc ? `<audio id="soundtrack" src="${escapeHtml(opts.soundtrackSrc)}" data-start="0" data-duration="${total}" data-track-index="1" data-volume="0.7"></audio>` : ""}
+      ${endVideoClip(base, total)}
       ${voices.join("\n      ")}
     </div>
     <script>
@@ -481,7 +485,7 @@ export function motionPlan(spec: MotionSpec) {
 /** Fichiers de public/hyperframes/ nécessaires au rendu d'une vidéo de ce style (voix et bande son en plus). */
 export const MOTION_ASSETS: string[] = [
   "fonts/poppins-latin-400-normal.woff2", "fonts/poppins-latin-500-normal.woff2", "fonts/poppins-latin-600-normal.woff2",
-  "gsap-3.14.2.min.js", LOGOS.endHorizontal.file, BASELINE.file, MASCOT.file,
+  "gsap-3.14.2.min.js", LOGOS.endHorizontal.file, BASELINE.file, MASCOT.file, END_VIDEO.file,
 ];
 
 /** Sous-titres SRT (fichier séparé demandé par le prompt) : une réplique par segment de phrase, temps de la voix réelle. */

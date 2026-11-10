@@ -62,7 +62,9 @@ describe("style Motion BeeRecos - Dynamique : composition", () => {
   });
   it("seuls les fichiers officiels de marque sont utilisés (logo, baseline, mascotte)", () => {
     const imgs = [...html(DEMO_MOTION).matchAll(/<img[^>]+src="\.\/([^"]+)"/g)].map((m) => m[1]);
-    expect(new Set(imgs)).toEqual(new Set(MOTION_ASSETS.filter((a) => a.startsWith("brand/"))));
+    expect(new Set(imgs)).toEqual(new Set(MOTION_ASSETS.filter((a) => a.startsWith("brand/") && !a.endsWith(".mp4"))));
+    // Fin : la vidéo de fin officielle des Reels, après la dernière scène.
+    expect(html(DEMO_MOTION)).toContain('src="./brand/beerecos-video-fin.mp4"');
   });
   it("tout texte saisi est échappé", () => {
     expect(html(clone((s) => { s.scenes[0].title = "Ton <b>prochain</b>\nclient"; }))).not.toContain("<b>prochain");

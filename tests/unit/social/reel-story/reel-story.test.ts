@@ -19,7 +19,9 @@ describe("template Reel « Recommandation »", () => {
   it("la composition respecte le contrat Hyperframes et la charte", () => {
     const out = html();
     expect(out).toContain('data-composition-id="main"');
-    expect(out).toContain('data-duration="20"');
+    // 20 s de film + 7,8 s de vidéo de fin officielle (la même que les Reels).
+    expect(out).toContain('data-duration="27.8"');
+    expect(out).toContain('src="https://app.test/hyperframes/brand/beerecos-video-fin.mp4" data-start="20"');
     expect(out).toContain('data-width="1080" data-height="1920"');
     expect(out).toContain('data-fps="30"');
     expect(out).toContain('window.__timelines["main"] = tl');

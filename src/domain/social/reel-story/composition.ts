@@ -1,4 +1,5 @@
 import { COLORS, FONT_FAMILY, FONT_FILES, FRAME, LOGOS, PICTOGRAM, SAFE, SAFE_WIDTH, logoClearSpace } from "./brand";
+import { END_VIDEO } from "../montage/brand";
 import { GUIDE_BASE_HEIGHT, GUIDE_BASE_WIDTH, GUIDE_RATIO, guideGsap, type GuidePose } from "./guide";
 import { fitSize, textWidth } from "./metrics";
 import { SHAPES, type ShapeName } from "./shapes";
@@ -279,7 +280,7 @@ export function buildStoryComposition(input: StorySpec, opts: CompositionOptions
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-width="${W}" data-height="${FRAME.height}" data-duration="${b.total}" data-fps="${FRAME.fps}">
+    <div id="root" data-composition-id="main" data-start="0" data-width="${W}" data-height="${FRAME.height}" data-duration="${endTotal(b.total)}" data-fps="${FRAME.fps}">
       ${shape("organique-large", "deco", `left:520px;top:1080px;width:760px;opacity:0.07`, C.blue).replace('class="deco"', 'class="deco" id="deco-hook"')}
 
       <!-- 0 · Accroche : lisible dès la première image -->
@@ -348,6 +349,7 @@ export function buildStoryComposition(input: StorySpec, opts: CompositionOptions
       <div id="guide" aria-hidden="true"><div id="guide-in"><img class="g-bleu" src="${base}/${PICTOGRAM.blue}" alt="" width="${GUIDE_BASE_WIDTH}" height="${GUIDE_BASE_HEIGHT}" /><img class="g-blanc" src="${base}/${PICTOGRAM.white}" alt="" width="${GUIDE_BASE_WIDTH}" height="${GUIDE_BASE_HEIGHT}" style="opacity:0" /></div></div>
 
       ${opts.soundtrackSrc ? `<audio id="soundtrack" src="${escapeHtml(opts.soundtrackSrc)}" data-start="0" data-duration="${b.total}" data-track-index="1" data-volume="0.6"></audio>` : ""}
+      ${endVideoClip(base, b.total)}
       ${voices.map(({ k, a }) => `<audio id="vo-${k}" src="${escapeHtml(opts.resolveVoice ? opts.resolveVoice(a!.src, k) : a!.src)}" data-start="${b.voiceAt[k]}" data-duration="${a!.duration}" data-track-index="2" data-volume="1.25"></audio>`).join("\n      ")}
     </div>
     <script>
@@ -533,6 +535,14 @@ function timelineScript(spec: StorySpec, b: ReturnType<typeof storyBeats>, L: La
   add(g.reagir(r(b.cta.typing[b.cta.typing.length - 1] + 0.15)));
 
   // Fin : la chronologie couvre toute la durée (dernière image stable, rien n'est coupé).
-  add(`tl.set({}, {}, ${b.total});`);
+  // Même fin que les Reels (2026-11-10) : vidéo de fin officielle BeeRecos après l'appel à l'action.
+  add(`tl.set("#end-video", { autoAlpha: 1 }, ${b.total});`);
+  add(`tl.set({}, {}, ${endTotal(b.total)});`);
   return lines.join("\n");
+}
+
+/** Vidéo de fin officielle (la même que les Reels filmés), jouée plein cadre après l'appel à l'action, sans son. */
+export const endTotal = (total: number) => Math.round((total + END_VIDEO.durationMs / 1000) * 1000) / 1000;
+export function endVideoClip(base: string, total: number): string {
+  return `<video id="end-video" class="clip" src="${base}/${END_VIDEO.file}" data-start="${total}" data-duration="${END_VIDEO.durationMs / 1000}" data-has-audio="false" muted playsinline data-track-index="7" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:90;visibility:hidden"></video>`;
 }

@@ -734,9 +734,11 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
     const r = applyStandard(scenes, { endMs: end, keyword: m.reel?.keyword ?? null, matteAt: (ms) => matteAt(edit, ms), words: keptWords(m.captions, edit.ranges), ...(chosen ? { template: chosen } : {}), ...(look ? { look: look.look, styleName: look.label } : {}) });
     // À l'ouverture : enregistré tout de suite (sinon le brouillon bloquerait le cadrage et les sous-titres) ; modifiable
     // ensuite comme toute animation, et rien n'est rendu sans l'aperçu validé. Sur le bouton : brouillon à relire.
-    if (replace) changeDraft(r.custom);
-    else { const placed = withAnimationIds(r.custom); setDraft(placed); void saveDraft(placed).catch(() => {}); }
-    setStandardNote(`${look ? `Style « ${look.label} »` : chosen ? `Mon modèle « ${chosen.name} »` : "Standard BeeRecos"} appliqué : ${r.custom.length} animation(s). ${replace ? "Vérifie dans l’aperçu, ajuste si besoin, puis enregistre." : "Enregistré : vérifie dans l’aperçu et ajuste si besoin."}${r.warnings.length ? `\n${r.warnings.join("\n")}` : ""}`);
+    // Film IA : il se termine déjà par la vidéo de fin officielle (reel-story) ; pas de seconde fin.
+    const custom = m.aiSource ? r.custom.filter((a) => a.name !== "logo-fin") : r.custom;
+    if (replace) changeDraft(custom);
+    else { const placed = withAnimationIds(custom); setDraft(placed); void saveDraft(placed).catch(() => {}); }
+    setStandardNote(`${look ? `Style « ${look.label} »` : chosen ? `Mon modèle « ${chosen.name} »` : "Standard BeeRecos"} appliqué : ${custom.length} animation(s). ${replace ? "Vérifie dans l’aperçu, ajuste si besoin, puis enregistre." : "Enregistré : vérifie dans l’aperçu et ajuste si besoin."}${r.warnings.length ? `\n${r.warnings.join("\n")}` : ""}`);
   };
   const unsaved = Boolean(proposal) || JSON.stringify(logo)!==JSON.stringify(m.edit?.logo) || JSON.stringify(draft) !== JSON.stringify(m.edit?.custom ?? []) || JSON.stringify(animationChoices) !== JSON.stringify(m.edit?.animationChoices);
   pendingEdits.current = unsaved;
