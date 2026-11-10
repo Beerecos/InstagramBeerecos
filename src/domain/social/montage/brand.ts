@@ -34,6 +34,8 @@ export const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ESC[c]);
 
 /** Filigrane fourni par Cédric le 2026-11-02 : PNG RGBA original, sans fond ni redessin. */
 export const STUDIO_LOGO = { file: "brand/beerecos-logo-transparent.png", ratio: 781 / 906 } as const;
+/** Réglage standard du logo dans son cercle blanc, fixé par Cédric le 2026-11-10 : 220 px, 100 px à droite, 100 px en bas (référentiel du 2026-11-10). */
+export const STUDIO_LOGO_DEFAULT = { width: 220, right: 100, bottom: 100, opacity: 1 } as const;
 
 /**
  * Logo de fin des vidéos montées : version horizontale officielle (pictogramme et « Recos » bleus, « Bee » noir) sur fond

@@ -93,3 +93,28 @@ test("storyboard : Modifier ouvre la bibliothèque d'effets, changer ou supprime
   await expect.poll(() => saved.at(-1)?.custom.map((c) => c.name)).toEqual(["titre-profondeur", "logo-fin"]);
   expect(saved.at(-1)?.custom[0].props).toEqual({ texte: "TON RÉSEAU" });
 });
+
+test("réglages d'une animation : libellés clairs, textes proposés par l'IA depuis ce qui est dit", async ({ page }) => {
+  let version = 1;
+  let edit = { ...initialEdit("prise.mp4", DURATION), custom: [
+    { id: "a1", name: "bandeau-double", fromMs: 300, toMs: 2800, props: { texte: "TON RÉSEAU", detail: "vaut de l'or" } },
+    { id: "a2", name: "logo-fin", fromMs: DURATION - 2000, toMs: DURATION, props: { baseline: true } },
+  ] };
+  const briefs: string[] = [];
+  await mockBee(page, {
+    get: () => ({ montage: { id: "m9", title: "Prise", status: "ready", durationMs: DURATION, keptMs: DURATION, workspaceId: null, createdAt: "t", updatedAt: `v${version}`, renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit, captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: null }),
+    "save-edit": (body) => { edit = body.edit as typeof edit; version++; return {}; },
+    "": (body) => { briefs.push(String(body.brief)); return { text: JSON.stringify({ texte: "TON RÉSEAU VAUT DE L'OR", detail: "si tu sais quoi dire", remplacement: "" }) }; },
+  });
+  await page.goto("/reels/m9");
+  await page.getByRole("navigation", { name: "Étapes du montage" }).filter({ visible: true }).getByRole("button", { name: /Style/ }).click();
+  await page.getByRole("list", { name: "Animations du réel" }).filter({ visible: true }).getByRole("button", { name: /^Bandeau double ·/ }).click();
+  const panel = page.getByRole("region", { name: "Réglages de l’animation" }).filter({ visible: true });
+  await expect(panel.getByLabel("Texte principal")).toHaveValue("TON RÉSEAU");
+  await expect(panel.getByLabel("Deuxième ligne", { exact: true })).toHaveValue("vaut de l'or");
+  await expect(panel.getByText("remplacement", { exact: true })).toHaveCount(0);
+  await panel.getByRole("button", { name: "Proposer avec l'IA" }).click();
+  await expect(panel.getByLabel("Texte principal")).toHaveValue("TON RÉSEAU VAUT DE L'OR");
+  expect(briefs[0]).toContain("Ton réseau vaut de l'or");
+  await expect.poll(() => edit.custom.find((c) => c.name === "bandeau-double")?.props).toMatchObject({ texte: "TON RÉSEAU VAUT DE L'OR", detail: "si tu sais quoi dire" });
+});

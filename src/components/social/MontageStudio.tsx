@@ -35,7 +35,7 @@ import StudioSimpleCaptions from "@/components/social/studio/StudioSimpleCaption
 import StudioDirector from "@/components/social/studio/StudioDirector";
 import StudioBeeStyles from "@/components/social/studio/StudioBeeStyles";
 import StudioAutoSave from "@/components/social/studio/StudioAutoSave";
-import { END_VIDEO } from "@/domain/social/montage/brand";
+import { END_VIDEO, STUDIO_LOGO_DEFAULT } from "@/domain/social/montage/brand";
 import { ANIMATIONS } from "@/domain/social/montage/registry";
 import { removeSequence } from "@/domain/social/montage/sequence-edit";
 import { studioSequences } from "@/domain/social/montage/studio-sequences";
@@ -895,7 +895,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
               </select> : null}
               <button type="button" aria-label={`Retirer ${ANIMATIONS[a.name]?.label ?? a.name}`} className="btn-ghost min-h-11 min-w-11 text-red-700" disabled={saving||animationBusy||frozen} onClick={()=>{changeDraft(draft.filter(x=>x.id!==a.id));if(selectedId===a.id)setSelectedId(null);}}>✕</button>
             </li>)}</ul> : <p className="text-sm text-mut">Aucune animation pour l&apos;instant.</p>}
-            {selectedAnimation ? <StudioInspector animation={selectedAnimation} ranges={m.edit?.ranges ?? []} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChange={changeAnimation} onRemove={() => { changeDraft(draft.filter(a => a.id !== selectedAnimation.id)); setSelectedId(null); }} onTest={() => { seekSource(selectedAnimation.fromMs);player.current?.play(); }} /> : null}
+            {selectedAnimation ? <StudioInspector animation={selectedAnimation} ranges={m.edit?.ranges ?? []} words={m.captions} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChange={changeAnimation} onRemove={() => { changeDraft(draft.filter(a => a.id !== selectedAnimation.id)); setSelectedId(null); }} onTest={() => { seekSource(selectedAnimation.fromMs);player.current?.play(); }} /> : null}
             <StudioAutoSave active={!proposal&&!saving&&!frozen&&!animationBusy} unsaved={unsaved} contentKey={JSON.stringify({draft,logo,animationChoices})} onSave={()=>saveDraft()} canDelete={Boolean(selectedId)&&!saving&&!frozen&&!animationBusy&&!proposal} onDelete={()=>{if(!selectedId)return;changeDraft(draft.filter(x=>x.id!==selectedId));setSelectedId(null);}} />
             <p role="status" className="text-xs text-mut">{saving ? "Enregistrement…" : unsaved && !proposal ? "Modifications en cours d'enregistrement…" : "✓ Enregistré automatiquement · Annuler pour revenir en arrière · Suppr retire l'animation choisie"}</p>
           </section> : null}
@@ -927,7 +927,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             {panel === "coupe" && (ready ? <StudioCutPlan key={m.updatedAt} m={m} disabled={saving || animationBusy || frozen || (!proposal && unsaved)} proposal={proposal}
               onClear={() => setProposal(null)} onPreview={(p) => { setProposal(p); player.current?.seek(0); preview.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }}
               onApply={applyProposal} /> : <p className="text-sm text-mut">Transcrivez d&apos;abord la prise : le plan de coupe se construit phrase par phrase.</p>)}
-            {panel === "animations" && <StudioInspector animation={selectedAnimation} ranges={m.edit?.ranges ?? []} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChange={changeAnimation} onRemove={() => { if(selectedAnimation) changeDraft(draft.filter(a => a.id !== selectedAnimation.id)); }} onTest={() => { if(selectedAnimation) {seekSource(selectedAnimation.fromMs);player.current?.play();} }} />}
+            {panel === "animations" && <StudioInspector animation={selectedAnimation} ranges={m.edit?.ranges ?? []} words={m.captions} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChange={changeAnimation} onRemove={() => { if(selectedAnimation) changeDraft(draft.filter(a => a.id !== selectedAnimation.id)); }} onTest={() => { if(selectedAnimation) {seekSource(selectedAnimation.fromMs);player.current?.play();} }} />}
             {panel === "ideation" && <StudioIdeation key={m.updatedAt} m={m} disabled={saving || animationBusy || frozen} onChange={load} warnings={ideationWarnings} onWarnings={setIdeationWarnings} />}
             {panel === "medias" && (m.edit ? (
               <StudioMedia library={lib.library} onRefresh={lib.refresh} editor={{ edit: m.edit, playheadMs: playSource, disabled: saving || frozen || unsaved, onSave: async (e) => { await montage.saveEdit(m.id, e, m.updatedAt); load(); } }} />
@@ -1009,7 +1009,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             </>:<button type="button" className="btn-ghost min-h-[44px]" disabled={saving||animationBusy||frozen||unsaved} onClick={appendOutro}>Ajouter le logo de fin</button>}
           </section>
           <details className="card p-3"><summary className="cursor-pointer py-2 text-sm font-semibold">Logo BeeRecos · bas à droite</summary>
-            <label className="flex min-h-[44px] items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(logo)} disabled={saving||frozen||Boolean(proposal)} onChange={e=>{setMonitorView("edit");setLogo(e.target.checked?{width:220,right:170,bottom:260,opacity:1}:undefined);}}/>Afficher mon logo sur la vidéo</label>
+            <label className="flex min-h-[44px] items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(logo)} disabled={saving||frozen||Boolean(proposal)} onChange={e=>{setMonitorView("edit");setLogo(e.target.checked?{...STUDIO_LOGO_DEFAULT}:undefined);}}/>Afficher mon logo sur la vidéo</label>
             {logo?<div className="space-y-2">{([["width","Largeur du logo",150,360],["right","Marge à droite",40,300],["bottom","Marge en bas",80,600]] as const).map(([key,label,min,max])=><label key={key} className="block text-xs">{label} (px)<input className="mt-1 min-h-[44px] w-full rounded-xl border border-line px-3" type="number" min={min} max={max} value={logo[key]} disabled={saving||frozen||Boolean(proposal)} onChange={e=>{const n=e.target.valueAsNumber;if(Number.isFinite(n)){setMonitorView("edit");setLogo({...logo,[key]:Math.max(min,Math.min(max,Math.round(n)))});}}}/></label>)}</div>:null}
             <p className="mt-2 text-xs text-mut">Logo officiel de votre charte, conservé à ses proportions. Testez sa position dans l’aperçu puis enregistrez le montage.</p>
           </details>
