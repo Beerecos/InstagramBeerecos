@@ -12,8 +12,11 @@ async function mock(page: Page, view: Record<string, unknown>) {
     const path = new URL(req.url()).pathname.replace("/api/canva", "");
     calls.push({ method: req.method(), path, body: req.postDataJSON?.() ?? null });
     if (path === "/connection") return route.fulfill({ json: view });
-    if (path === "/templates") return route.fulfill({ json: { templates: [{ id: "EAGgsOdRFIY", title: "Carrousel Linkedin", thumbnailUrl: PIXEL, editUrl: "https://www.canva.com/brand/brand-templates/EAGgsOdRFIY" }] } });
-    if (path === "/templates/EAGgsOdRFIY") return route.fulfill({ json: { fields: [{ name: "Thematique", type: "text" }, { name: "Texte 1", type: "text" }, { name: "Photo", type: "image" }] } });
+    if (path === "/templates") return route.fulfill({ json: { templates: [
+      { id: "EAGgsOdRFIY", title: "Carrousel Linkedin", thumbnailUrl: PIXEL, editUrl: "https://www.canva.com/brand/brand-templates/EAGgsOdRFIY" },
+      { id: "EAHab7SU6Jw", title: "Gazette Beerecos Post Instagram", thumbnailUrl: PIXEL, editUrl: "https://www.canva.com/brand/brand-templates/EAHab7SU6Jw" },
+    ] } });
+    if (path === "/templates/EAGgsOdRFIY" || path === "/templates/EAHab7SU6Jw") return route.fulfill({ json: { fields: [{ name: "Thematique", type: "text" }, { name: "Texte 1", type: "text" }, { name: "Photo", type: "image" }] } });
     if (path === "/visuals") return route.fulfill({ json: { paths: ["u/a.jpg", "u/b.jpg"], previews: { "u/a.jpg": PIXEL, "u/b.jpg": PIXEL }, editUrl: "https://www.canva.com/design/D1/edit", designId: "D1", pages: 2, missing: ["Texte 1"] } });
     return route.fulfill({ status: 404, json: { error: "non simulé" } });
   });
@@ -26,7 +29,13 @@ test("Post : créer le visuel avec Canva remplit le modèle et ajoute ses pages 
   const calls = await mock(page, CONNECTED);
   await page.goto("/post/nouveau");
   const panel = page.getByRole("region", { name: "Créer le visuel avec Canva" });
-  await panel.getByRole("button", { name: "Choisir un modèle Canva" }).click();
+  // Post simple : seuls les modèles de post ; carrousel : seuls les modèles carrousel (on ne confond pas).
+  await panel.getByRole("button", { name: "Choisir un modèle Canva post" }).click();
+  await expect(panel.getByRole("button", { name: /Gazette Beerecos Post Instagram/ })).toBeVisible();
+  await expect(panel.getByRole("button", { name: /Carrousel Linkedin/ })).toHaveCount(0);
+  await page.getByRole("radio", { name: /Carrousel/ }).click();
+  await expect(panel.getByRole("list", { name: "Modèles Canva carrousel" })).toBeVisible();
+  await expect(panel.getByRole("button", { name: /Gazette Beerecos Post Instagram/ })).toHaveCount(0);
   await panel.getByRole("button", { name: /Carrousel Linkedin/ }).click();
   await expect(panel.getByLabel("Thematique")).toBeVisible();
   const modify = panel.getByRole("link", { name: "Modifier ce modèle dans Canva" });
@@ -73,8 +82,8 @@ test("Post : les textes du modèle Canva sont suggérés par l'IA, sans inventer
   await page.goto("/post/nouveau");
   await page.getByRole("textbox", { name: "Légende" }).fill("Viens découvrir comment ton réseau peut recommander ton activité.");
   const panel = page.getByRole("region", { name: "Créer le visuel avec Canva" });
-  await panel.getByRole("button", { name: "Choisir un modèle Canva" }).click();
-  await panel.getByRole("button", { name: /Carrousel Linkedin/ }).click();
+  await panel.getByRole("button", { name: "Choisir un modèle Canva post" }).click();
+  await panel.getByRole("button", { name: /Gazette Beerecos Post Instagram/ }).click();
   await expect(panel.getByLabel("Thematique")).toHaveValue("Ton réseau, ton meilleur commercial");
   // « Texte 1 » n'est pas une zone factuelle : gardée. La consigne liste les zones et la légende.
   expect(asked[0]).toContain('["Thematique","Texte 1"]');

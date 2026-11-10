@@ -8,10 +8,11 @@ import { Palette, Sparkles } from "lucide-react";
 import { canvaApi, type CanvaField, type CanvaTemplate, type CanvaView } from "@/lib/canva/api";
 import { canvaSuggestBrief, parseCanvaSuggestions } from "@/domain/instagram/canva-suggest";
 import { generateEditorialText } from "@/lib/social/editorial-api";
+import { canvaKind, type CanvaKind } from "@/domain/instagram/canva-kind";
 
 export type CanvaPhoto = { path: string; url: string };
 
-export default function CanvaPanel({ disabled, room, onAdd, context = "" }: { disabled: boolean; room: number; onAdd: (photos: CanvaPhoto[], note: string) => void; context?: string }) {
+export default function CanvaPanel({ disabled, room, onAdd, context = "", format = "simple" }: { disabled: boolean; room: number; onAdd: (photos: CanvaPhoto[], note: string) => void; context?: string; format?: CanvaKind }) {
   const [view, setView] = useState<CanvaView | null>(null);
   const [open, setOpen] = useState(false);
   const [templates, setTemplates] = useState<CanvaTemplate[] | null>(null);
@@ -47,9 +48,13 @@ export default function CanvaPanel({ disabled, room, onAdd, context = "" }: { di
       if (context.trim()) { setBusy("L'IA suggère les textes…"); try { await suggest(list); } catch { setSuggestNote("Suggestion IA indisponible : écris les textes toi-même."); } }
     });
   };
+  // Seuls les modèles du format choisi : posts dans Post, carrousels dans Carrousel.
+  const shown = templates?.filter((t) => canvaKind(t.title) === format) ?? null;
+  // Changement de format : un modèle de l'autre format n'est plus le modèle choisi.
+  const active = chosen && canvaKind(chosen.title) === format ? chosen : null;
   const textFields = (fields ?? []).filter((f) => f.type === "text");
-  const create = () => chosen && run("Canva crée le visuel (quelques secondes)…", async () => {
-    const r = await canvaApi.createVisual({ templateId: chosen.id, title: `Post BeeRecos · ${chosen.title}`, texts });
+  const create = () => active && run("Canva crée le visuel (quelques secondes)…", async () => {
+    const r = await canvaApi.createVisual({ templateId: active.id, title: `Post BeeRecos · ${active.title}`, texts });
     const kept = r.paths.slice(0, Math.max(0, room));
     onAdd(kept.map((path) => ({ path, url: r.previews[path] ?? "" })),
       `Visuel Canva ajouté : ${kept.length} image(s)${r.pages > kept.length ? ` (${r.pages - kept.length} page(s) au-delà de la limite du format non ajoutée(s))` : ""}${r.missing.length ? ` · zones laissées vides : ${r.missing.join(", ")}` : ""}.`);
@@ -65,16 +70,20 @@ export default function CanvaPanel({ disabled, room, onAdd, context = "" }: { di
       ) : view.autofill === false || view.brandTemplates === false ? (
         <p className="text-sm text-amber-800">Ce compte Canva n&apos;a pas accès au remplissage automatique des modèles de marque (Canva Pro, Teams ou Enterprise).</p>
       ) : !open ? (
-        <button type="button" className="btn-ghost min-h-11" disabled={disabled || room <= 0} onClick={openPanel}>Choisir un modèle Canva</button>
+        <button type="button" className="btn-ghost min-h-11" disabled={disabled || room <= 0} onClick={openPanel}>{format === "carrousel" ? "Choisir un modèle Canva carrousel" : "Choisir un modèle Canva post"}</button>
       ) : (
         <div className="space-y-3">
-          {templates && !templates.length ? <p className="text-sm text-mut">Aucun modèle de marque avec des zones remplissables dans ton Canva.</p> : null}
-          {templates?.length ? (
-            <ul aria-label="Modèles Canva" className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {templates.map((t) => (
+          {shown && !shown.length ? (
+            <p className="text-sm text-mut">{format === "carrousel"
+              ? "Aucun modèle carrousel dans ton Canva. Pour qu'un modèle apparaisse ici, mets « Carrousel » dans son nom (dans Canva)."
+              : "Aucun modèle de post dans ton Canva (les modèles dont le nom contient « Carrousel » sont rangés dans Carrousel)."}</p>
+          ) : null}
+          {shown?.length ? (
+            <ul aria-label={format === "carrousel" ? "Modèles Canva carrousel" : "Modèles Canva post"} className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {shown.map((t) => (
                 <li key={t.id}>
-                  <button type="button" aria-pressed={chosen?.id === t.id} onClick={() => choose(t)} disabled={Boolean(busy)}
-                    className={`w-full overflow-hidden rounded-lg border text-left text-xs ${chosen?.id === t.id ? "border-brand ring-2 ring-brand/30" : "border-line"}`}>
+                  <button type="button" aria-pressed={active?.id === t.id} onClick={() => choose(t)} disabled={Boolean(busy)}
+                    className={`w-full overflow-hidden rounded-lg border text-left text-xs ${active?.id === t.id ? "border-brand ring-2 ring-brand/30" : "border-line"}`}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {t.thumbnailUrl ? <img src={t.thumbnailUrl} alt="" className="aspect-[4/5] w-full object-cover" /> : <span className="grid aspect-[4/5] place-items-center bg-black/[0.04]">Aperçu indisponible</span>}
                     <span className="block truncate p-1.5">{t.title}</span>
@@ -83,13 +92,13 @@ export default function CanvaPanel({ disabled, room, onAdd, context = "" }: { di
               ))}
             </ul>
           ) : null}
-          {chosen?.editUrl ? (
+          {active?.editUrl ? (
             <p className="text-sm">
-              <a className="inline-flex min-h-11 items-center gap-1 text-brand underline" href={chosen.editUrl} target="_blank" rel="noreferrer">Modifier ce modèle dans Canva</a>
+              <a className="inline-flex min-h-11 items-center gap-1 text-brand underline" href={active.editUrl} target="_blank" rel="noreferrer">Modifier ce modèle dans Canva</a>
               <span className="block text-xs text-mut">Mise en page, couleurs, zones : dans Canva. Les visuels suivants utilisent la version enregistrée.</span>
             </p>
           ) : null}
-          {chosen && fields ? (
+          {active && fields ? (
             textFields.length ? (
               <div className="space-y-2">
                 <button type="button" className="btn-ghost inline-flex min-h-11 items-center gap-1 px-3 text-sm" disabled={Boolean(busy) || !context.trim()} onClick={() => void run("L'IA suggère les textes…", () => suggest(fields))}>
