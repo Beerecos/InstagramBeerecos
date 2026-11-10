@@ -1,3 +1,4 @@
+import { DIRECTOR_INTENSITIES } from "./director";
 import { CAPTION_MODES } from "./caption-modes";
 import { z } from "zod";
 
@@ -91,6 +92,8 @@ export const RythmeSchema = z.strictObject({
   /** Son de la bibliothèque joué à l'entrée de chaque animation (absent = aucun). */
   sonAnimations: fileName(/\.(mp3|wav|m4a|aac|ogg)$/i, "audio (.mp3, .wav, .m4a, .aac, .ogg)").optional(),
   volumeSon: z.number().min(0).max(1).default(0.35),
+  /** Auto Director (director.ts) : changements de plan aux moments forts. Absent = désactivé (rendu d'avant). */
+  director: z.enum(DIRECTOR_INTENSITIES).optional(),
 });
 export type Rythme = z.infer<typeof RythmeSchema>;
 

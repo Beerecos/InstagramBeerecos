@@ -96,9 +96,16 @@ source_files: src/components/social/MontageStudio.tsx, src/components/social/stu
    - Sans style choisi : rendu d'avant à l'identique.
    - Choix dans l'étape Style ; les couleurs, la taille et la position restent réglables.
 
+5. **Auto Director** (branches `claude/studio-auto-director`) : une seule caméra, plusieurs plans simulés.
+   - Plans à 100, 110, 115 ou 125 %, avec un léger décalage gauche ou droite en Dynamique.
+   - Ils changent aux moments forts du transcript : accroche, changement d'idée, chiffre ou preuve, phrase forte, appel à l'action.
+   - Coupe nette, comme un changement de caméra. Retour régulier au plan large, plan d'au moins 1,5 s.
+   - Intensité : Désactivé, Sobre, Équilibré ou Dynamique (étape Style). Sans choix : rendu d'avant à l'identique.
+   - Pas de détection du visage : plan serré centré en haut du cadre. Le cadrage manuel reste respecté et le détourage suit les mêmes plans.
+   - Configuration pure (`director.ts`, champ `rythme.director` accepté par le serveur) rendue par le même moteur ; il remplace le zoom alterné.
+
 ## Prochains lots (ordre de priorité de Cédric)
 
-3. **Auto Director** : changements de cadrage (100 / 110 / 115 / 125 %) aux moments forts, et intensité Sobre / Équilibré / Dynamique.
 4. **BeeStyles** : préréglages exprimés en configuration (comme « Mon modèle »), sans dupliquer le rendu.
 5. **✨ Améliorer avec l'IA** : une seule liste de suggestions horodatées, avec Appliquer, Ignorer et Tout appliquer.
 6. **Commentaires horodatés** sur l'aperçu.

@@ -215,6 +215,13 @@ test("studio simple : quatre étapes, couleurs des sous-titres en un clic, mode 
   await page.getByRole("radiogroup", { name: "Style des sous-titres" }).filter({ visible: true }).getByRole("radio", { name: /Punch/ }).click();
   await expect.poll(() => saved.at(-1)?.captionStyle.mode).toBe("punch");
   expect(saved.at(-1)?.captionStyle.fontSize).toBeUndefined();
+  // Auto Director : rythme de la caméra en un clic, désactivable.
+  const camera = page.getByRole("radiogroup", { name: "Rythme de la caméra" }).filter({ visible: true });
+  await expect(camera.getByRole("radio", { name: /Désactivé/ })).toHaveAttribute("aria-checked", "true");
+  await camera.getByRole("radio", { name: /Dynamique/ }).click();
+  await expect.poll(() => saved.at(-1)?.rythme?.director).toBe("dynamique");
+  await camera.getByRole("radio", { name: /Désactivé/ }).click();
+  await expect.poll(() => saved.at(-1)?.rythme && !("director" in saved.at(-1)!.rythme!)).toBe(true);
 
   await expect(page.getByRole("button", { name: "+ Ajouter une animation" }).filter({ visible: true })).toBeVisible();
   // Standard v1 posé automatiquement (brouillon) : accroche reprise de ce qui est dit (onglet sans détourage), logo de fin.
