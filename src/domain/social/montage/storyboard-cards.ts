@@ -7,6 +7,7 @@ import { restoreSource } from "./studio";
 import { studioSequences } from "./studio-sequences";
 import { checkTimeline, type CustomAnimation } from "./suggest";
 import type { KeptMotion, SceneIntent } from "./beemotion";
+import { swapWordAnimation, wordProps, type WordAnimation } from "./bee-styles";
 
 /**
  * STORYBOARD EN CARTES (refonte du Studio, 2026-11-10, « Tu parles. BeeMarketing monte. ») : le montage entier se lit
@@ -33,7 +34,8 @@ export type StoryboardCard = {
   outStartMs: number | null;
   outEndMs: number | null;
   /** Effets posés pendant la séquence (libellé lisible + texte affiché). */
-  effects: { name: string; label: string; text: string | null }[];
+  /** Effets qui commencent dans la séquence ; `ref` = position dans edit.custom. */
+  effects: { ref: number; name: string; label: string; text: string | null }[];
 };
 
 const keyOf = (scene: Pick<Scene, "startMs">) => String(Math.round(scene.startMs));
@@ -43,7 +45,9 @@ const keptShare = (edit: Pick<Edit, "ranges">, scene: Pick<Scene, "startMs" | "e
   return kept / len;
 };
 const overlaps = (a: { fromMs: number; toMs: number }, s: Pick<Scene, "startMs" | "endMs">) => a.fromMs < s.endMs && a.toMs > s.startMs;
+const startsIn = (a: { fromMs: number }, s: Pick<Scene, "startMs" | "endMs">) => a.fromMs >= s.startMs && a.fromMs < s.endMs;
 const shownText = (props: Record<string, unknown>) => {
+  if (Array.isArray(props.items) && typeof props.items[0] === "string") return props.items.join(" · ");
   for (const k of ["texte", "mot", "titre", "legende"]) if (typeof props[k] === "string" && props[k]) return String(props[k]);
   return null;
 };
@@ -61,7 +65,8 @@ export function storyboardCards(edit: Edit, words: CaptionWord[], durationMs: nu
     const deleted = keptShare(edit, scene) < 0.3;
     const mark = edit.sceneMarks?.[key];
     const status: CardStatus = deleted ? "deleted" : mark ?? "suggested";
-    const effects = deleted ? [] : edit.custom.filter((c) => overlaps(c, scene)).map((c) => ({ name: c.name, label: ANIMATIONS[c.name]?.label ?? c.name, text: shownText(c.props) }));
+    // Un effet appartient à la séquence où il commence (jamais affiché sur deux cartes).
+    const effects = deleted ? [] : edit.custom.flatMap((c, ref) => (startsIn(c, scene) ? [{ ref, name: c.name, label: ANIMATIONS[c.name]?.label ?? c.name, text: shownText(c.props) }] : []));
     const inside = edit.ranges.filter((r) => r.toMs > scene.startMs && r.fromMs < scene.endMs);
     return {
       key, scene, role: ROLE_LABEL[scene.intent] ?? "Séquence", status, effects,
@@ -136,4 +141,43 @@ export function modifyInstruction(card: Pick<StoryboardCard, "scene" | "outStart
   const sec = (ms: number | null) => (ms === null ? "?" : (ms / 1000).toFixed(1).replace(".", ","));
   const quote = card.scene.text.length > 140 ? `${card.scene.text.slice(0, 140)}…` : card.scene.text;
   return `Seulement pour la séquence de ${sec(card.outStartMs)} s à ${sec(card.outEndMs)} s (« ${quote} ») : ${instruction.trim()}`;
+}
+
+// ── Effets d'une séquence, modifiables en un clic (2026-11-10 : « quand je clique sur Modifier, je dois avoir la
+// bibliothèque d'effets ou la possibilité de supprimer l'effet »). Chaque action marque la séquence « Modifié ».
+
+/** Supprimer un effet de la séquence. */
+export function removeCardEffect(edit: Edit, card: Pick<StoryboardCard, "key">, ref: number): Edit {
+  return markModified({ ...edit, custom: edit.custom.filter((_, i) => i !== ref) }, card);
+}
+
+/** Changer l'animation d'un effet de mot (même texte, mêmes temps). */
+export function swapCardEffect(edit: Edit, card: Pick<StoryboardCard, "key">, ref: number, name: WordAnimation): Edit {
+  return markModified({ ...edit, custom: edit.custom.map((c, i) => (i === ref ? swapWordAnimation(c, name) : c)) }, card);
+}
+
+/** Texte proposé pour un nouvel effet : le mot pivot de la séquence, sinon ses premiers mots. */
+export function defaultEffectText(card: Pick<StoryboardCard, "scene">): string {
+  const pivot = card.scene.pivotWords[0]?.word?.replace(/[^\p{L}\p{N}%€'’ -]/gu, "").trim();
+  if (pivot) return pivot.toUpperCase();
+  return card.scene.text.split(/\s+/).slice(0, 4).join(" ").replace(/[.,!?…]+$/, "");
+}
+
+/**
+ * Ajouter un effet de mot au début de la partie gardée de la séquence (2,5 s au plus, sans dépasser la séquence).
+ * Les autres effets de la séquence sont remplacés (une idée par séquence). Renvoie une raison si c'est impossible.
+ */
+export function addCardEffect(edit: Edit, card: Pick<StoryboardCard, "key" | "scene">, name: WordAnimation, text: string): { edit: Edit } | { error: string } {
+  const t = text.replace(/\s+/g, " ").trim();
+  if (!t) return { error: "Écris le texte à afficher." };
+  const kept = edit.ranges.find((r) => r.toMs > card.scene.startMs && r.fromMs < card.scene.endMs);
+  if (!kept) return { error: "Séquence retirée du montage : restaure-la d'abord." };
+  const fromMs = Math.max(card.scene.startMs, kept.fromMs);
+  const toMs = Math.min(fromMs + 2500, card.scene.endMs, kept.toMs);
+  if (toMs - fromMs < 800) return { error: "Séquence trop courte pour un effet (moins d'une seconde)." };
+  const custom = [...edit.custom.filter((c) => !startsIn(c, card.scene) || c.name === "logo-fin" || c.name === "mot-cle"), { name, fromMs, toMs, props: wordProps(name, t), label: "Storyboard · effet" }]
+    .sort((a, b) => a.fromMs - b.fromMs);
+  const errors = checkTimeline(custom);
+  if (errors.length) return { error: `Effet impossible ici : ${errors[0]}` };
+  return { edit: markModified({ ...edit, custom }, card) };
 }
