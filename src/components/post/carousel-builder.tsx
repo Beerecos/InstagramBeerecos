@@ -12,6 +12,7 @@ import { generateEditorialText, researchCarouselFacts } from "@/lib/social/edito
 import { instagram, uploadJpeg } from "@/lib/instagram/api";
 import { IMAGE_MODES } from "@/domain/instagram/visual-prompt";
 import CarouselSlide from "./carousel-slide";
+import WorkProgress from "./work-progress";
 
 /** Photo source : gardée dans le navigateur (seules les slides finales sont envoyées), PNG transparent intact. */
 type SourcePhoto = { id: string; url: string; label: string; ai?: boolean };
@@ -163,6 +164,8 @@ export default function CarouselBuilder({ subject, facts, onSubjectChange: setSu
       <button type="button" className="btn-ghost inline-flex min-h-11 items-center gap-1 px-3" disabled={disabled || !subject.trim() || Boolean(busy)} onClick={searchOnly}>
         <Search aria-hidden size={16} /> {busy === "recherche" ? "Recherche de l'histoire sur le web…" : "Rechercher l'histoire avec l'IA"}
       </button>
+      {busy === "recherche" ? <WorkProgress label="Recherche de l'histoire sur le web" expectedMs={60000} steps={["Recherche des sources", "Lecture des pages", "Vérification des sources", "Faits datés"]} /> : null}
+      {busy === "plan" ? <WorkProgress label="Préparation des slides" expectedMs={25000} steps={["Lecture des faits", "Plan des slides", "Mise en page BeeRecos"]} /> : null}
       <div>
         <p className="font-medium">Photos du sujet <span className="font-normal text-mut">(produit, archives identifiées, rencontres)</span></p>
         <ul className="mt-2 space-y-2">

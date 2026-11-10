@@ -61,3 +61,28 @@ test("Paramètres : carte Canva, guide et adresse de retour", async ({ page }) =
   await card.getByText("Guide : créer l'intégration Canva (une seule fois)").click();
   await expect(card.getByText(/\/api\/canva\/callback/)).toBeVisible();
 });
+
+test("Post : les textes du modèle Canva sont suggérés par l'IA, sans inventer date ni lieu", async ({ page }) => {
+  await mock(page, CONNECTED);
+  const asked: string[] = [];
+  await page.route("https://bee-api.test/**", async (route) => {
+    const body = JSON.parse(route.request().postData() ?? "{}");
+    asked.push(String(body.brief ?? ""));
+    await route.fulfill({ json: { text: JSON.stringify({ Thematique: "Ton réseau, ton meilleur commercial", "Texte 1": "Réunion le 12 mars à Lyon" }) } });
+  });
+  await page.goto("/post/nouveau");
+  await page.getByRole("textbox", { name: "Légende" }).fill("Viens découvrir comment ton réseau peut recommander ton activité.");
+  const panel = page.getByRole("region", { name: "Créer le visuel avec Canva" });
+  await panel.getByRole("button", { name: "Choisir un modèle Canva" }).click();
+  await panel.getByRole("button", { name: /Carrousel Linkedin/ }).click();
+  await expect(panel.getByLabel("Thematique")).toHaveValue("Ton réseau, ton meilleur commercial");
+  // « Texte 1 » n'est pas une zone factuelle : gardée. La consigne liste les zones et la légende.
+  expect(asked[0]).toContain('["Thematique","Texte 1"]');
+  expect(asked[0]).toContain("ton réseau peut recommander");
+  await expect(panel.getByText(/Textes suggérés par l'IA/)).toBeVisible();
+  // Un texte tapé n'est jamais écrasé par une nouvelle suggestion.
+  await panel.getByLabel("Thematique").fill("Mon titre");
+  await panel.getByRole("button", { name: "Suggérer les textes avec l'IA" }).click();
+  await expect(panel.getByText(/Textes suggérés par l'IA/)).toBeVisible();
+  await expect(panel.getByLabel("Thematique")).toHaveValue("Mon titre");
+});
