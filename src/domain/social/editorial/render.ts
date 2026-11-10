@@ -13,9 +13,13 @@ const SKEW_DEG = 9;
 const SKEW_PX = Math.round(Math.tan((SKEW_DEG * Math.PI) / 180) * H); // décalage haut/bas du front diagonal
 const BAND = Math.round(W * 0.16);
 export const INNER_W = W - SAFE.left - SAFE.right;
-/** Mascotte officielle (454 × 640, fournie par Cédric) : taille et marge à droite. */
-export const MASCOT = { file: "brand/beerecos-mascotte.webp", w: 180, h: Math.round((180 * 640) / 454) } as const;
-const MASCOT_RIGHT = 70;
+/** Mascotte officielle (454 × 640, fournie par Cédric) : personnage central du Réel (grande, en bas de l'écran). */
+export const MASCOT = { file: "brand/beerecos-mascotte.webp", w: 260, h: Math.round((260 * 640) / 454) } as const;
+/** Deux places, jamais sous les boutons Instagram (colonne de droite) : à gauche, puis au centre. */
+const MASCOT_X = [70, 520] as const;
+const MASCOT_TOP = H - SAFE.bottom - MASCOT.h + 60;
+/** Hauteur retirée à la zone de texte quand la mascotte est là. */
+export const MASCOT_RESERVE = H - MASCOT_TOP + 20 - SAFE.bottom;
 const s = (msv: number) => Math.round(msv) / 1000;
 
 /** « BeeRecos » toujours écrit ainsi, même dans un titre en capitales. */
@@ -180,9 +184,10 @@ const CSS = `
       .logo { height: 168px; width: auto; margin-top: 46px; visibility: hidden; }
       .cta-btn { display: inline-block; margin-top: 30px; padding: 32px 56px; border-radius: 999px; background: ${PALETTE.brand}; color: ${PALETTE.white}; font-size: 50px; font-weight: 700; letter-spacing: 0.01em; visibility: hidden; }
       .scene.brand .cta-btn { background: ${PALETTE.white}; color: ${PALETTE.brand}; }
-      .bee { position: absolute; left: ${W - MASCOT_RIGHT - MASCOT.w}px; top: ${H - SAFE.bottom - MASCOT.h - 10}px; width: ${MASCOT.w}px; height: ${MASCOT.h}px; z-index: 55; transform-origin: 50% 100%; }
-      .bee img { width: 100%; height: 100%; display: block; }
-      .with-bee .content { bottom: ${SAFE.bottom + MASCOT.h + 20}px; }
+      .bee { position: absolute; left: 0; top: ${MASCOT_TOP}px; width: ${MASCOT.w}px; height: ${MASCOT.h}px; z-index: 55; }
+      .bee div { width: 100%; height: 100%; transform-origin: 50% 100%; }
+      .bee img { width: 100%; height: 100%; display: block; filter: drop-shadow(0 18px 18px rgba(0,0,0,0.28)); }
+      .with-bee .content { bottom: ${H - MASCOT_TOP + 20}px; }
       .end-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 60; }
       .band { position: absolute; top: 0; left: 0; height: ${H}px; width: ${BAND}px; transform: skewX(-${SKEW_DEG}deg); visibility: hidden; z-index: 50; }`;
 
@@ -210,7 +215,9 @@ export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan 
     const next = plan.scenes[k + 1].scene.id;
     if (tr.kind === "cut") return;
     const lr = tr.kind === "wipe-lr";
-    clips.push(`      <div id="band-${k}" class="band" style="background:${bandColor(tr.from, tr.to)}"></div>`);
+    // Opacité 0 au départ : le lecteur Hyperframes force « visibility: visible » sur les éléments sans timing ;
+    // la bande n'existe à l'écran que pendant sa transition (sinon elle reste figée sur le bord gauche).
+    clips.push(`      <div id="band-${k}" class="band" style="background:${bandColor(tr.from, tr.to)};opacity:0"></div>`);
     const from = lr ? -(SKEW_PX / 2 + BAND) : W + SKEW_PX / 2 + BAND, to = lr ? W + SKEW_PX / 2 : -SKEW_PX / 2;
     const half = SKEW_PX / 2;
     const poly = (e: number) => lr
@@ -221,31 +228,61 @@ export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan 
     // Sans fonction de rappel : le clip-path (chaîne de nombres) et la bande sont animés directement par GSAP.
     tweens.push(
       `tl.fromTo("#sc-${next}", { clipPath: "${poly(from)}" }, { clipPath: "${poly(to)}", duration: ${dur}, ease: E.wipe, immediateRender: false }, ${t0});`,
+      `tl.set("#band-${k}", { autoAlpha: 0, x: ${bandX(from)} }, 0);`,
       `tl.fromTo("#band-${k}", { x: ${bandX(from)}, autoAlpha: 1 }, { x: ${bandX(to)}, duration: ${dur}, ease: E.wipe, immediateRender: false }, ${t0});`,
       `tl.set("#band-${k}", { autoAlpha: 0 }, ${s(tr.atMs + tr.durMs / 2)});`,
     );
   });
-  // Mascotte officielle (option du Studio IA) : en bas à droite, au-dessus de la zone Instagram ; le texte lui laisse
-  // la place. Elle arrive, saute à chaque changement de scène, réagit aux moments forts, puis part avant la fin.
+  // Mascotte officielle (option du Studio IA) : personnage central, toujours en mouvement. Elle entre en sautant,
+  // respire (léger rebond continu), saute d'une place à l'autre à chaque scène (arc + écrasement à l'atterrissage),
+  // réagit aux moments forts (bond + frétillement), salue sur l'appel à l'action, puis sort avant la vidéo de fin.
+  // Calques : #bee (place, x) > #bee-hop (sauts, y) > #bee-bob (respiration) > #bee-sq (écrasement, réactions) > img.
   if (sb.mascot) {
-    clips.push(`      <div id="bee" class="bee" style="visibility:hidden"><img src="${base}/${MASCOT.file}" alt="" width="${MASCOT.w}" height="${MASCOT.h}" /></div>`);
-    tweens.push(`tl.fromTo("#bee", { autoAlpha: 0, y: 80, scale: 0.8 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.4, ease: E.springCard, immediateRender: false }, 0.35);`);
+    const T = (ms: number) => s(ms);
+    clips.push(`      <div id="bee" class="bee" style="opacity:0"><div id="bee-hop"><div id="bee-bob"><div id="bee-sq"><img src="${base}/${MASCOT.file}" alt="" width="${MASCOT.w}" height="${MASCOT.h}" /></div></div></div></div>`);
+    tweens.push(
+      `tl.set("#bee", { autoAlpha: 0, x: ${MASCOT_X[0]} }, 0);`,
+      // Entrée : jaillit du bas avec un rebond.
+      `tl.fromTo("#bee-hop", { y: 420 }, { y: 0, duration: 0.55, ease: "back.out(2.2)", immediateRender: false }, 0.2);`,
+      `tl.to("#bee", { autoAlpha: 1, duration: 0.15 }, 0.2);`,
+      `tl.fromTo("#bee-sq", { scaleX: 0.8, scaleY: 1.25 }, { scaleX: 1, scaleY: 1, duration: 0.6, ease: "elastic.out(1, 0.45)", immediateRender: false }, 0.6);`,
+    );
+    // Respiration continue (nombre de répétitions fini : la timeline garde une durée exacte).
+    const bobs = Math.max(1, Math.floor((total - 1200) / 550) | 1);
+    tweens.push(`tl.fromTo("#bee-bob", { y: 0, rotation: -2 }, { y: -16, rotation: 2, duration: 0.55, ease: "sine.inOut", yoyo: true, repeat: ${bobs}, immediateRender: false }, 0.8);`);
+    // Saut vers l'autre place à chaque changement de scène.
     plan.transitions.forEach((tr, k) => {
-      const t0 = Math.max(0.5, (tr.atMs - 260) / 1000);
+      const t0 = Math.max(900, tr.atMs - 250);
+      const x = MASCOT_X[(k + 1) % 2];
       tweens.push(
-        `tl.to("#bee", { y: -70, rotation: ${k % 2 ? 6 : -6}, duration: 0.22, ease: E.sharpOut }, ${s(t0 * 1000)});`,
-        `tl.to("#bee", { y: 0, rotation: 0, duration: 0.3, ease: E.springCard }, ${s(t0 * 1000 + 220)});`,
+        `tl.to("#bee-sq", { scaleX: 1.15, scaleY: 0.82, duration: 0.09, ease: "power2.out" }, ${T(t0)});`,
+        `tl.to("#bee-sq", { scaleX: 0.9, scaleY: 1.12, duration: 0.12, ease: "power2.out" }, ${T(t0 + 90)});`,
+        `tl.to("#bee", { x: ${x}, duration: 0.5, ease: "power1.inOut" }, ${T(t0 + 90)});`,
+        `tl.to("#bee-hop", { y: -230, rotation: ${k % 2 ? -14 : 14}, duration: 0.25, ease: "power2.out" }, ${T(t0 + 90)});`,
+        `tl.to("#bee-hop", { y: 0, rotation: 0, duration: 0.25, ease: "power2.in" }, ${T(t0 + 340)});`,
+        `tl.to("#bee-sq", { scaleX: 1.2, scaleY: 0.8, duration: 0.07, ease: "power2.out" }, ${T(t0 + 590)});`,
+        `tl.to("#bee-sq", { scaleX: 1, scaleY: 1, duration: 0.45, ease: "elastic.out(1, 0.4)" }, ${T(t0 + 660)});`,
       );
     });
     // Sur fond bleu, un fin contour blanc la détache (mascotte bleue).
-    for (const p of plan.scenes) tweens.push(`tl.set("#bee img", { filter: "${p.scene.background === "brand" ? "drop-shadow(0 0 3px #FFFFFF) drop-shadow(0 0 2px #FFFFFF)" : "none"}" }, ${s(p.startMs + (p.index ? 180 : 0))});`);
-    // Réaction : le chiffre qui se pose, le mot accent, le bouton.
+    for (const p of plan.scenes) tweens.push(`tl.set("#bee img", { filter: "${p.scene.background === "brand" ? "drop-shadow(0 0 4px #FFFFFF) drop-shadow(0 0 2px #FFFFFF) drop-shadow(0 18px 18px rgba(0,0,0,0.28))" : "drop-shadow(0 18px 18px rgba(0,0,0,0.28))"}" }, ${T(p.startMs + (p.index ? 180 : 0))});`);
+    // Réactions : le chiffre qui se pose, le mot accent (bond + frétillement) ; le bouton (salut appuyé).
     for (const p of plan.scenes) for (const e of p.events) {
       if (e.anim !== "counter" && e.anim !== "accent" && e.anim !== "button") continue;
       const at = e.atMs + (e.anim === "counter" ? e.durMs : 60);
-      tweens.push(`tl.to("#bee", { scale: 1.1, duration: 0.12, ease: E.sharpOut }, ${s(at)});`, `tl.to("#bee", { scale: 1, duration: 0.25, ease: E.springCard }, ${s(at + 120)});`);
+      const wave = e.anim === "button";
+      tweens.push(
+        `tl.to("#bee-sq", { scale: ${wave ? 1.22 : 1.14}, duration: 0.12, ease: "power2.out" }, ${T(at)});`,
+        `tl.to("#bee-sq", { rotation: 10, duration: 0.09, ease: "sine.inOut", yoyo: true, repeat: ${wave ? 7 : 3} }, ${T(at + 60)});`,
+        `tl.to("#bee-sq", { scale: 1, rotation: 0, duration: 0.35, ease: "elastic.out(1, 0.5)" }, ${T(at + 60 + (wave ? 8 : 4) * 90)});`,
+      );
     }
-    tweens.push(`tl.to("#bee", { autoAlpha: 0, y: 60, duration: 0.3, ease: E.editorialOut }, ${s(Math.max(0, total - 450))});`);
+    // Sortie : petit bond puis plongeon avant la vidéo de fin.
+    tweens.push(
+      `tl.to("#bee-hop", { y: -120, duration: 0.18, ease: "power2.out" }, ${T(Math.max(0, total - 650))});`,
+      `tl.to("#bee-hop", { y: 520, duration: 0.35, ease: "power2.in" }, ${T(Math.max(0, total - 470))});`,
+      `tl.to("#bee", { autoAlpha: 0, duration: 0.1 }, ${T(Math.max(0, total - 120))});`,
+    );
   }
   // Voix d'Audrey (rendu) : chaque phrase commence avec le contenu de sa scène.
   for (const p of plan.scenes) {
