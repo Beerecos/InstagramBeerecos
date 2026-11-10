@@ -4,12 +4,14 @@
  * design, l'exporte en JPG, et chaque page rejoint les photos du post (carrousel si plusieurs pages). Rien n'est publié.
  */
 import { useEffect, useState } from "react";
-import { Palette } from "lucide-react";
+import { Palette, Sparkles } from "lucide-react";
 import { canvaApi, type CanvaField, type CanvaTemplate, type CanvaView } from "@/lib/canva/api";
+import { canvaSuggestBrief, parseCanvaSuggestions } from "@/domain/instagram/canva-suggest";
+import { generateEditorialText } from "@/lib/social/editorial-api";
 
 export type CanvaPhoto = { path: string; url: string };
 
-export default function CanvaPanel({ disabled, room, onAdd }: { disabled: boolean; room: number; onAdd: (photos: CanvaPhoto[], note: string) => void }) {
+export default function CanvaPanel({ disabled, room, onAdd, context = "" }: { disabled: boolean; room: number; onAdd: (photos: CanvaPhoto[], note: string) => void; context?: string }) {
   const [view, setView] = useState<CanvaView | null>(null);
   const [open, setOpen] = useState(false);
   const [templates, setTemplates] = useState<CanvaTemplate[] | null>(null);
@@ -26,7 +28,25 @@ export default function CanvaPanel({ disabled, room, onAdd }: { disabled: boolea
     try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : "Canva indisponible."); } finally { setBusy(null); }
   };
   const openPanel = () => { setOpen(true); if (!templates) void run("Lecture de tes modèles Canva…", async () => setTemplates((await canvaApi.templates()).templates)); };
-  const choose = (t: CanvaTemplate) => { setChosen(t); setFields(null); setTexts({}); setEditUrl(null); void run("Lecture des zones du modèle…", async () => setFields((await canvaApi.fields(t.id)).fields)); };
+  const [suggestNote, setSuggestNote] = useState<string | null>(null);
+  /** Suggestions IA : remplit seulement les zones vides ; zones factuelles jamais inventées (canva-suggest.ts). */
+  const suggest = async (list: CanvaField[]) => {
+    const names = list.filter((f) => f.type === "text").map((f) => f.name);
+    if (!names.length) return;
+    const raw = await generateEditorialText({ channel: "instagram", workspaceId: null, brief: canvaSuggestBrief(names, context) });
+    const r = parseCanvaSuggestions(raw, names, context);
+    setTexts((cur) => ({ ...r.texts, ...Object.fromEntries(Object.entries(cur).filter(([, v]) => v.trim())) }));
+    setSuggestNote(`Textes suggérés par l'IA : relis-les avant de créer le visuel.${r.skipped.length ? ` À compléter toi-même (information absente du post) : ${r.skipped.join(", ")}.` : ""}`);
+  };
+  const choose = (t: CanvaTemplate) => {
+    setChosen(t); setFields(null); setTexts({}); setEditUrl(null); setSuggestNote(null);
+    void run("Lecture des zones du modèle…", async () => {
+      const list = (await canvaApi.fields(t.id)).fields;
+      setFields(list);
+      // Avec un sujet ou une légende déjà écrits, les textes sont suggérés tout de suite.
+      if (context.trim()) { setBusy("L'IA suggère les textes…"); try { await suggest(list); } catch { setSuggestNote("Suggestion IA indisponible : écris les textes toi-même."); } }
+    });
+  };
   const textFields = (fields ?? []).filter((f) => f.type === "text");
   const create = () => chosen && run("Canva crée le visuel (quelques secondes)…", async () => {
     const r = await canvaApi.createVisual({ templateId: chosen.id, title: `Post BeeRecos · ${chosen.title}`, texts });
@@ -72,6 +92,11 @@ export default function CanvaPanel({ disabled, room, onAdd }: { disabled: boolea
           {chosen && fields ? (
             textFields.length ? (
               <div className="space-y-2">
+                <button type="button" className="btn-ghost inline-flex min-h-11 items-center gap-1 px-3 text-sm" disabled={Boolean(busy) || !context.trim()} onClick={() => void run("L'IA suggère les textes…", () => suggest(fields))}>
+                  <Sparkles aria-hidden size={14} /> Suggérer les textes avec l&apos;IA
+                </button>
+                {!context.trim() ? <p className="text-xs text-mut">Écris d&apos;abord le sujet ou la légende du post : l&apos;IA s&apos;en sert pour proposer les textes.</p> : null}
+                {suggestNote ? <p role="status" className="text-xs text-brand">{suggestNote}</p> : null}
                 {textFields.map((f) => (
                   <label key={f.name} className="block text-sm">{f.name}
                     <textarea rows={2} maxLength={500} value={texts[f.name] ?? ""} onChange={(e) => setTexts({ ...texts, [f.name]: e.target.value })}

@@ -128,6 +128,7 @@ export async function researchCarouselFacts(subject: string): Promise<{ facts: R
   if (res.status === 401) throw new Error("Reconnecte-toi pour lancer la recherche.");
   if (!res.ok || !Array.isArray(data.facts)) {
     if (data.code === "AI_CONNECTION_REQUIRED" || data.error === "AI_CONNECTION_REQUIRED") throw new Error("Le service IA n'est pas connecté.");
+    if (data.code === "AI_TIMEOUT") throw new Error("La recherche a pris trop de temps. Réessaie avec un sujet plus précis (ex. « histoire du stylo BIC Cristal »).");
     throw new Error(typeof data.error === "string" && !/^[A-Z_0-9]+$/.test(data.error) ? data.error : "La recherche n'a pas abouti. Réessaie ou colle tes faits.");
   }
   return { facts: data.facts, text: String(data.text ?? ""), dropped: Number(data.dropped ?? 0) };
