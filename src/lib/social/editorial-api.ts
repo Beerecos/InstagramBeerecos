@@ -115,6 +115,24 @@ export async function generateEditorialText(input: {
   return String(data.text);
 }
 
+export type ResearchFact = { date: string; text: string; source: string; url: string };
+/** Recherche web de l'histoire d'un sujet : faits datés avec leur source (pages réellement consultées). Rien n'est publié. */
+export async function researchCarouselFacts(subject: string): Promise<{ facts: ResearchFact[]; text: string; dropped: number }> {
+  if (!apiUrl) throw new Error("Service de recherche non configuré.");
+  const token = await getAccessToken();
+  const res = await fetch(`${apiUrl}/editorial-generate`, {
+    method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify({ action: "research-facts", subject }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) throw new Error("Reconnecte-toi pour lancer la recherche.");
+  if (!res.ok || !Array.isArray(data.facts)) {
+    if (data.code === "AI_CONNECTION_REQUIRED" || data.error === "AI_CONNECTION_REQUIRED") throw new Error("Le service IA n'est pas connecté.");
+    throw new Error(typeof data.error === "string" && !/^[A-Z_0-9]+$/.test(data.error) ? data.error : "La recherche n'a pas abouti. Réessaie ou colle tes faits.");
+  }
+  return { facts: data.facts, text: String(data.text ?? ""), dropped: Number(data.dropped ?? 0) };
+}
+
 export type CampaignPackResult = {
   recipients: number; listName: string | null; imageError: string | null; deliverables: Deliverable[];
 };

@@ -197,6 +197,7 @@ test("Post : visuels du carrousel, plan proposé par l'IA aux couleurs BeeRecos,
   await page.goto("/post/nouveau?format=carrousel");
   const visuels = page.getByRole("group", { name: "Créer les visuels avec l'IA" });
   await expect(visuels.getByRole("button", { name: "Proposer les slides" })).toBeDisabled();
+  await expect(visuels.getByRole("button", { name: "Rechercher l'histoire avec l'IA" })).toBeDisabled();
   await visuels.getByRole("textbox", { name: "Sujet", exact: true }).fill("L'histoire du STABILO BOSS");
   await visuels.getByLabel("Faits et sources").fill("1971 : lancement du STABILO BOSS (STABILO)\nMai 2025 : plus de trois milliards vendus");
   await visuels.getByRole("button", { name: "Proposer les slides" }).click();
@@ -299,4 +300,22 @@ test("Carrousel : le sujet saisi pour les visuels est partagé avec la légende"
   await expect(page.getByRole('textbox', { name: 'De quoi parle ce post ?' })).toHaveValue('La rencontre des entrepreneurs');
   await page.getByRole('textbox', { name: 'De quoi parle ce post ?' }).fill('Un nouveau sujet');
   await expect(page.getByRole('textbox', { name: 'Sujet', exact: true })).toHaveValue('Un nouveau sujet');
+});
+
+test("Carrousel : sans faits, l'IA recherche l'histoire sur le web (sources affichées) puis propose les slides", async ({ page }) => {
+  const plan = { slides: [{ layout: "date", title: "Le Cristal arrive", number: "1950", text: "Selon BIC, le Cristal est lancé en France.", source: "SOURCE : BIC" }] };
+  const ai = await mockBee(page, {
+    "research-facts": () => ({ facts: [{ date: "1950", text: "Lancement du BIC Cristal en France.", source: "BIC", url: "https://www.bicworld.com/fr/notre-histoire" }], text: "1950 : Lancement du BIC Cristal en France. (BIC, https://www.bicworld.com/fr/notre-histoire)", dropped: 1 }),
+    "": () => ({ text: JSON.stringify(plan) }),
+  });
+  await mockInstagram(page, { connected: true, items: [] });
+  await page.goto("/post/nouveau?format=carrousel");
+  const visuels = page.getByRole("group", { name: "Créer les visuels avec l'IA" });
+  await visuels.getByRole("textbox", { name: "Sujet", exact: true }).fill("histoire du stylo bic");
+  await visuels.getByRole("button", { name: "Proposer les slides" }).click();
+  await expect(visuels.getByLabel("Faits et sources")).toHaveValue(/1950 : Lancement du BIC Cristal en France\. \(BIC, https:\/\/www\.bicworld\.com/);
+  await expect(visuels.getByText(/1 fait trouvé sur le web, chacun avec sa source \(1 écarté/)).toBeVisible();
+  await expect(visuels.getByRole("list", { name: "Slides du carrousel" }).getByRole("listitem")).toHaveCount(2);
+  expect(ai.find((c) => c.action === "research-facts")).toMatchObject({ subject: "histoire du stylo bic" });
+  expect(String(ai.find((c) => c.channel === "instagram")?.brief)).toContain("bicworld.com");
 });
