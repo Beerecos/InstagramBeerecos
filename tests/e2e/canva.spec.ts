@@ -61,3 +61,39 @@ test("Paramètres : carte Canva, guide et adresse de retour", async ({ page }) =
   await card.getByText("Guide : créer l'intégration Canva (une seule fois)").click();
   await expect(card.getByText(/\/api\/canva\/callback/)).toBeVisible();
 });
+
+test("Post : la bibliothèque Canva se met à jour en revenant de Canva et sur « Actualiser »", async ({ page }) => {
+  let library = [{ id: "EAGgsOdRFIY", title: "Carrousel Linkedin", thumbnailUrl: PIXEL, editUrl: "https://www.canva.com/brand/brand-templates/EAGgsOdRFIY" }];
+  let fields = [{ name: "Thematique", type: "text" }];
+  await page.route("**/api/linkedin/connection", (r) => r.fulfill({ json: { connected: false, name: null, expiresAt: null, page: { configured: false, allowed: false } } }));
+  await page.route("**/api/instagram/**", (r) => r.fulfill({ json: { connected: false, username: null, expiresAt: null, needsRefresh: false, webhook: {} } }));
+  await page.route("**/api/canva/**", (route) => {
+    const path = new URL(route.request().url()).pathname.replace("/api/canva", "");
+    if (path === "/connection") return route.fulfill({ json: CONNECTED });
+    if (path === "/templates") return route.fulfill({ json: { templates: library } });
+    if (path === "/templates/EAGgsOdRFIY") return route.fulfill({ json: { fields } });
+    return route.fulfill({ status: 404, json: { error: "non simulé" } });
+  });
+  await page.clock.install();
+  await page.goto("/post/nouveau");
+  const panel = page.getByRole("region", { name: "Créer le visuel avec Canva" });
+  await panel.getByRole("button", { name: "Choisir un modèle Canva" }).click();
+  await panel.getByRole("button", { name: /Carrousel Linkedin/ }).click();
+  await panel.getByLabel("Thematique").fill("Le réseau qui recommande");
+  await expect(panel.getByText(/À jour à/)).toBeVisible();
+
+  // Cédric ajoute un modèle et une zone dans Canva, puis revient sur l'onglet : relu sans recharger la page.
+  library = [{ id: "NEW123", title: "Portrait adhérent", thumbnailUrl: PIXEL, editUrl: null as unknown as string }, ...library];
+  fields = [{ name: "Thematique", type: "text" }, { name: "Métier", type: "text" }];
+  await page.clock.fastForward(6000);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(panel.getByRole("button", { name: /Portrait adhérent/ })).toBeVisible();
+  await expect(panel.getByLabel("Métier")).toBeVisible();
+  await expect(panel.getByLabel("Thematique")).toHaveValue("Le réseau qui recommande");
+
+  // Modèle retiré de Canva : « Actualiser » le signale et désélectionne.
+  library = library.filter((t) => t.id !== "EAGgsOdRFIY");
+  await panel.getByRole("button", { name: "Actualiser" }).click();
+  await expect(panel.getByRole("alert")).toContainText("n'existe plus dans Canva");
+  await expect(panel.getByRole("button", { name: /Carrousel Linkedin/ })).toHaveCount(0);
+});

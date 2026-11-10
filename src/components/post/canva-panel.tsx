@@ -2,9 +2,14 @@
 /**
  * Onglet Post → « Créer le visuel avec Canva » : choisir un modèle de marque, remplir ses zones de texte, Canva crée le
  * design, l'exporte en JPG, et chaque page rejoint les photos du post (carrousel si plusieurs pages). Rien n'est publié.
+ * Bibliothèque à jour (demande de Cédric, 2026-11-10) : relue en revenant sur l'onglet (après une modification dans
+ * Canva), toutes les minutes tant que le panneau est ouvert et visible, et sur « Actualiser ». Canva ne prévient pas
+ * des changements de modèles (pas de webhook pour les modèles de marque) : la relecture est le seul moyen fiable.
  */
-import { useEffect, useState } from "react";
-import { Palette } from "lucide-react";
+const REFRESH_MS = 60_000;
+const FOCUS_MIN_MS = 5_000;
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Palette, RefreshCw } from "lucide-react";
 import { canvaApi, type CanvaField, type CanvaTemplate, type CanvaView } from "@/lib/canva/api";
 
 export type CanvaPhoto = { path: string; url: string };
@@ -25,7 +30,35 @@ export default function CanvaPanel({ disabled, room, onAdd }: { disabled: boolea
     setBusy(label); setError(null);
     try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : "Canva indisponible."); } finally { setBusy(null); }
   };
-  const openPanel = () => { setOpen(true); if (!templates) void run("Lecture de tes modèles Canva…", async () => setTemplates((await canvaApi.templates()).templates)); };
+  const [syncedAt, setSyncedAt] = useState<Date | null>(null);
+  const lastSync = useRef(0);
+  const chosenRef = useRef<CanvaTemplate | null>(null);
+  useEffect(() => { chosenRef.current = chosen; }, [chosen]);
+  /** Relit la bibliothèque ; le modèle choisi garde ses textes s'il existe encore, ses zones sont relues. */
+  const refresh = useCallback(async (silent: boolean) => {
+    lastSync.current = Date.now();
+    try {
+      const list = (await canvaApi.templates()).templates;
+      setTemplates(list); setSyncedAt(new Date());
+      const cur = chosenRef.current;
+      if (!cur) return;
+      const still = list.find((t) => t.id === cur.id);
+      if (!still) { setChosen(null); setFields(null); setTexts({}); setError("Le modèle choisi n'existe plus dans Canva (supprimé ou retiré des modèles de marque)."); return; }
+      setChosen(still);
+      const next = (await canvaApi.fields(still.id)).fields;
+      setFields(next);
+      setTexts((t) => Object.fromEntries(Object.entries(t).filter(([k]) => next.some((f) => f.name === k && f.type === "text"))));
+    } catch (e) { if (!silent) throw e; }
+  }, []);
+  const openPanel = () => { setOpen(true); if (!templates) void run("Lecture de tes modèles Canva…", () => refresh(false)); };
+  useEffect(() => {
+    if (!open) return;
+    const again = () => { if (document.visibilityState === "visible" && Date.now() - lastSync.current > FOCUS_MIN_MS) void refresh(true); };
+    const timer = window.setInterval(() => { if (document.visibilityState === "visible") void refresh(true); }, REFRESH_MS);
+    document.addEventListener("visibilitychange", again);
+    window.addEventListener("focus", again);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", again); window.removeEventListener("focus", again); };
+  }, [open, refresh]);
   const choose = (t: CanvaTemplate) => { setChosen(t); setFields(null); setTexts({}); setEditUrl(null); void run("Lecture des zones du modèle…", async () => setFields((await canvaApi.fields(t.id)).fields)); };
   const textFields = (fields ?? []).filter((f) => f.type === "text");
   const create = () => chosen && run("Canva crée le visuel (quelques secondes)…", async () => {
@@ -48,6 +81,12 @@ export default function CanvaPanel({ disabled, room, onAdd }: { disabled: boolea
         <button type="button" className="btn-ghost min-h-11" disabled={disabled || room <= 0} onClick={openPanel}>Choisir un modèle Canva</button>
       ) : (
         <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-mut">
+            <button type="button" className="btn-ghost inline-flex min-h-11 items-center gap-1 px-3 text-sm" disabled={Boolean(busy)} onClick={() => void run("Actualisation de tes modèles Canva…", () => refresh(false))}>
+              <RefreshCw aria-hidden size={14} /> Actualiser
+            </button>
+            <span role="status">{syncedAt ? `À jour à ${syncedAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} · mis à jour automatiquement quand tu reviens de Canva` : null}</span>
+          </div>
           {templates && !templates.length ? <p className="text-sm text-mut">Aucun modèle de marque avec des zones remplissables dans ton Canva.</p> : null}
           {templates?.length ? (
             <ul aria-label="Modèles Canva" className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -66,7 +105,7 @@ export default function CanvaPanel({ disabled, room, onAdd }: { disabled: boolea
           {chosen?.editUrl ? (
             <p className="text-sm">
               <a className="inline-flex min-h-11 items-center gap-1 text-brand underline" href={chosen.editUrl} target="_blank" rel="noreferrer">Modifier ce modèle dans Canva</a>
-              <span className="block text-xs text-mut">Mise en page, couleurs, zones : dans Canva. Les visuels suivants utilisent la version enregistrée.</span>
+              <span className="block text-xs text-mut">Mise en page, couleurs, zones : dans Canva. En revenant ici, la bibliothèque et les zones du modèle sont relues automatiquement.</span>
             </p>
           ) : null}
           {chosen && fields ? (
