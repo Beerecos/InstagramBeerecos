@@ -89,6 +89,13 @@ describe("Editorial Impact — rendu", () => {
       expect(textEm(t) * size).toBeGreaterThan(INNER_W * 0.9);
     }
   });
+  it("finit comme les Reels classiques : vidéo de fin après le CTA (désactivable)", () => {
+    const plan = planStoryboard(sb());
+    const html = renderEditorial(sb(), { assetBase: "/hyperframes" }, plan);
+    expect(html).toContain(`src="/hyperframes/brand/beerecos-video-fin.mp4" data-start="${plan.durationMs / 1000}"`);
+    expect(html).toContain(`data-duration="${(plan.durationMs + 7800) / 1000}" data-fps="30"`);
+    expect(renderEditorial(sb(), { assetBase: "/hyperframes", outro: false }, plan)).not.toContain("beerecos-video-fin.mp4");
+  });
   it("écrit toujours BeeRecos", () => {
     expect(brandCase("CHEZ BEERECOS et beerecos, Bee Recos")).toBe("CHEZ BeeRecos et BeeRecos, BeeRecos");
   });

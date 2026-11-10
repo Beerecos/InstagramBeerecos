@@ -1,4 +1,4 @@
-import { escapeHtml } from "../montage/brand";
+import { END_VIDEO, escapeHtml } from "../montage/brand";
 import { easingSource } from "./easings";
 import { planStoryboard, SFX_PEAK_MS, type Plan, type PlanEvent } from "./schedule";
 import { BG, H, PALETTE, SAFE, TYPE, W, type Background } from "./tokens";
@@ -177,9 +177,11 @@ const CSS = `
       .logo { height: 168px; width: auto; margin-top: 46px; visibility: hidden; }
       .cta-btn { display: inline-block; margin-top: 30px; padding: 32px 56px; border-radius: 999px; background: ${PALETTE.brand}; color: ${PALETTE.white}; font-size: 50px; font-weight: 700; letter-spacing: 0.01em; visibility: hidden; }
       .scene.brand .cta-btn { background: ${PALETTE.white}; color: ${PALETTE.brand}; }
+      .end-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 60; }
       .band { position: absolute; top: 0; left: 0; height: ${H}px; width: ${BAND}px; transform: skewX(-${SKEW_DEG}deg); visibility: hidden; z-index: 50; }`;
 
-export type RenderOptions = { assetBase: string; preview?: boolean; mediaUrl?: (file: string) => string };
+/** `outro` (par défaut oui) : la vidéo de fin officielle des Reels BeeRecos, jouée après l'appel à l'action. */
+export type RenderOptions = { assetBase: string; preview?: boolean; mediaUrl?: (file: string) => string; outro?: boolean };
 
 /** Composition complète (aperçu = rendu). */
 export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan = planStoryboard(sb)): string {
@@ -226,6 +228,13 @@ export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan 
     const url = opts.mediaUrl?.(sb.music.file) ?? `${base}/${sb.music.file}`;
     clips.push(`      <audio id="music" src="${escapeHtml(url)}" data-start="0" data-duration="${s(total)}" data-volume="${sb.music.volume}" data-track-index="2"></audio>`);
   }
+  // Même fin que les Reels classiques (décision du 2026-11-10) : vidéo de fin officielle, plein cadre, après le CTA.
+  const outro = opts.outro !== false;
+  if (outro) {
+    clips.push(`      <video id="end-video" class="clip end-video" src="${base}/${END_VIDEO.file}" data-start="${s(total)}" data-duration="${s(END_VIDEO.durationMs)}" data-has-audio="false" muted playsinline data-track-index="7" style="visibility:hidden"></video>`);
+    tweens.push(`tl.set("#end-video", { autoAlpha: 1 }, ${s(total)});`);
+  }
+  const length = total + (outro ? END_VIDEO.durationMs : 0);
   return `<!doctype html>
 <html lang="fr">
   <head>
@@ -238,7 +247,7 @@ export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan 
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-width="${W}" data-height="${H}" data-duration="${s(total)}" data-fps="30">
+    <div id="root" data-composition-id="main" data-start="0" data-width="${W}" data-height="${H}" data-duration="${s(length)}" data-fps="30">
 ${clips.join("\n")}
     </div>
     <script>

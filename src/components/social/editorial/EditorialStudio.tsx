@@ -8,6 +8,7 @@ import { planStoryboard, type Plan } from "@/domain/social/editorial/schedule";
 import { renderEditorial } from "@/domain/social/editorial/render";
 import { qaStoryboard } from "@/domain/social/editorial/qa";
 import { beatTicks } from "@/domain/social/editorial/beat";
+import { END_VIDEO } from "@/domain/social/montage/brand";
 import { SCENE_LABEL, StoryboardSchema, TRANSITIONS, type EditorialScene, type Storyboard } from "@/domain/social/editorial/schema";
 
 /**
@@ -46,7 +47,7 @@ function withField(s: EditorialScene, key: string, v: string): EditorialScene {
 }
 
 function Timeline({ plan, at, onSeek }: { plan: Plan; at: number; onSeek: (s: number) => void }) {
-  const total = plan.durationMs;
+  const total = plan.durationMs + END_VIDEO.durationMs;
   const pct = (ms: number) => `${(ms / total) * 100}%`;
   return (
     <div className="mt-4">
@@ -57,11 +58,14 @@ function Timeline({ plan, at, onSeek }: { plan: Plan; at: number; onSeek: (s: nu
             <span className="block truncate px-1 pt-1">{SCENE_LABEL[p.scene.type]}</span>
           </button>
         ))}
-        {beatTicks(0, total, plan.bpm).map((t) => <span key={t} aria-hidden className="absolute bottom-0 h-2 w-px bg-black/25" style={{ left: pct(t) }} />)}
+        <button type="button" onClick={() => onSeek(plan.durationMs / 1000 + 0.05)} title="Vidéo de fin BeeRecos" className="absolute top-0 h-8 bg-[#9aa7ff] text-left text-[10px] font-semibold text-white" style={{ left: pct(plan.durationMs), width: pct(END_VIDEO.durationMs) }}>
+          <span className="block truncate px-1 pt-1">Fin BeeRecos</span>
+        </button>
+        {beatTicks(0, plan.durationMs, plan.bpm).map((t) => <span key={t} aria-hidden className="absolute bottom-0 h-2 w-px bg-black/25" style={{ left: pct(t) }} />)}
         {plan.audio.map((a, i) => <span key={i} aria-hidden title={a.sfx} className="absolute bottom-2 size-1.5 -translate-x-1/2 rounded-full bg-brand" style={{ left: pct(a.atMs) }} />)}
         <span aria-hidden className="absolute top-0 h-full w-0.5 bg-red-500" style={{ left: pct(at * 1000) }} />
       </div>
-      <p className="mt-1 text-xs text-mut">{(total / 1000).toFixed(1)} s · {plan.scenes.length} scènes · {plan.audio.length} sons · grille {plan.bpm} BPM</p>
+      <p className="mt-1 text-xs text-mut">{(total / 1000).toFixed(1)} s (dont {(END_VIDEO.durationMs / 1000).toFixed(1)} s de vidéo de fin) · {plan.scenes.length} scènes · {plan.audio.length} sons · grille {plan.bpm} BPM</p>
     </div>
   );
 }
