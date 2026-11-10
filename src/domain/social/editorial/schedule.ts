@@ -8,7 +8,8 @@ import type { EditorialScene, Storyboard } from "./schema";
  * Règle « un seul héros » : les événements d'une scène se succèdent, ils ne s'empilent pas. Respiration volontaire
  * dans la scène humaine. Lisibilité : chaque scène reste à l'écran au moins le temps de lire ses mots.
  */
-export type Anim = "mask" | "accent" | "counter" | "pill" | "cardIn" | "cardOut" | "rise" | "star" | "button" | "logo" | "fade";
+export type Anim = "mask" | "accent" | "counter" | "pill" | "cardIn" | "cardOut" | "rise" | "star" | "button" | "logo" | "fade"
+  | "flash" | "impact" | "strike" | "dim" | "deep" | "cart";
 export type SfxName = "editorialWhoosh" | "softHit" | "microPop" | "uiClick" | "cardSlide" | "cardDrop" | "digitalTick" | "softRiser" | "softDowner";
 export type PlanEvent = { atMs: number; el: string; anim: Anim; durMs: number; dir?: 1 | -1 };
 export type AudioEvent = { atMs: number; sfx: SfxName; gain: number; priority: number };
@@ -50,10 +51,36 @@ function sceneEvents(s: EditorialScene, g: number, bpm: number, audio: (at: numb
     }
     case "statement": {
       let t = 0;
-      s.lines.forEach((_, i) => { push(t, `${id}-l${i}`, "mask", ms("fast")); t += g; });
+      // Habillage repris des Réels filmés : titre en profondeur 3D, cartouches, ou masque sobre.
+      const anim: Anim = s.style === "3d" ? "deep" : s.style === "cartouche" ? "cart" : "mask";
+      s.lines.forEach((_, i) => { push(t, `${id}-l${i}`, anim, anim === "mask" ? ms("fast") : ms("normal")); t += g; });
       if (s.accentWords.length) audio(ev[ev.length - 1].atMs + 150, "softHit", 3, 0.7);
       if (s.micro) { push(t, `${id}-micro`, "fade", ms("normal")); t += g; }
       return { events: ev, hold: Math.max(600, readMs([...s.lines, s.micro ?? ""]) - t) };
+    }
+    case "impact": {
+      // Mot-impact : flash + mot énorme qui claque, un choc sourd ; la petite phrase arrive après.
+      push(0, `${id}-flash`, "flash", ms("fast"));
+      const a = push(0, `${id}-word`, "impact", ms("slow"));
+      audio(a + 120, "softHit", 5, 1.1);
+      let t = a + Math.round(g * 1.6);
+      if (s.sub) { push(t, `${id}-sub`, "fade", ms("normal")); t += g; }
+      return { events: ev, hold: Math.max(900, readMs([s.word, s.sub ?? ""]) - t) };
+    }
+    case "strike": {
+      // Barré puis remplacé : le mot apparaît, se fait barrer, s'efface ; le bon mot arrive en couleur.
+      let t = 0;
+      if (s.lead) { push(t, `${id}-lead`, "mask", ms("fast")); t += g; }
+      push(t, `${id}-before`, "mask", ms("fast"));
+      t += Math.round(g * 1.6);
+      const k = push(t, `${id}-line`, "strike", ms("normal"));
+      audio(k + 60, "cardDrop", 4, 0.9);
+      push(k + 330, `${id}-before`, "dim", ms("fast"));
+      const a = push(k + 520, `${id}-after`, "accent", ms("fast"));
+      audio(a, "softHit", 4);
+      t = a + g;
+      if (s.micro) { push(t, `${id}-micro`, "fade", ms("normal")); t += g; }
+      return { events: ev, hold: Math.max(900, readMs([s.lead ?? "", s.before, s.after, s.micro ?? ""]) - t) };
     }
     case "pills": {
       push(0, `${id}-title`, "mask", ms("fast"));

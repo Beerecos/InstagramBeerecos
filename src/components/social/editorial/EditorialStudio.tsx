@@ -22,7 +22,7 @@ import { SCENE_LABEL, StoryboardSchema, TRANSITIONS, type EditorialScene, type S
 const BG_LABEL = { dark: "Sombre", light: "Clair", brand: "Bleu BeeRecos" } as const;
 const TR_LABEL: Record<(typeof TRANSITIONS)[number], string> = { "wipe-lr": "Balayage →", "wipe-rl": "Balayage ←", cut: "Coupe sèche", none: "Aucune" };
 const LAYOUTS: Record<EditorialScene["type"], string[]> = {
-  "hook-stat": ["left", "center", "full"], statement: ["left", "center", "stack"], pills: ["left", "center", "alternate"],
+  "hook-stat": ["left", "center", "full"], statement: ["left", "center", "stack"], impact: ["center", "left"], strike: ["left", "center"], pills: ["left", "center", "alternate"],
   human: ["left", "center", "stack"], testimonials: ["diagonal", "horizontal", "stack"], cta: ["left", "center", "stack"],
 };
 const LAYOUT_LABEL: Record<string, string> = { left: "Aligné à gauche", center: "Centré", full: "Plein écran", stack: "Empilé", alternate: "En quinconce", diagonal: "En diagonale", horizontal: "En ligne" };
@@ -34,6 +34,8 @@ function linesOf(s: EditorialScene): { key: string; label: string; value: string
   switch (s.type) {
     case "hook-stat": return [{ key: "lead", label: "Avant le chiffre", value: s.lead ?? "" }, { key: "stat", label: "Chiffre (dit dans le script)", value: String(s.stat.value).replace(".", ",") }, { key: "lines", label: "Après le chiffre (une ligne par ligne)", value: s.lines.join("\n") }, { key: "accent", label: "Mot en couleur", value: s.accent ?? "" }];
     case "statement": return [{ key: "lines", label: "Texte (une ligne par ligne)", value: s.lines.join("\n") }, { key: "accentWords", label: "Mots en couleur (séparés par une virgule)", value: s.accentWords.join(", ") }, { key: "micro", label: "Petite phrase", value: s.micro ?? "" }];
+    case "impact": return [{ key: "word", label: "Le mot qui claque", value: s.word }, { key: "sub", label: "Petite phrase", value: s.sub ?? "" }];
+    case "strike": return [{ key: "lead", label: "Avant (facultatif)", value: s.lead ?? "" }, { key: "before", label: "Mot barré", value: s.before }, { key: "after", label: "Mot qui le remplace", value: s.after }, { key: "micro", label: "Petite phrase", value: s.micro ?? "" }];
     case "pills": return [{ key: "title", label: "Titre", value: s.title }, { key: "pills", label: "Capsules (une par ligne)", value: s.pills.join("\n") }];
     case "human": return [{ key: "question", label: "Question (une ligne par ligne)", value: s.question.join("\n") }, { key: "answer", label: "Réponse", value: s.answer }, { key: "micro", label: "Petite phrase", value: s.micro ?? "" }];
     case "testimonials": return [{ key: "title", label: "Titre", value: s.title }];
@@ -47,6 +49,8 @@ function screenText(s: EditorialScene): string {
   switch (s.type) {
     case "hook-stat": return [s.lead, String(s.stat.value).replace(".", ",") + (s.stat.suffix ?? ""), ...s.lines, s.accent].filter(Boolean).join(" ");
     case "statement": return s.lines.join(" ");
+    case "impact": return s.word;
+    case "strike": return `${s.lead ? `${s.lead} ` : ""}${s.before} → ${s.after}`;
     case "pills": return `${s.title} ${s.pills.join(" · ")}`;
     case "human": return `${s.question.join(" ")} ${s.answer}`;
     case "testimonials": return s.title;
@@ -344,6 +348,13 @@ function SceneEditor({ s, i, n, onChange, onMove, onDuplicate, onDelete }: { s: 
             {Object.entries(BG_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </label>
+        {s.type === "statement" ? (
+          <label className="block text-xs font-medium">Habillage
+            <select className={field} value={s.style} onChange={(e) => onChange({ ...s, style: e.target.value as "plain" | "3d" | "cartouche" })}>
+              <option value="plain">Sobre</option><option value="3d">Titre 3D</option><option value="cartouche">Cartouches</option>
+            </select>
+          </label>
+        ) : null}
         <label className="block text-xs font-medium">Transition vers la suite
           <select className={field} value={s.transitionOut} disabled={i === n - 1} onChange={(e) => onChange({ ...s, transitionOut: e.target.value as EditorialScene["transitionOut"] })}>
             {TRANSITIONS.map((t) => <option key={t} value={t}>{TR_LABEL[t]}</option>)}

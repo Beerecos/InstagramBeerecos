@@ -18,6 +18,8 @@ const texts = (s: EditorialScene): string[] => {
   switch (s.type) {
     case "hook-stat": return [s.lead ?? "", ...s.lines, s.accent ?? ""].filter(Boolean);
     case "statement": return s.lines;
+    case "impact": return [s.word];
+    case "strike": return [s.lead ?? "", s.before, s.after].filter(Boolean);
     case "pills": return [s.title];
     case "human": return [...s.question, s.answer];
     case "testimonials": return [s.title];
@@ -34,6 +36,8 @@ function contentHeight(s: EditorialScene): number {
   switch (s.type) {
     case "hook-stat": return texts(s).reduce((h, t) => h + line(t, 120), 0) + 380;
     case "statement": return s.lines.reduce((h, t) => h + line(t, 150), 0) + (s.micro ? 110 : 0);
+    case "impact": return line(s.word, 400) + (s.sub ? 110 : 0);
+    case "strike": return texts(s).reduce((h, t) => h + line(t, 150), 0) + (s.micro ? 110 : 0);
     case "pills": return line(s.title, 116) + 40 + s.pills.length * (56 * 1.1 + 48 + 22);
     case "human": return [...s.question, s.answer].reduce((h, t) => h + line(t, 150), 0) + (s.micro ? 110 : 0);
     case "testimonials": return line(s.title, 104) + 40 + 640;
