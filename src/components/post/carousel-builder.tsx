@@ -6,9 +6,9 @@
  */
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { toJpeg } from "html-to-image";
-import { ImagePlus, Move, RotateCcw, Sparkles, Wand2, X } from "lucide-react";
+import { ImagePlus, Move, RotateCcw, Search, Sparkles, Wand2, X } from "lucide-react";
 import { LAYOUTS, removePhotoFromPlan, normalizePlan, parsePlan, planBrief, SLIDE_H, SLIDE_W, type Layout, type Slide } from "@/domain/instagram/carousel";
-import { generateEditorialText } from "@/lib/social/editorial-api";
+import { generateEditorialText, researchCarouselFacts } from "@/lib/social/editorial-api";
 import { instagram, uploadJpeg } from "@/lib/instagram/api";
 import { IMAGE_MODES } from "@/domain/instagram/visual-prompt";
 import CarouselSlide from "./carousel-slide";
@@ -68,10 +68,26 @@ export default function CarouselBuilder({ subject, facts, onSubjectChange: setSu
     if (!images.length) return null;
     return pushPhotos(images.map((f) => ({ id: crypto.randomUUID(), url: URL.createObjectURL(f), label: f.name.replace(/\.[^.]+$/, "") })));
   };
+  /** Recherche web de l'histoire : faits datés et sourcés, ajoutés à « Faits et sources » pour relecture. */
+  const research = async (): Promise<string | null> => {
+    const r = await researchCarouselFacts(subject);
+    if (!r.facts.length) { setError("Aucun fait fiable trouvé sur le web pour ce sujet. Précise le sujet (marque, produit, personne) ou colle tes faits."); return null; }
+    const next = facts.trim() ? `${facts.trim()}\n${r.text}` : r.text;
+    setFacts(next);
+    setNotice(`${r.facts.length} fait${r.facts.length > 1 ? "s" : ""} trouvé${r.facts.length > 1 ? "s" : ""} sur le web, chacun avec sa source${r.dropped ? ` (${r.dropped} écarté${r.dropped > 1 ? "s" : ""} : source non vérifiable)` : ""}. Relis-les : seuls ces faits serviront aux slides.`);
+    return next;
+  };
+  const searchOnly = async () => {
+    setBusy("recherche"); setError(null); setNotice(null);
+    try { await research(); } catch (e) { setError(e instanceof Error ? e.message : "La recherche n'a pas abouti."); } finally { setBusy(null); }
+  };
   const propose = async () => {
     setBusy("plan"); setError(null); setNotice(null);
     try {
-      const text = await generateEditorialText({ channel: "instagram", workspaceId: null, brief: planBrief(subject, facts, photos.map((p) => p.label || "photo")) });
+      let facts_ = facts;
+      // Sans faits : l'IA cherche d'abord l'histoire sur le web, puis propose les slides avec ces faits sourcés.
+      if (!facts_.trim()) { setBusy("recherche"); const found = await research(); if (!found) return; facts_ = found; setBusy("plan"); }
+      const text = await generateEditorialText({ channel: "instagram", workspaceId: null, brief: planBrief(subject, facts_, photos.map((p) => p.label || "photo")) });
       setSlides(parsePlan(text, photos.length)); setSelected(0);
     } catch (e) { setError(e instanceof Error ? e.message : "La proposition n'a pas abouti."); } finally { setBusy(null); }
   };
@@ -139,11 +155,14 @@ export default function CarouselBuilder({ subject, facts, onSubjectChange: setSu
   return (
     <fieldset disabled={disabled || Boolean(busy)} aria-labelledby="visuels-titre" className="min-w-0 space-y-3 rounded-xl border border-brand/20 bg-brand-soft/40 p-3 text-sm">
       <h2 id="visuels-titre" className="flex items-center gap-2 font-medium"><Sparkles aria-hidden size={16} className="text-brand" /> Créer les visuels avec l&apos;IA</h2>
-      <p className="text-xs text-mut">L&apos;IA propose le plan des slides à partir de tes faits ; la charte BeeRecos, le logo officiel et la mise en page sont appliqués automatiquement. Aucune photo n&apos;est inventée : sans photo, la slide devient typographique.</p>
+      <p className="text-xs text-mut">L&apos;IA recherche l&apos;histoire sur le web (chaque fait avec sa source), puis propose les slides ; la charte BeeRecos, le logo officiel et la mise en page sont appliqués automatiquement. Tu peux aussi coller tes propres faits. Aucune photo n&apos;est inventée : sans photo, la slide devient typographique.</p>
       <label className="block">Sujet<input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="L'histoire du STABILO BOSS" className={`${field} min-h-11`} /></label>
       <label className="block">Faits et sources
         <textarea rows={4} maxLength={9000} value={facts} onChange={(e) => setFacts(e.target.value)} className={`${field} py-2`} placeholder={"1971 : lancement du STABILO BOSS (STABILO)\nMai 2025 : plus de trois milliards vendus (Schwan-STABILO)"} />
       </label>
+      <button type="button" className="btn-ghost inline-flex min-h-11 items-center gap-1 px-3" disabled={disabled || !subject.trim() || Boolean(busy)} onClick={searchOnly}>
+        <Search aria-hidden size={16} /> {busy === "recherche" ? "Recherche de l'histoire sur le web…" : "Rechercher l'histoire avec l'IA"}
+      </button>
       <div>
         <p className="font-medium">Photos du sujet <span className="font-normal text-mut">(produit, archives identifiées, rencontres)</span></p>
         <ul className="mt-2 space-y-2">
@@ -162,7 +181,7 @@ export default function CarouselBuilder({ subject, facts, onSubjectChange: setSu
           <input type="file" accept="image/*" multiple className="sr-only" aria-label="Ajouter des photos du sujet" onChange={(e) => { add(e.target.files); e.target.value = ""; }} />
         </label>
       </div>
-      <button type="button" className="btn-red min-h-11" disabled={disabled || !subject.trim() || !facts.trim() || Boolean(busy)} onClick={propose}><Sparkles aria-hidden size={16} /> {busy === "plan" ? "Préparation du plan…" : slides.length ? "Proposer un nouveau plan" : "Proposer les slides"}</button>
+      <button type="button" className="btn-red min-h-11" disabled={disabled || !subject.trim() || Boolean(busy)} onClick={propose}><Sparkles aria-hidden size={16} /> {busy === "plan" ? "Préparation du plan…" : busy === "recherche" ? "Recherche de l'histoire sur le web…" : slides.length ? "Proposer un nouveau plan" : "Proposer les slides"}</button>
 
       {slides.length ? <>
         <ol aria-label="Slides du carrousel" className="flex gap-2 overflow-x-auto pb-2">
