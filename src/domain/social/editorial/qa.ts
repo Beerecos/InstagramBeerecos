@@ -81,7 +81,12 @@ export function qaStoryboard(sb: Storyboard, plan: Plan): QaIssue[] {
     const built = Math.max(...last.events.map((e) => e.atMs + e.durMs));
     if (last.endMs - built < 1500) add("warning", "cta-hold", "L'appel à l'action n'est pas tenu assez longtemps.", last.scene.id);
   }
-  // 8. Durée totale d'un Reel éditorial.
+  // 8. Réel générique : BeeRecos n'apparaît qu'à la fin (dernière scène).
+  sb.scenes.slice(0, -1).forEach((s) => {
+    const all = [...texts(s), s.voice ?? "", "micro" in s ? s.micro ?? "" : ""].join(" ");
+    if (/bee\s?recos/i.test(all)) add("warning", "brand-early", "BeeRecos apparaît avant la fin : le Réel reste générique, BeeRecos arrive dans l'appel à l'action.", s.id);
+  });
+  // 9. Durée totale d'un Reel éditorial.
   // Réel IA : environ 30 s de contenu, puis la vidéo de fin BeeRecos (7,8 s) en plus.
   if (plan.durationMs > 36000) add("warning", "duration", `${Math.round(plan.durationMs / 1000)} s de contenu (+ ${END_VIDEO.durationMs / 1000} s de vidéo de fin) : vise environ 30 s (raccourcis les phrases d'Audrey).`);
   return out;

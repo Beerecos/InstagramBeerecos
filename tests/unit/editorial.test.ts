@@ -172,6 +172,16 @@ describe("Editorial Impact — QA", () => {
     expect(inventedNumbers(s, "la recommandation")).toHaveLength(1);
     expect(inventedNumbers(s, ["la recommandation", "2024 87 % des dirigeants font confiance au bouche-à-oreille."].join("\n"))).toEqual([]);
   });
+  it("Réel générique : consigne affirmations/tips, BeeRecos seulement dans le CTA (QA le signale sinon)", () => {
+    const b = directorBrief("la recommandation", { idea: true });
+    expect(b).toContain("GÉNÉRIQUE");
+    expect(b).toContain("N'écris JAMAIS « BeeRecos »");
+    // L'exemple met « CHEZ BeeRecos » dans la scène 2 : signalé ; dans le CTA : accepté.
+    const s = sb();
+    expect(qaStoryboard(s, planStoryboard(s)).filter((i) => i.code === "brand-early").map((i) => i.sceneId)).toEqual([s.scenes[1].id]);
+    const ok = { ...s, scenes: s.scenes.map((x, i) => (i === 1 && x.type === "statement" ? { ...x, lines: ["TU NE VIENS PAS", "CHERCHER DES", "CARTES DE VISITE."], micro: undefined } : x)) } as Storyboard;
+    expect(qaStoryboard(ok, planStoryboard(ok)).map((i) => i.code)).not.toContain("brand-early");
+  });
   it("signale un texte répété", () => {
     const s = sb();
     const dup = { ...s, scenes: [s.scenes[1], { ...s.scenes[1], id: "s9" }, s.scenes[4]] } as Storyboard;
