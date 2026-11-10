@@ -2,6 +2,7 @@ import type { CaptionWord } from "./edit";
 import type { Scene } from "./scenes";
 import { checkTimeline, MIN_GAP_MS, type CustomAnimation } from "./suggest";
 import { STANDARD_TEMPLATE, type AnimationTemplate } from "./template";
+import { wordProps, type Look } from "./bee-styles";
 
 /**
  * DYNAMIQUE « BEERECOS STANDARD V1 » (validée par Cédric le 2026-11-04) : toutes les vidéos suivent le même déroulé,
@@ -36,6 +37,10 @@ type Opts = {
   words?: CaptionWord[];
   /** « Mon modèle » de Cédric (template.ts) ; sans lui, le Standard BeeRecos v1. */
   template?: AnimationTemplate;
+  /** BeeStyle (bee-styles.ts) : animations de l'accroche, des idées et du mot « à retenir » ; sans lui, des onglets. */
+  look?: Look;
+  /** Nom affiché dans les libellés (« Bee Dynamic · accroche ») ; sans lui, le nom du modèle. */
+  styleName?: string;
 };
 
 /** Mots forts BeeRecos (sans accents) : ils passent avant tout autre mot de la phrase. */
@@ -144,7 +149,12 @@ export function applyStandard(scenes: Scene[], opts: Opts): { custom: CustomAnim
   const T = opts.template ?? STANDARD_TEMPLATE;
   const S = { ...STANDARD_V1, overlayMs: T.overlayMs, minSpacingMs: T.minSpacingMs, maxBehind: T.maxBehind, hook: T.hook, takeaway: T.takeaway };
   const on = (a: keyof AnimationTemplate["auto"]) => T.auto[a];
-  const L = T.name;
+  const L = opts.styleName ?? T.name;
+  // Sans BeeStyle : onglets, exactement comme avant.
+  const word = (slot: keyof Look, text: string, atMs: number, label: string): CustomAnimation => {
+    const name = opts.look?.[slot] ?? "onglet";
+    return { name, fromMs: atMs, toMs: atMs + S.overlayMs, props: name === "onglet" ? { texte: text, ...S.onglet } : wordProps(name, text), label };
+  };
   const warnings: string[] = [];
   const closingFrom = Math.max(0, opts.endMs - S.closingMs);
   const candidates: { priority: number; a: CustomAnimation; behind: boolean }[] = [];
@@ -171,7 +181,7 @@ export function applyStandard(scenes: Scene[], opts: Opts): { custom: CustomAnim
     } else warnings.push("Appel à l'action sans mot-clé : pastille « Commente MOT » non posée.");
   }
 
-  const big = (scene: Scene, style: AnimationTemplate["hook"], priority: number, label: string) => {
+  const big = (scene: Scene, style: AnimationTemplate["hook"], priority: number, label: string, slot: keyof Look) => {
     const strong = strongWords(scene, opts.words);
     if (!strong) return;
     const { text, atMs } = strong;
@@ -179,12 +189,12 @@ export function applyStandard(scenes: Scene[], opts: Opts): { custom: CustomAnim
     if (!behind && !on("onglet") && S.maxBehind > 0) { warnings.push(`${label} : pas de détourage de la prise et onglets désactivés, « ${text} » n'est pas affiché.`); return; }
     const a: CustomAnimation = behind
       ? { name: "titre-derriere", fromMs: atMs, toMs: atMs + S.overlayMs, props: { texte: text, ...style }, label }
-      : { name: "onglet", fromMs: atMs, toMs: atMs + S.overlayMs, props: { texte: text, ...S.onglet }, label };
+      : word(slot, text, atMs, label);
     if (!behind && S.maxBehind > 0) warnings.push(`${label} : pas de détourage de la prise, « ${text} » passe en onglet.`);
     add(priority, a, behind);
   };
-  if (content[0]) big(content[0], S.hook, 2, `${L} · accroche`);
-  if (content.length > 2) big(content[content.length - 1], S.takeaway, 3, `${L} · à retenir`);
+  if (content[0]) big(content[0], S.hook, 2, `${L} · accroche`, "accroche");
+  if (content.length > 2) big(content[content.length - 1], S.takeaway, 3, `${L} · à retenir`, "retenir");
 
   content.slice(1, -1).forEach((scene) => {
     const figure = spokenFigure(scene, opts.words);
@@ -192,7 +202,7 @@ export function applyStandard(scenes: Scene[], opts: Opts): { custom: CustomAnim
     const steps = scene.intent === "LIST" && on("liste") ? spokenSteps(scene) : [];
     if (steps.length) return add(5, { name: "liste", fromMs: scene.startMs, toMs: Math.min(scene.endMs, scene.startMs + 1500 + steps.length * 1200), props: { items: steps }, label: `${L} · étapes` });
     const strong = strongWords(scene, opts.words);
-    if (strong && on("onglet")) add(6, { name: "onglet", fromMs: strong.atMs, toMs: strong.atMs + S.overlayMs, props: { texte: strong.text, ...S.onglet }, label: `${L} · idée` });
+    if (strong && on("onglet")) add(6, word("idee", strong.text, strong.atMs, `${L} · idée`));
   });
 
   const placed: { a: CustomAnimation; behind: boolean }[] = [];
@@ -211,7 +221,7 @@ export function applyStandard(scenes: Scene[], opts: Opts): { custom: CustomAnim
     if (!p.behind || !ordered[i - 1]?.behind || dropped.has(i - 1)) return;
     // Onglets désactivés dans le modèle : le second grand mot n'est pas affiché plutôt que de devenir un onglet.
     if (!on("onglet")) { dropped.add(i); return; }
-    p.behind = false; p.a = { ...p.a, name: "onglet", props: { texte: String(p.a.props.texte), ...S.onglet } };
+    p.behind = false; p.a = { ...word("retenir", String(p.a.props.texte), p.a.fromMs, p.a.label ?? `${L} · à retenir`), toMs: p.a.toMs };
   });
   return { custom: ordered.filter((_, i) => !dropped.has(i)).map((p) => p.a), warnings };
 }

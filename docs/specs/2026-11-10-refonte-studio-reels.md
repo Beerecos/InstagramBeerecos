@@ -104,6 +104,12 @@ source_files: src/components/social/MontageStudio.tsx, src/components/social/stu
    - Pas de détection du visage : plan serré centré en haut du cadre. Le cadrage manuel reste respecté et le détourage suit les mêmes plans.
    - Configuration pure (`director.ts`, champ `rythme.director` accepté par le serveur) rendue par le même moteur ; il remplace le zoom alterné.
 
+6. **BeeStyles** (branches `claude/studio-beestyles`) : « je veux pouvoir choisir mes animations, pas grave si je n'ai pas le détourage ».
+   - Étape Style : 6 cartes (Standard, Bee Dynamic, Clean, Business, Story, Punch). Un clic pose les animations sur les mots dits.
+   - Chaque style choisit l'animation de l'accroche, des idées fortes et du mot à retenir parmi Cartouche, Titre, Mot impact, Titre 3D et Papier déchiré. Sans détourage, tout s'affiche devant la personne.
+   - Dans la liste, chaque mot peut changer d'animation (même texte, mêmes temps).
+   - Configuration pure (`bee-styles.ts`) ; sans style choisi, pose identique à avant.
+
 ## Prochains lots (ordre de priorité de Cédric)
 
 4. **BeeStyles** : préréglages exprimés en configuration (comme « Mon modèle »), sans dupliquer le rendu.
