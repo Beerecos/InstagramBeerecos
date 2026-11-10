@@ -35,7 +35,7 @@ import StudioSimpleCaptions from "@/components/social/studio/StudioSimpleCaption
 import StudioDirector from "@/components/social/studio/StudioDirector";
 import StudioBeeStyles from "@/components/social/studio/StudioBeeStyles";
 import StudioAutoSave from "@/components/social/studio/StudioAutoSave";
-import { END_VIDEO } from "@/domain/social/montage/brand";
+import { END_VIDEO, STUDIO_LOGO_DEFAULT } from "@/domain/social/montage/brand";
 import { ANIMATIONS } from "@/domain/social/montage/registry";
 import { removeSequence } from "@/domain/social/montage/sequence-edit";
 import { studioSequences } from "@/domain/social/montage/studio-sequences";
@@ -1009,7 +1009,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             </>:<button type="button" className="btn-ghost min-h-[44px]" disabled={saving||animationBusy||frozen||unsaved} onClick={appendOutro}>Ajouter le logo de fin</button>}
           </section>
           <details className="card p-3"><summary className="cursor-pointer py-2 text-sm font-semibold">Logo BeeRecos · bas à droite</summary>
-            <label className="flex min-h-[44px] items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(logo)} disabled={saving||frozen||Boolean(proposal)} onChange={e=>{setMonitorView("edit");setLogo(e.target.checked?{width:220,right:170,bottom:260,opacity:1}:undefined);}}/>Afficher mon logo sur la vidéo</label>
+            <label className="flex min-h-[44px] items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(logo)} disabled={saving||frozen||Boolean(proposal)} onChange={e=>{setMonitorView("edit");setLogo(e.target.checked?{...STUDIO_LOGO_DEFAULT}:undefined);}}/>Afficher mon logo sur la vidéo</label>
             {logo?<div className="space-y-2">{([["width","Largeur du logo",150,360],["right","Marge à droite",40,300],["bottom","Marge en bas",80,600]] as const).map(([key,label,min,max])=><label key={key} className="block text-xs">{label} (px)<input className="mt-1 min-h-[44px] w-full rounded-xl border border-line px-3" type="number" min={min} max={max} value={logo[key]} disabled={saving||frozen||Boolean(proposal)} onChange={e=>{const n=e.target.valueAsNumber;if(Number.isFinite(n)){setMonitorView("edit");setLogo({...logo,[key]:Math.max(min,Math.min(max,Math.round(n)))});}}}/></label>)}</div>:null}
             <p className="mt-2 text-xs text-mut">Logo officiel de votre charte, conservé à ses proportions. Testez sa position dans l’aperçu puis enregistrez le montage.</p>
           </details>
