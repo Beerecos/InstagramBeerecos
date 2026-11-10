@@ -3,13 +3,15 @@ import type { CaptionWord } from "./edit";
 /**
  * Le nom de la marque mal transcrit (demande de Cédric, 2026-11-10 : « dans les sous-titres c'est écrit Biroco sauf que
  * c'est BeeRecos »). Correction déterministe des variantes entendues par la transcription : Biroco, Birecos, Beerecos,
- * Bérécos… et « Bee recos » en deux mots. La ponctuation autour du mot est gardée.
+ * Bérécos, B-Recru… et « Bee recos » en deux mots. La ponctuation autour du mot est gardée.
  */
 export const BRAND = "BeeRecos";
 const fold = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-const ONE = /^b(?:i|ee|e|ie|ea|y)rr?[eo]?[ck]+os?$/;
+// Variantes entendues en production : Biroco, Birecos, Beerecos, Bérécos, B-Recru, Bi-reco… (« B » + « recos »).
+// Il faut une voyelle ou un tiret après le B (jamais « brico »), puis R + voyelle + C/K (+ R) + O/U.
+const ONE = /^b(?:(?:i|ee|e|ie|ea|y)-?|-)r?[eiuoy]{0,2}r?[eiouy]{1,2}[ck]+r?[ouy]{1,2}s?$/;
 const FIRST = /^(?:bee|bi|be|b)$/;
-const SECOND = /^r[eo]?[ck]+os?$/;
+const SECOND = /^r[eiuoy]{1,2}[ck]+r?[ouy]{1,2}s?$/;
 
 function split(text: string) {
   const m = text.match(/^([«"“'(\s]*)(.*?)([»"”')\s.,!?;:…-]*)$/u);
