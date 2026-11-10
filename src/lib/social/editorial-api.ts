@@ -117,12 +117,12 @@ export async function generateEditorialText(input: {
 
 export type ResearchFact = { date: string; text: string; source: string; url: string };
 /** Recherche web de l'histoire d'un sujet : faits datés avec leur source (pages réellement consultées). Rien n'est publié. */
-export async function researchCarouselFacts(subject: string): Promise<{ facts: ResearchFact[]; text: string; dropped: number }> {
+export async function researchCarouselFacts(subject: string, kind: "carousel" | "reel" = "carousel"): Promise<{ facts: ResearchFact[]; text: string; dropped: number }> {
   if (!apiUrl) throw new Error("Service de recherche non configuré.");
   const token = await getAccessToken();
   const res = await fetch(`${apiUrl}/editorial-generate`, {
     method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify({ action: "research-facts", subject }),
+    body: JSON.stringify({ action: "research-facts", subject, ...(kind === "reel" ? { kind } : {}) }),
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401) throw new Error("Reconnecte-toi pour lancer la recherche.");

@@ -82,8 +82,7 @@ export function qaStoryboard(sb: Storyboard, plan: Plan): QaIssue[] {
     if (last.endMs - built < 1500) add("warning", "cta-hold", "L'appel à l'action n'est pas tenu assez longtemps.", last.scene.id);
   }
   // 8. Durée totale d'un Reel éditorial.
-  // Réel IA : environ 30 s au total, écran de fin (7,8 s) compris.
-  const total = plan.durationMs + END_VIDEO.durationMs;
-  if (total > 36000) add("warning", "duration", `${Math.round(total / 1000)} s avec l'écran de fin : vise environ 30 s (raccourcis les phrases d'Audrey).`);
+  // Réel IA : environ 30 s de contenu, puis la vidéo de fin BeeRecos (7,8 s) en plus.
+  if (plan.durationMs > 36000) add("warning", "duration", `${Math.round(plan.durationMs / 1000)} s de contenu (+ ${END_VIDEO.durationMs / 1000} s de vidéo de fin) : vise environ 30 s (raccourcis les phrases d'Audrey).`);
   return out;
 }
