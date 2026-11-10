@@ -148,7 +148,7 @@ export default function EditorialStudio() {
     setBusy(true); setError(null); setNote(null); setEditing(null);
     const opts = { intensity: sb?.intensity ?? 4, keyword: keyword.trim() || null, mascot, idea: true };
     try {
-      const raw = await generateEditorialText({ channel: "instagram", workspaceId: null, brief: directorBrief(idea, opts) });
+      const raw = await generateEditorialText({ channel: "reel", workspaceId: null, brief: directorBrief(idea, opts) });
       const r = parseDirector(raw, idea, opts);
       adopt(r.storyboard);
       setNote(r.source === "ai" ? "Structure proposée par l'IA : modifie une carte ou valide." : "Réponse de l'IA inutilisable : structure construite à partir de ton texte. Modifie-la ou relance.");
