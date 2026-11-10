@@ -34,6 +34,7 @@ import StudioFraming from "@/components/social/studio/StudioFraming";
 import StudioSimpleCaptions from "@/components/social/studio/StudioSimpleCaptions";
 import StudioDirector from "@/components/social/studio/StudioDirector";
 import StudioBeeStyles from "@/components/social/studio/StudioBeeStyles";
+import StudioAutoSave from "@/components/social/studio/StudioAutoSave";
 import { END_VIDEO } from "@/domain/social/montage/brand";
 import { ANIMATIONS } from "@/domain/social/montage/registry";
 import { removeSequence } from "@/domain/social/montage/sequence-edit";
@@ -895,7 +896,8 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
               <button type="button" aria-label={`Retirer ${ANIMATIONS[a.name]?.label ?? a.name}`} className="btn-ghost min-h-11 min-w-11 text-red-700" disabled={saving||animationBusy||frozen} onClick={()=>{changeDraft(draft.filter(x=>x.id!==a.id));if(selectedId===a.id)setSelectedId(null);}}>✕</button>
             </li>)}</ul> : <p className="text-sm text-mut">Aucune animation pour l&apos;instant.</p>}
             {selectedAnimation ? <StudioInspector animation={selectedAnimation} ranges={m.edit?.ranges ?? []} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChange={changeAnimation} onRemove={() => { changeDraft(draft.filter(a => a.id !== selectedAnimation.id)); setSelectedId(null); }} onTest={() => { seekSource(selectedAnimation.fromMs);player.current?.play(); }} /> : null}
-            {unsaved && !proposal ? <button type="button" className="btn-red min-h-11 w-full" disabled={saving||animationBusy||frozen} onClick={()=>{void saveDraft().catch(()=>{});}}>Enregistrer mes animations</button> : null}
+            <StudioAutoSave active={!proposal&&!saving&&!frozen&&!animationBusy} unsaved={unsaved} contentKey={JSON.stringify({draft,logo,animationChoices})} onSave={()=>saveDraft()} canDelete={Boolean(selectedId)&&!saving&&!frozen&&!animationBusy&&!proposal} onDelete={()=>{if(!selectedId)return;changeDraft(draft.filter(x=>x.id!==selectedId));setSelectedId(null);}} />
+            <p role="status" className="text-xs text-mut">{saving ? "Enregistrement…" : unsaved && !proposal ? "Modifications en cours d'enregistrement…" : "✓ Enregistré automatiquement · Annuler pour revenir en arrière · Suppr retire l'animation choisie"}</p>
           </section> : null}
           {simple && simpleStep==="apercu" ? <section className="card space-y-4 p-4" aria-label="Aperçu et validation">
             <h3 className="font-semibold">✨ Améliorer avec l&apos;IA</h3>

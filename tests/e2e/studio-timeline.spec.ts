@@ -207,6 +207,8 @@ test("studio simple : quatre étapes, couleurs des sous-titres en un clic, mode 
   await expect(page.getByRole("button", { name: "Publier →" }).filter({ visible: true })).toBeVisible();
 
   await steps.getByRole("button", { name: /Style/ }).click();
+  // Réglages fins repliés : un clic les ouvre.
+  await page.getByText("Couleurs, taille et position").filter({ visible: true }).click();
   await page.getByRole("radiogroup", { name: "Couleurs des sous-titres" }).filter({ visible: true }).getByRole("radio", { name: /Bleu BeeRecos/ }).click();
   await expect.poll(() => saved.at(-1)?.captionStyle.backgroundColor).toBe("#2851FF");
   await page.getByRole("radiogroup", { name: "Taille des sous-titres" }).filter({ visible: true }).getByRole("radio", { name: "Grand" }).click();
@@ -237,9 +239,14 @@ test("studio simple : quatre étapes, couleurs des sous-titres en un clic, mode 
   await expect(list.getByRole("button", { name: /^Mot impact ·/ })).toBeVisible();
   await expect(page.getByRole("radiogroup", { name: "Style des animations" }).filter({ visible: true }).getByRole("radio", { name: /Punch/ })).toHaveAttribute("aria-checked", "true");
   await list.getByRole("combobox", { name: "Changer l'animation « BEERECOS »" }).selectOption("titre-profondeur");
-  await page.getByRole("button", { name: "Enregistrer mes animations" }).filter({ visible: true }).click();
+  // Enregistré tout seul (plus de bouton « Enregistrer mes animations »).
+  await expect(page.getByRole("button", { name: "Enregistrer mes animations" })).toHaveCount(0);
   await expect.poll(() => saved.at(-1)?.custom.map((c) => c.name)).toEqual(["titre-profondeur", "logo-fin"]);
   expect(saved.at(-1)?.custom[0].props).toEqual({ texte: "BEERECOS" });
+  // Touche Suppr : retire l'animation choisie, enregistré tout seul.
+  await list.getByRole("button", { name: /^Titre en profondeur 3D ·/ }).click();
+  await page.keyboard.press("Delete");
+  await expect.poll(() => saved.at(-1)?.custom.map((c) => c.name)).toEqual(["logo-fin"]);
 
   // Aperçu : modification en langage naturel et validation de la planche, sans passer en mode avancé.
   await steps.getByRole("button", { name: /Aperçu/ }).click();
