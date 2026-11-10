@@ -9,8 +9,9 @@ import { montage, type MontageDetail } from "@/lib/social/montage-api";
 import type { Edit } from "@/domain/social/montage/edit";
 import { matteAt } from "@/domain/social/montage/matte";
 import {
-  deleteCard, keepCard, markModified, modifyInstruction, regenerateCard, restoreCard, STATUS_LABEL, storyboardCards, type StoryboardCard,
+  addCardEffect, defaultEffectText, deleteCard, keepCard, markModified, modifyInstruction, regenerateCard, removeCardEffect, restoreCard, STATUS_LABEL, storyboardCards, swapCardEffect, type StoryboardCard,
 } from "@/domain/social/montage/storyboard-cards";
+import { WORD_ANIMATIONS, WORD_LABEL, type WordAnimation } from "@/domain/social/montage/bee-styles";
 import type { Proposal } from "@/components/social/studio/StudioFeedback";
 
 const time = (ms: number | null) => (ms === null ? "—" : `${String(Math.floor(ms / 60000)).padStart(2, "0")}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`);
@@ -26,6 +27,7 @@ export default function StudioStoryboardCards({ m, disabled, onSave, onSeek, onA
   const [editing, setEditing] = useState<string | null>(null);
   const [instruction, setInstruction] = useState("");
   const [pending, setPending] = useState<{ key: string; reply: string; proposal: Proposal | null } | null>(null);
+  const [effectText, setEffectText] = useState("");
 
   if (!edit) return null;
   if (!m.captions.length) return <p className="card p-4 text-sm text-mut">Le storyboard apparaît après la transcription de la vidéo.</p>;
@@ -45,6 +47,15 @@ export default function StudioStoryboardCards({ m, disabled, onSave, onSeek, onA
     await onSave(r.edit);
     return `Nouvelle mise en scène : ${r.name}.`;
   });
+  const removeEffect = (c: StoryboardCard, ref: number) => act(c, "effet", async () => { await onSave(removeCardEffect(edit, c, ref)); return "Effet supprimé."; });
+  const swapEffect = (c: StoryboardCard, ref: number, name: WordAnimation) => act(c, "effet", async () => { await onSave(swapCardEffect(edit, c, ref, name)); return `Animation changée : ${WORD_LABEL[name]}.`; });
+  const addEffect = (c: StoryboardCard, name: WordAnimation) => act(c, "effet", async () => {
+    const r = addCardEffect(edit, c, name, effectText || defaultEffectText(c));
+    if ("error" in r) { setNotice({ key: c.key, text: r.error, tone: "warn" }); return null; }
+    await onSave(r.edit);
+    return `Effet ajouté : ${WORD_LABEL[name]}.`;
+  });
+  const isWord = (name: string): name is WordAnimation => (WORD_ANIMATIONS as readonly string[]).includes(name);
   const modify = (c: StoryboardCard) => act(c, "modifier", async () => {
     const r = await montage.feedback(m.id, modifyInstruction(c, instruction), []);
     setPending({ key: c.key, reply: r.reply, proposal: r.proposal && r.baseUpdatedAt ? { edit: markModified(r.proposal, c), baseUpdatedAt: r.baseUpdatedAt } : null });
@@ -77,18 +88,44 @@ export default function StudioStoryboardCards({ m, disabled, onSave, onSeek, onA
                   <button type="button" className="btn-ghost min-h-11 px-3 text-sm" disabled={off} onClick={() => void restore(c)}>Restaurer</button>
                 ) : <>
                   <button type="button" className="btn-ghost min-h-11 px-3 text-sm" aria-pressed={c.status === "validated"} disabled={off || c.status === "validated"} onClick={() => void keep(c)}>Garder</button>
-                  <button type="button" className="btn-ghost min-h-11 px-3 text-sm" aria-expanded={editing === c.key} disabled={off} onClick={() => { setEditing(editing === c.key ? null : c.key); setPending(null); }}>Modifier</button>
+                  <button type="button" className="btn-ghost min-h-11 px-3 text-sm" aria-expanded={editing === c.key} disabled={off} onClick={() => { setEditing(editing === c.key ? null : c.key); setPending(null); setEffectText(defaultEffectText(c)); }}>Modifier</button>
                   <button type="button" className="btn-ghost min-h-11 px-3 text-sm" disabled={off} onClick={() => void regenerate(c)}>Régénérer</button>
                   <button type="button" className="btn-ghost min-h-11 px-3 text-sm text-red-700" disabled={off} onClick={() => void remove(c)}>Supprimer</button>
                 </>}
               </div>
               {editing === c.key ? (
+                <div className="space-y-3 rounded-xl border border-line p-3" aria-label={`Effets de la séquence ${c.role}`} role="group">
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-mut">Effets de cette séquence</p>
+                    {c.effects.length ? c.effects.map((e) => (
+                      <div key={e.ref} className="flex flex-wrap items-center gap-2">
+                        <span className="min-w-0 flex-1 truncate text-sm">{e.label}{e.text ? ` « ${e.text} »` : ""}</span>
+                        {isWord(e.name) ? (
+                          <select aria-label={`Changer l'animation de « ${e.text ?? e.label} »`} value={e.name} disabled={off} onChange={(ev) => void swapEffect(c, e.ref, ev.target.value as WordAnimation)} className="min-h-11 rounded-lg border border-line bg-white px-2 text-sm">
+                            {WORD_ANIMATIONS.map((n) => <option key={n} value={n}>{WORD_LABEL[n]}</option>)}
+                          </select>
+                        ) : null}
+                        <button type="button" className="btn-ghost min-h-11 px-3 text-sm text-red-700" disabled={off} onClick={() => void removeEffect(c, e.ref)} aria-label={`Supprimer l'effet ${e.label}`}>Supprimer l&apos;effet</button>
+                      </div>
+                    )) : <p className="text-sm text-mut">Aucun effet : sous-titres seuls.</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-mut">{c.effects.length ? "Remplacer par" : "Ajouter un effet"}</p>
+                    <label className="block text-sm">Texte affiché
+                      <input value={effectText} maxLength={60} onChange={(ev) => setEffectText(ev.target.value)} className="mt-1 block min-h-11 w-full rounded-xl border border-line bg-white px-3 text-sm" />
+                    </label>
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Bibliothèque d'effets">
+                      {WORD_ANIMATIONS.map((n) => <button key={n} type="button" className="btn-ghost min-h-11 px-3 text-sm" disabled={off || !effectText.trim()} onClick={() => void addEffect(c, n)}>{WORD_LABEL[n]}</button>)}
+                    </div>
+                  </div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-mut">Ou demande à Bee</p>
                 <form className="flex flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); if (instruction.trim()) void modify(c); }}>
                   <label className="sr-only" htmlFor={`modif-${c.key}`}>Ce que tu veux changer dans cette séquence</label>
                   <input id={`modif-${c.key}`} value={instruction} maxLength={600} onChange={(e) => setInstruction(e.target.value)} placeholder="Ex. zoom moins fort, mets BUSINESS derrière moi…"
                     className="min-h-11 flex-1 rounded-xl border border-line bg-white px-3 text-sm" />
                   <button type="submit" className="btn-red min-h-11 px-4 text-sm" disabled={off || !instruction.trim()}>Demander à Bee</button>
                 </form>
+                </div>
               ) : null}
               {pending?.key === c.key ? (
                 <div className="space-y-2 rounded-xl bg-brand/5 p-3 text-sm" role="status">

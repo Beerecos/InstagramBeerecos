@@ -62,3 +62,34 @@ test("storyboard en cartes : garder, modifier avec ses mots, régénérer, suppr
   expect(calls.map((c) => c.action).filter((a) => /render|to-reel|publish/.test(String(a)))).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+test("storyboard : Modifier ouvre la bibliothèque d'effets, changer ou supprimer l'effet en un clic", async ({ page }) => {
+  let version = 1;
+  let edit = { ...initialEdit("prise.mp4", DURATION), custom: [
+    { name: "onglet", fromMs: 300, toMs: 2800, props: { texte: "RÉSEAU", variante: "blanc" } },
+    { name: "logo-fin", fromMs: DURATION - 2000, toMs: DURATION, props: { baseline: true } },
+  ] };
+  const saved: typeof edit[] = [];
+  await mockBee(page, {
+    get: () => ({ montage: { id: "m9", title: "Prise", status: "ready", durationMs: DURATION, keptMs: DURATION, workspaceId: null, createdAt: "t", updatedAt: `v${version}`, renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit, captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: null }),
+    "save-edit": (body) => { edit = body.edit as typeof edit; saved.push(edit); version++; return {}; },
+  });
+  await page.goto("/reels/m9");
+  const board = page.getByRole("region", { name: "Storyboard" }).filter({ visible: true });
+  const hook = board.getByRole("listitem", { name: "Séquence Accroche" });
+  await hook.getByRole("button", { name: "Modifier" }).click();
+  const fx = hook.getByRole("group", { name: "Effets de la séquence Accroche" });
+  // Changer l'animation : même texte.
+  await fx.getByRole("combobox", { name: "Changer l'animation de « RÉSEAU »" }).selectOption("mot-impact");
+  await expect.poll(() => saved.at(-1)?.custom[0]).toMatchObject({ name: "mot-impact", props: { texte: "RÉSEAU" } });
+  expect(saved.at(-1)?.sceneMarks).toEqual({ "0": "modified" });
+  // Supprimer l'effet.
+  await fx.getByRole("button", { name: "Supprimer l'effet Mot impact" }).click();
+  await expect.poll(() => saved.at(-1)?.custom.map((c) => c.name)).toEqual(["logo-fin"]);
+  await expect(fx.getByText("Aucun effet : sous-titres seuls.")).toBeVisible();
+  // Ajouter depuis la bibliothèque, avec son texte.
+  await fx.getByLabel("Texte affiché").fill("TON RÉSEAU");
+  await fx.getByRole("group", { name: "Bibliothèque d'effets" }).getByRole("button", { name: "Titre 3D" }).click();
+  await expect.poll(() => saved.at(-1)?.custom.map((c) => c.name)).toEqual(["titre-profondeur", "logo-fin"]);
+  expect(saved.at(-1)?.custom[0].props).toEqual({ texte: "TON RÉSEAU" });
+});

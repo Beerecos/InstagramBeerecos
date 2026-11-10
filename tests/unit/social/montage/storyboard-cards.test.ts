@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { initialEdit } from "@/domain/social/montage/montage";
-import { deleteCard, keepCard, modifyInstruction, regenerateCard, restoreCard, storyboardCards } from "@/domain/social/montage/storyboard-cards";
+import { addCardEffect, deleteCard, keepCard, modifyInstruction, regenerateCard, removeCardEffect, restoreCard, storyboardCards, swapCardEffect } from "@/domain/social/montage/storyboard-cards";
 import { EditSchema } from "@/domain/social/montage/edit";
 
 /** Un mot toutes les 300 ms ; phrases séparées par un point. */
@@ -63,5 +63,24 @@ describe("storyboard en cartes", () => {
     expect(msg).toMatch(/^Seulement pour la séquence de 0,0 s à /);
     expect(msg).toContain("Ton réseau vaut de l'or");
     expect(msg.endsWith(": zoom moins fort")).toBe(true);
+  });
+});
+
+describe("effets d'une séquence (Modifier)", () => {
+  const w = "Ton réseau vaut de l'or si tu sais quoi dire. Imagine un photographe qui travaille avec les restaurants du quartier.".split(" ").map((text, i) => ({ text, startMs: i * 300, endMs: i * 300 + 250 }));
+  const base = { ...initialEditForEffects(), custom: [{ name: "onglet", fromMs: 1500, toMs: 4000, props: { texte: "RÉSEAU", variante: "blanc" } }] };
+  function initialEditForEffects() { return { video: "p.mp4", accent: "bleu" as const, ranges: [{ fromMs: 0, toMs: 8000 }], subtitles: false, captionStyle: {}, voiceGain: 1, custom: [], sounds: [] }; }
+  it("un effet n'apparaît que sur la séquence où il commence", () => {
+    const cards = storyboardCards(base, w, 8000);
+    expect(cards.filter((c) => c.effects.length).length).toBe(1);
+  });
+  it("supprimer, changer, ajouter ; ajout refusé si la séquence est retirée", () => {
+    const [c] = storyboardCards(base, w, 8000).filter((x) => x.effects.length);
+    expect(removeCardEffect(base, c, c.effects[0].ref).custom).toEqual([]);
+    expect(swapCardEffect(base, c, c.effects[0].ref, "titre").custom[0]).toMatchObject({ name: "titre", props: { texte: "RÉSEAU" } });
+    const r = addCardEffect(base, c, "mot-impact", "OR");
+    expect("edit" in r && r.edit.custom.map((a) => a.name)).toEqual(["mot-impact"]);
+    expect(addCardEffect({ ...base, ranges: [{ fromMs: 9000, toMs: 9500 }] }, c, "titre", "OR")).toEqual({ error: "Séquence retirée du montage : restaure-la d'abord." });
+    expect(addCardEffect(base, c, "titre", " ")).toEqual({ error: "Écris le texte à afficher." });
   });
 });
