@@ -33,6 +33,7 @@ import StudioLibraryDialog from "@/components/social/studio/StudioLibraryDialog"
 import StudioFraming from "@/components/social/studio/StudioFraming";
 import StudioSimpleCaptions from "@/components/social/studio/StudioSimpleCaptions";
 import StudioDirector from "@/components/social/studio/StudioDirector";
+import StudioMusic from "@/components/social/studio/StudioMusic";
 import StudioBeeStyles from "@/components/social/studio/StudioBeeStyles";
 import StudioAutoSave from "@/components/social/studio/StudioAutoSave";
 import { END_VIDEO, STUDIO_LOGO_DEFAULT } from "@/domain/social/montage/brand";
@@ -881,6 +882,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
           {simple && simpleStep==="importer" ? <TakesCard m={m} onChange={load} /> : null}
           {simple && simpleStep==="importer" && m.edit ? <MattesCard m={m} onChange={load} /> : null}
           {simple && simpleStep==="style" ? <section className="card p-4">{ready && m.edit ? <StudioSimpleCaptions edit={m.edit} disabled={saving||animationBusy||frozen||Boolean(proposal)} onChange={patch=>{if(m.edit)void save({...m.edit,...patch});}} /> : <p className="text-sm text-mut">Les sous-titres arrivent avec la transcription (étape Storyboard).</p>}</section> : null}
+          {simple && simpleStep==="style" && m.edit ? <section className="card p-4"><StudioMusic edit={m.edit} library={lib.library} disabled={saving||animationBusy||frozen||Boolean(proposal)} onChange={patch=>{if(m.edit)void save({...m.edit,...patch});}} onOpenLibrary={()=>{setLibraryTab("sounds");setLibraryOpen(true);}} /></section> : null}
           {simple && simpleStep==="style" && ready && m.edit ? <section className="card p-4"><StudioDirector edit={m.edit} disabled={saving||animationBusy||frozen||Boolean(proposal)} onChange={patch=>{if(m.edit)void save({...m.edit,...patch});}} /></section> : null}
           {simple && simpleStep==="style" ? <section className="card space-y-3 p-4">
             <StudioBeeStyles custom={draft} disabled={!ready||saving||animationBusy||frozen||Boolean(proposal)} onPick={(k)=>applyStandardDraft(true,true,k)} />

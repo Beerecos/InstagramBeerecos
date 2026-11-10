@@ -118,3 +118,23 @@ test("réglages d'une animation : libellés clairs, textes proposés par l'IA de
   expect(briefs[0]).toContain("Ton réseau vaut de l'or");
   await expect.poll(() => edit.custom.find((c) => c.name === "bandeau-double")?.props).toMatchObject({ texte: "TON RÉSEAU VAUT DE L'OR", detail: "si tu sais quoi dire" });
 });
+
+test("musique de fond : un morceau de la bibliothèque, léger, baissé pendant la voix", async ({ page }) => {
+  let version = 1;
+  let edit = { ...initialEdit("prise.mp4", DURATION), custom: [{ name: "logo-fin", fromMs: DURATION - 2000, toMs: DURATION, props: { baseline: true } }] };
+  await mockBee(page, {
+    get: () => ({ montage: { id: "m9", title: "Prise", status: "ready", durationMs: DURATION, keptMs: DURATION, workspaceId: null, createdAt: "t", updatedAt: `v${version}`, renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit, captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: null }),
+    "save-edit": (body) => { edit = body.edit as typeof edit; version++; return {}; },
+    "media-list": () => ({ media: [{ id: "s1", kind: "son", title: "Ambiance douce", fileName: "ambiance-1a2b3c4d.mp3", durationMs: 120000, licence: "Pixabay", sourceUrl: null }] }),
+  });
+  await page.goto("/reels/m9");
+  await page.getByRole("navigation", { name: "Étapes du montage" }).filter({ visible: true }).getByRole("button", { name: /Style/ }).click();
+  const music = page.getByRole("radiogroup", { name: "Musique de fond" }).filter({ visible: true });
+  await expect(music.getByRole("radio", { name: "Sans musique" })).toHaveAttribute("aria-checked", "true");
+  await music.getByRole("radio", { name: /Ambiance douce/ }).click();
+  await expect.poll(() => edit.sounds).toEqual([{ file: "ambiance-1a2b3c4d.mp3", atMs: 0, volume: 0.12, duck: { volume: 0.05 } }]);
+  await page.getByRole("radiogroup", { name: "Volume de la musique" }).filter({ visible: true }).getByRole("radio", { name: "Moyen" }).click();
+  await expect.poll(() => edit.sounds[0]?.volume).toBe(0.22);
+  await music.getByRole("radio", { name: "Sans musique" }).click();
+  await expect.poll(() => edit.sounds).toEqual([]);
+});
