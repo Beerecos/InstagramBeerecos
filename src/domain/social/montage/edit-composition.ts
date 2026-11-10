@@ -1,4 +1,4 @@
-import { ACCENT, BASELINE_FONT, COLORS, DEFAULT_ACCENT, CAPTION_DEFAULTS, STUDIO_LOGO, REEL_HEIGHT, REEL_WIDTH, escapeHtml } from "./brand";
+import { ACCENT, BASELINE_FONT, COLORS, DEFAULT_ACCENT, CAPTION_DEFAULTS, END_VIDEO, STUDIO_LOGO, REEL_HEIGHT, REEL_WIDTH, escapeHtml } from "./brand";
 import { CAPTION_MODE, captionModeOf } from "./caption-modes";
 import { fixBrandWords } from "./brand-words";
 import { directorShots, shotAt, type Shot } from "./director";
@@ -195,6 +195,8 @@ export function buildEditComposition(input: unknown, rawWords: CaptionWord[], op
   // Chaque animation se rend dans la version figée à l'enregistrement (BeeMotion) ; sans version, la version courante.
   const versioned = renderRegistry(registry);
   edit.custom.forEach((c, i) => {
+    // Logo de fin : remplacé par la vidéo de fin officielle, ajoutée après la dernière image (plus de page blanche).
+    if (c.name === "logo-fin") return;
     const start = F(c.fromMs);
     const visible = F(c.toMs) - start;
     if (visible <= 0) return;
@@ -238,6 +240,7 @@ export function buildEditComposition(input: unknown, rawWords: CaptionWord[], op
   // Son d'entrée de chaque animation (lot S6) : une seconde au plus, pour ponctuer l'arrivée du texte.
   const son = edit.rythme?.sonAnimations;
   if (son) edit.custom.forEach((c, i) => {
+    if (c.name === "logo-fin") return;
     clips.push(`      <audio id="whoosh-${i}" src="${media(son)}" data-start="${s(F(c.fromMs))}" data-duration="1" data-volume="${edit.rythme?.volumeSon ?? 0.35}" data-track-index="5"></audio>`);
   });
 
@@ -250,7 +253,7 @@ export function buildEditComposition(input: unknown, rawWords: CaptionWord[], op
 
   // Musique baissée pendant la voix : le même fichier joué en morceaux successifs, au volume voulu (temps du montage).
   const speech = speechWindows(words, segments);
-  const end = totalMs(segments) + (edit.outro ? edit.outro.durationMs : 0);
+  const end = totalMs(segments) + (edit.outro || edit.custom.some((c) => c.name === "logo-fin") ? END_VIDEO.durationMs : 0);
   edit.sounds.forEach((snd, i) => {
     if (snd.duck) {
       duckPieces(F(snd.atMs), snd.durationMs ?? end - F(snd.atMs), speech, snd.volume, Math.min(snd.volume, snd.duck.volume), end).forEach((p, k) => {
@@ -262,14 +265,14 @@ export function buildEditComposition(input: unknown, rawWords: CaptionWord[], op
     clips.push(`      <audio id="sfx-${i}" src="${media(snd.file)}" data-start="${s(F(snd.atMs))}"${dur} data-volume="${snd.volume}" data-track-index="3"></audio>`);
   });
 
-  if (edit.outro) {
-    const start = s(totalMs(segments));
-    const out = renderAnimation("logo-fin", { baseline: edit.outro.baseline }, { id: "outro-logo", start, duration: 2, accent, assetBase: base }, registry);
-    css.add(registry["logo-fin"].css);
-    clips.push(`<div id="studio-outro" class="clip anim-host" data-start="${start}" data-duration="2" data-track-index="7" style="position:absolute;inset:0;z-index:20">${out.html}</div>`);
-    tweens.push(...out.tweens);
+  // Vidéo de fin officielle (2026-11-10), en remplacement de la page blanche : pour tout Reel qui se termine par le logo
+  // de fin (animation « logo-fin » ou écran de fin), jouée après la dernière image du montage, plein cadre, sans son.
+  const withEnd = Boolean(edit.outro) || edit.custom.some((c) => c.name === "logo-fin");
+  if (withEnd) {
+    clips.push(`      <video id="studio-end-video" class="end-video" src="${escapeHtml(base)}/${END_VIDEO.file}" data-start="${s(totalMs(segments))}" data-duration="${s(END_VIDEO.durationMs)}" data-has-audio="false" muted playsinline data-track-index="7"></video>`);
+    css.add(".end-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 20; }");
   }
-  return documentShell({ title: edit.video, base, preview: opts.preview, css: [...css].join(""), clips, tweens, durationS: s(totalMs(segments) + (edit.outro?.durationMs ?? 0)) });
+  return documentShell({ title: edit.video, base, preview: opts.preview, css: [...css].join(""), clips, tweens, durationS: s(totalMs(segments) + (withEnd ? END_VIDEO.durationMs : 0)) });
 }
 
 /**

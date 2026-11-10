@@ -15,7 +15,7 @@ test("Mon modèle : régler, enregistrer, puis revenir au Standard BeeRecos v1",
   await hook.getByLabel("Couleur").selectOption("bleu");
   await hook.getByLabel("Entrée").selectOption("laterale");
   await editor.getByLabel("Grands mots derrière moi").selectOption("1");
-  await editor.getByLabel("Logo BeeRecos de fin").uncheck();
+  await editor.getByLabel("Vidéo de fin BeeRecos").uncheck();
   await expect(editor.getByText(/Sans logo de fin/)).toBeVisible();
   await expect(editor.getByTestId("mon-modele-apercu").locator("iframe")).toHaveCount(1);
 

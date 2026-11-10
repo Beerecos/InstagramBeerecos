@@ -115,12 +115,12 @@ describe("onglet et baseline (règles de rendu 2026-10-21)", () => {
     const edge = buildEditComposition(edit([{ name: "onglet", fromMs: 0, toMs: 2000, props: { texte: "Bord", x: 10 } }]), [], { assetBase: "." });
     expect(edge).toContain("anim-erreur");
   });
-  it("logo de fin : fichier officiel avec la baseline (par défaut), ou le même logo coupé au-dessus si on la retire", () => {
+  it("logo de fin : remplacé par la vidéo de fin officielle, jouée après la dernière image (plus de page blanche)", () => {
     const on = buildEditComposition(edit([{ name: "logo-fin", fromMs: 8000, toMs: 10000, props: {} }]), [], { assetBase: "." });
-    expect(on).toContain('src="./brand/beerecos-baseline.webp"');
-    const off = buildEditComposition(edit([{ name: "logo-fin", fromMs: 8000, toMs: 10000, props: { baseline: false } }]), [], { assetBase: "." });
-    expect(off).toContain('src="./brand/beerecos-logo-horizontal.webp" alt="BeeRecos" width="740" height="165"');
-    expect(off).not.toContain("beerecos-baseline.webp");
-    expect(off).not.toContain("#MonReseauCestTonReseau");
+    expect(on).toContain('<video id="studio-end-video" class="end-video" src="./brand/beerecos-video-fin.mp4" data-start="10" data-duration="7.8" data-has-audio="false"');
+    expect(on).not.toContain("anim-logo-fin");
+    expect(on).not.toContain("beerecos-baseline.webp");
+    const none = buildEditComposition(edit([]), [], { assetBase: "." });
+    expect(none).not.toContain("studio-end-video");
   });
 });

@@ -46,6 +46,13 @@ export const END_LOGO = {
   plain: { file: "brand/beerecos-logo-horizontal.webp", ratio: 390 / 1752 },
   baseline: { file: "brand/beerecos-baseline.webp", ratio: 106 / 1752 },
 } as const;
+/**
+ * Vidéo de fin officielle (fournie par Cédric le 2026-11-10, « en remplacement de la page blanche BeeRecos ») : logo,
+ * LIKE · COMMENTE · PARTAGE · ABONNE-TOI et #MonReseauCestTonReseau, 7,8 s, sans son. Fichier d'origine 2160 × 3840
+ * réduit en 1080 × 1920 (H.264, 30 i/s), jamais retouché. Ajoutée après la dernière image de chaque Reel qui se termine
+ * par le logo de fin (animation « logo-fin » ou écran de fin).
+ */
+export const END_VIDEO = { file: "brand/beerecos-video-fin.mp4", durationMs: 7800 } as const;
 /** Espace entre le logo et la baseline (« mets le # un peu plus bas », Cédric, 2026-10-22). */
 export const END_BASELINE_GAP = 56;
 /**

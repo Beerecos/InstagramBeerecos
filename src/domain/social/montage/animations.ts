@@ -266,8 +266,8 @@ export const KIT_ANIMATIONS: Record<string, AnimationDef> = {
   }),
 
   "logo-fin": defineAnimation({
-    label: "Logo BeeRecos de fin",
-    description: "Plein écran blanc avec le logo officiel horizontal (BeeRecos bleu et noir) et, par défaut, la baseline #MonReseauCestTonReseau manuscrite dessous, au centre, plus une phrase facultative en bas de l'écran. Pour clore la vidéo (dernières secondes).",
+    label: "Vidéo de fin BeeRecos",
+    description: "Clôt le Reel : la vidéo de fin officielle (logo, LIKE · COMMENTE · PARTAGE · ABONNE-TOI, #MonReseauCestTonReseau, 7,8 s) est ajoutée après la dernière image. Une seule par vidéo, posée à la fin.",
     lengthMs: 2000,
     props: z.strictObject({ texte: z.string().trim().max(60).optional(), baseline: z.boolean().default(true) }),
     example: { texte: "Rejoins un club BeeRecos", baseline: true },

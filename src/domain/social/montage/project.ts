@@ -2,7 +2,7 @@ import { buildZip, type ZipEntry } from "../reel-story/zip";
 import { takeStrip, type CaptionWord, type Edit } from "./edit";
 import { buildEditComposition } from "./edit-composition";
 import { usedMedia } from "./media";
-import { END_LOGO, STUDIO_LOGO } from "./brand";
+import { END_LOGO, END_VIDEO, STUDIO_LOGO } from "./brand";
 import { usedMattes } from "./matte";
 import { ANIMATIONS } from "./registry";
 
@@ -22,6 +22,7 @@ export const MONTAGE_ASSETS = [
   MONTAGE_GSAP,
   END_LOGO.baseline.file,
   END_LOGO.plain.file,
+  END_VIDEO.file,
   STUDIO_LOGO.file,
 ];
 
