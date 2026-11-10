@@ -43,6 +43,12 @@ export const SceneSchema = z.discriminatedUnion("type", [HookStatScene, Statemen
 export type EditorialScene = z.infer<typeof SceneSchema>;
 export type SceneType = EditorialScene["type"];
 
+export const VoiceAsset = z.strictObject({
+  src: z.string().min(1).max(2000), duration: z.number().positive().max(60), text: z.string().max(260), voiceId: z.string().max(80),
+  speed: z.number().min(0.5).max(1.5), pronunciationVersion: z.string().max(40), receiptId: z.string().regex(/^[a-f0-9]{64}$/),
+});
+export type EditorialVoiceAsset = z.infer<typeof VoiceAsset>;
+
 export const StoryboardSchema = z.strictObject({
   preset: z.literal("editorial-impact"),
   intensity: z.number().int().min(1).max(5).default(4),
@@ -56,6 +62,8 @@ export const StoryboardSchema = z.strictObject({
   voiceSpeed: z.number().min(0.8).max(1.25).default(0.92),
   /** Voix générées (durées réelles, en secondes) : remplacent l'estimation quand elles existent. */
   voiceDurations: z.record(z.string(), z.number().positive().max(60)).optional(),
+  /** Voix d'Audrey générées pour le rendu (preuve : receiptId vérifié par le serveur). Jamais saisies à la main. */
+  assets: z.strictObject({ voice: z.record(z.string(), VoiceAsset) }).optional(),
   scenes: z.array(SceneSchema).min(2).max(10),
 });
 export type Storyboard = z.infer<typeof StoryboardSchema>;

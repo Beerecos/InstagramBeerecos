@@ -111,7 +111,7 @@ function sceneEvents(s: EditorialScene, g: number, bpm: number, audio: (at: numb
 /** Durée de la phrase d'Audrey : réelle si la voix est générée, sinon estimée (≈ 155 mots/min × débit). */
 export function voiceMs(sb: Storyboard, scene: EditorialScene): number {
   if (!scene.voice?.trim()) return 0;
-  const real = sb.voiceDurations?.[scene.id];
+  const real = sb.assets?.voice[scene.id]?.duration ?? sb.voiceDurations?.[scene.id];
   if (real) return Math.round(real * 1000);
   return Math.round((words(scene.voice) / (155 / 60) / sb.voiceSpeed) * 1000) + 200;
 }

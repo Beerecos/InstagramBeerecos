@@ -12,7 +12,18 @@ test("Réel IA : idée + mascotte → structure Hook → CTA, garder, modifier, 
   page.on("pageerror", (e) => errors.push(e.message));
   let reply: string = JSON.stringify(withVoice);
   const briefs: string[] = [];
-  await mockBee(page, { "": (body) => { briefs.push(String(body.brief ?? "")); return { text: reply }; } });
+  const tts: string[] = [];
+  let zipBytes = 0;
+  await mockBee(page, {
+    "": (body) => { briefs.push(String(body.brief ?? "")); return { text: reply }; },
+    tts: (body) => { tts.push(String(body.text)); return { duration: 2.4, receiptId: "a".repeat(64), audioBase64: "bXAz", words: [] }; },
+    "upload-url": () => ({ jobId: "11111111-1111-4111-8111-111111111111", uploadUrl: "https://upload.test/projet.zip" }),
+    jobs: () => ({ jobs: [] }),
+    submit: () => ({ renderId: "render-123" }),
+    status: () => ({ state: "done", narrationVerified: true, url: "https://video.test/reel.mp4", size: 1000 }),
+  });
+  await page.route("https://upload.test/**", async (route) => { zipBytes = route.request().postDataBuffer()?.length ?? 0; await route.fulfill({ status: 200, body: "" }); });
+  await page.route("https://video.test/**", (route) => route.fulfill({ status: 200, contentType: "video/mp4", body: "" }));
   await page.goto("/reels/nouveau/ia");
   await page.getByLabel("Mon idée").fill(IDEA);
   await expect(page.getByLabel("Mascotte BeeRecos")).toBeChecked();
@@ -44,6 +55,16 @@ test("Réel IA : idée + mascotte → structure Hook → CTA, garder, modifier, 
   await page.getByRole("button", { name: "Valider la structure" }).click();
   await expect(page.getByRole("group", { name: "Timeline" })).toBeVisible();
   await expect(page.getByText("Fin BeeRecos")).toBeVisible();
+
+  // Compiler avec la voix d'Audrey : une voix par phrase, projet envoyé, vidéo revenue (rien n'est publié).
+  await page.getByRole("button", { name: "Compiler la vidéo avec la voix d'Audrey" }).click();
+  await expect(page.getByLabel("Réel IA avec la voix d'Audrey")).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText("✅ Vidéo compilée avec la voix d'Audrey")).toBeVisible();
+  // Une voix par scène qui a une phrase (ici la carte gardée ; le CTA automatique n'en a pas).
+  expect(tts).toEqual(["Tu connais 500 personnes. Mais qui te recommande vraiment ?"]);
+  expect(zipBytes).toBeGreaterThan(10000);
+  await expect(page.getByRole("link", { name: "Télécharger le MP4" })).toHaveAttribute("href", "https://video.test/reel.mp4");
+
   await page.getByRole("button", { name: "Modifier la structure" }).click();
   await expect(board).toBeVisible();
   expect(errors).toEqual([]);

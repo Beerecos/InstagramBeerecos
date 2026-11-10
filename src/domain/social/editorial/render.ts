@@ -187,7 +187,7 @@ const CSS = `
       .band { position: absolute; top: 0; left: 0; height: ${H}px; width: ${BAND}px; transform: skewX(-${SKEW_DEG}deg); visibility: hidden; z-index: 50; }`;
 
 /** `outro` (par défaut oui) : la vidéo de fin officielle des Reels BeeRecos, jouée après l'appel à l'action. */
-export type RenderOptions = { assetBase: string; preview?: boolean; mediaUrl?: (file: string) => string; outro?: boolean };
+export type RenderOptions = { assetBase: string; preview?: boolean; mediaUrl?: (file: string) => string; outro?: boolean; resolveVoice?: (src: string, sceneId: string) => string };
 
 /** Composition complète (aperçu = rendu). */
 export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan = planStoryboard(sb)): string {
@@ -247,10 +247,17 @@ export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan 
     }
     tweens.push(`tl.to("#bee", { autoAlpha: 0, y: 60, duration: 0.3, ease: E.editorialOut }, ${s(Math.max(0, total - 450))});`);
   }
+  // Voix d'Audrey (rendu) : chaque phrase commence avec le contenu de sa scène.
+  for (const p of plan.scenes) {
+    const a = sb.assets?.voice[p.scene.id];
+    if (!a || p.voiceAtMs === undefined) continue;
+    const src = opts.resolveVoice ? opts.resolveVoice(a.src, p.scene.id) : a.src;
+    clips.push(`      <audio id="vo-${escapeHtml(p.scene.id)}" src="${escapeHtml(src)}" data-start="${s(p.voiceAtMs)}" data-duration="${a.duration}" data-track-index="2" data-volume="1"></audio>`);
+  }
   // Sons : le pic de chaque son tombe sur l'instant visé (centre du wipe, valeur finale du compteur…).
   plan.audio.forEach((a, i) => {
     const at = Math.max(0, a.atMs - SFX_PEAK_MS[a.sfx]);
-    clips.push(`      <audio id="sfx-${i}" src="${base}/sfx/${a.sfx}.wav" data-start="${s(at)}" data-duration="0.6" data-volume="${Math.min(1, 0.55 * a.gain).toFixed(2)}" data-track-index="${3 + (i % 3)}"></audio>`);
+    clips.push(`      <audio id="sfx-${i}" src="${base}/sfx/${a.sfx}.wav" data-start="${s(at)}" data-duration="0.6" data-volume="${Math.min(1, (sb.assets ? 0.38 : 0.55) * a.gain).toFixed(2)}" data-track-index="${3 + (i % 3)}"></audio>`);
   });
   if (sb.music) {
     const url = opts.mediaUrl?.(sb.music.file) ?? `${base}/${sb.music.file}`;
@@ -288,4 +295,14 @@ ${clips.join("\n")}
   </body>
 </html>
 `;
+}
+
+/** Fichiers de public/hyperframes/ nécessaires au rendu de ce Reel (voix en plus). */
+export function editorialAssets(sb: Storyboard, plan: Plan = planStoryboard(sb)): string[] {
+  const logos = sb.scenes.some((x) => x.type === "cta" && x.brand) ? ["brand/beerecos-logo-white.svg", "brand/beerecos-logo-blue.svg"] : [];
+  return [
+    ...[500, 600, 700, 800].map((w) => `fonts/poppins-latin-${w}-normal.woff2`),
+    "gsap-3.14.2.min.js", ...logos, ...(sb.mascot ? [MASCOT.file] : []),
+    ...[...new Set(plan.audio.map((a) => `sfx/${a.sfx}.wav`))], END_VIDEO.file,
+  ];
 }

@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { createOnlineRenderer, ONLINE_DEFAULT_VOICE, type OnlineDeps } from "@/lib/social/reel-render-online";
 import { renderMode } from "@/lib/social/reel-render-client";
 import { DEMO_MOTION, DEMO_STORY, SEQUENCES } from "@/domain/social/reel-story";
+import { readFileSync } from "node:fs";
+import { StoryboardSchema } from "@/domain/social/editorial/schema";
+import { renderEditorial } from "@/domain/social/editorial/render";
 
 function harness(over: Partial<OnlineDeps> = {}) {
   const calls: Record<string, unknown>[] = [];
@@ -33,6 +36,28 @@ const until = async (get: () => Promise<{ state: string }>, n = 20) => {
 };
 
 describe("rendu en ligne (sans poste de rendu)", () => {
+  it("Réel IA Editorial : une voix d'Audrey par phrase, durées réelles, composition identique à celle du ZIP", async () => {
+    const base = JSON.parse(readFileSync(new URL("../../../fixtures/editorial-sample.json", import.meta.url), "utf8"));
+    const sb = StoryboardSchema.parse({ ...base, mascot: true, scenes: base.scenes.map((x: Record<string, unknown>) => ({ ...x, voice: "Chez BeeRecos, on se recommande peut-être." })) });
+    const { deps, calls, zips } = harness({ audioDuration: async () => 3.4 });
+    const r = createOnlineRenderer(deps);
+    const { id } = r.start(sb);
+    const job = await until(() => r.get(id)) as Awaited<ReturnType<typeof r.get>>;
+    expect(job.state).toBe("done");
+    const tts = calls.filter((c) => c.action === "tts");
+    expect(tts).toHaveLength(sb.scenes.length);
+    expect(tts.every((c) => c.voiceId === ONLINE_DEFAULT_VOICE && c.speed === 0.92)).toBe(true);
+    expect(tts.some((c) => String(c.text).includes("Bi-reu-co"))).toBe(true);
+    const zip = new TextDecoder("latin1").decode(zips[0]);
+    for (const f of ["index.html", "narration.json", "voix/s1.mp3", "brand/beerecos-mascotte.webp", "brand/beerecos-video-fin.mp4", "sfx/editorialWhoosh.wav", "fonts/poppins-latin-800-normal.woff2"]) expect(zip).toContain(f);
+    // Le serveur recompose le HTML depuis narration.json : il doit être identique.
+    const start = zip.indexOf('{"preset"');
+    const narration = JSON.parse(zip.slice(start, zip.indexOf("PK\u0003\u0004", start)));
+    expect(narration.assets.voice.s1.duration).toBe(3.4);
+    expect(zip).toContain(renderEditorial(StoryboardSchema.parse(narration), { assetBase: ".", resolveVoice: (_s, k) => `voix/${k}.mp3` }).slice(0, 2000));
+    expect(zip).toContain('src="voix/s1.mp3"');
+  });
+
   it("style Motion : une voix HeyGen par scène, prononciation appliquée, ZIP complet, MP4 revenu par URL signée", async () => {
     const { deps, calls, zips } = harness();
     const r = createOnlineRenderer(deps);

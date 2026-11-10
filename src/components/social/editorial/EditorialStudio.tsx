@@ -1,8 +1,11 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Check, Copy, Lock, LockOpen, Pencil, Sparkles, Trash2 } from "lucide-react";
 import ReelPreview, { type ReelPreviewHandle } from "@/components/social/ReelPreview";
 import { generateEditorialText } from "@/lib/social/editorial-api";
+import { getRender, startRender, type RenderJob } from "@/lib/social/reel-render-client";
+import { specFingerprint } from "@/domain/social/spec-fingerprint";
+import type { StorySpec } from "@/domain/social/reel-story";
 import { directFromScript, directorBrief, inventedNumbers, parseDirector } from "@/domain/social/editorial/director";
 import { planStoryboard, type Plan } from "@/domain/social/editorial/schedule";
 import { renderEditorial } from "@/domain/social/editorial/render";
@@ -98,6 +101,32 @@ export default function EditorialStudio() {
   const [error, setError] = useState<string | null>(null);
   const [at, setAt] = useState(0);
   const preview = useRef<ReelPreviewHandle>(null);
+  // Compilation avec la voix d'Audrey (rendu serveur) ; la vidéo n'est valable que pour la structure compilée.
+  const [job, setJob] = useState<RenderJob | null>(null);
+  const [video, setVideo] = useState<{ fp: string; url: string; file: string } | null>(null);
+  const [jobError, setJobError] = useState<string | null>(null);
+  const compiledFp = useRef("");
+  const fp = sb ? specFingerprint({ ...sb, assets: undefined } as unknown as StorySpec) : "";
+  const current = video && video.fp === fp ? video : null;
+  const running = job?.state === "queued" || job?.state === "running";
+  useEffect(() => {
+    if (!job || !running) return;
+    const t = setTimeout(async () => {
+      try {
+        const next = await getRender(job.id, undefined, job);
+        setJob(next);
+        if (next.state === "done" && next.url) setVideo({ fp: compiledFp.current, url: next.url, file: next.file ?? "reel-ia.mp4" });
+        if (next.state === "error") setJobError(next.error ?? "La compilation a échoué.");
+      } catch (e) { setJobError(e instanceof Error ? e.message : "Compilation interrompue."); setJob({ ...job, state: "error" }); }
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [job, running]);
+  const compile = async () => {
+    if (!sb || running) return;
+    setJobError(null);
+    try { compiledFp.current = fp; const { id } = await startRender(sb); setJob({ id, state: "queued", step: "En attente", progress: 0, voice: {}, warnings: [] }); }
+    catch (e) { setJobError(e instanceof Error ? e.message : "Compilation impossible."); }
+  };
 
   const plan = useMemo(() => (sb ? planStoryboard(sb) : null), [sb]);
   const html = useMemo(() => {
@@ -220,13 +249,24 @@ export default function EditorialStudio() {
           <div>
             <h2 id="apercu-titre" className="sr-only">Aperçu</h2>
             <div className="mx-auto aspect-[9/16] w-full max-w-[360px] overflow-hidden rounded-2xl bg-black">
-              {html ? <ReelPreview ref={preview} html={html} title="Aperçu du Réel IA" onTimeUpdate={setAt} preservePosition /> : null}
+              {current ? <video key={current.url} src={current.url} controls playsInline preload="metadata" className="h-full w-full" aria-label="Réel IA avec la voix d'Audrey" />
+                : html ? <ReelPreview ref={preview} html={html} title="Aperçu du Réel IA" onTimeUpdate={setAt} preservePosition /> : null}
             </div>
             <Timeline plan={plan} at={at} onSeek={(sec) => preview.current?.seek(sec)} />
           </div>
           <div className="space-y-3">
-            <p className="text-sm">Aperçu muet : durées estimées sur la voix d&apos;Audrey. La vidéo se termine par le même écran de fin que les Reels.</p>
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">🟡 Compilation avec la voix d&apos;Audrey : prochaine mise à jour. Tu peux déjà relire et ajuster la structure.</div>
+            <p className="text-sm">{current ? "✅ Vidéo compilée avec la voix d'Audrey, pour cette structure." : "Aperçu muet : durées estimées sur la voix d'Audrey. La vidéo se termine par le même écran de fin que les Reels."}</p>
+            {!current ? (
+              <button type="button" className="btn-red min-h-12 px-6 text-base" onClick={() => void compile()} disabled={running} aria-busy={running}>
+                <Sparkles aria-hidden size={18} />{running ? "Compilation en cours…" : video ? "Compiler à nouveau avec la voix d'Audrey" : "Compiler la vidéo avec la voix d'Audrey"}
+              </button>
+            ) : <a className="btn-ghost flex min-h-11 items-center justify-center" href={current.url} download={current.file}>Télécharger le MP4</a>}
+            <div role="status" aria-live="polite" className="text-sm">
+              {running && job ? <div><p className="font-medium">{job.step} · {job.progress} %</p><div className="mt-1 h-2 overflow-hidden rounded-full bg-black/[0.07]"><div className="h-full rounded-full bg-brand transition-[width]" style={{ width: `${job.progress}%` }} /></div></div> : null}
+              {video && !current ? <p className="text-amber-800">🟡 La structure a changé depuis la dernière compilation : compile à nouveau pour entendre cette version.</p> : null}
+              {(job?.warnings ?? []).map((w) => <p key={w} className="text-xs text-amber-800">{w}</p>)}
+            </div>
+            {jobError ? <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{jobError}</p> : null}
             <QaList qa={qa} sb={sb} />
             <div className="flex flex-wrap gap-2">
               <button type="button" className="btn-ghost min-h-11" onClick={() => setStep("structure")}><Pencil size={16} aria-hidden /> Modifier la structure</button>
