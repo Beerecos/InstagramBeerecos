@@ -1,56 +1,90 @@
 import { expect, test } from "@playwright/test";
-import { mockBee } from "./bee-api";
 import { readFileSync } from "node:fs";
+import { mockBee } from "./bee-api";
 
-// « GÉNÉRER MON REEL » (preset Editorial Impact) : script → storyboard de l'IA → cartes modifiables, aperçu, QA. Serveur simulé.
+// Réel IA ultra simple (preset Editorial Impact) : idée + mascotte → structure Hook → CTA → aperçu. Serveur simulé.
 const sample = JSON.parse(readFileSync(new URL("../fixtures/editorial-sample.json", import.meta.url), "utf8"));
-const SCRIPT = "Tu connais 500 personnes qui te recommandent ? Chez BeeRecos, tu ne viens pas chercher des cartes de visite. Chaque semaine : une réunion de club, des recommandations, des chefs d'entreprise. Et ce qui fait la différence ? La confiance. Commente RÉSEAU pour recevoir ton invitation.";
+const IDEA = "Pourquoi venir visiter un club BeeRecos avant d'adhérer : tu connais 500 personnes mais qui te recommande ?";
+const withVoice = { ...sample, scenes: sample.scenes.map((s: Record<string, unknown>, i: number) => ({ ...s, voice: i === 0 ? "Tu connais 500 personnes. Mais qui te recommande vraiment ?" : "Une phrase dite par Audrey sur cette scène." })) };
 
-test("Reel éditorial : génération par l'IA, cartes, verrou, suppression, repli automatique", async ({ page }) => {
+test("Réel IA : idée + mascotte → structure Hook → CTA, garder, modifier, valider → aperçu", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  let reply: string = JSON.stringify(sample);
+  let reply: string = JSON.stringify(withVoice);
   const briefs: string[] = [];
-  await mockBee(page, { "": (body) => { briefs.push(String(body.brief ?? "")); return { text: reply }; } });
-  await page.goto("/reels/nouveau/editorial");
-  await page.getByLabel("Script ou transcription").fill(SCRIPT);
-  await page.getByLabel("Mot-clé du CTA (facultatif)").fill("réseau");
-  await page.getByRole("button", { name: "GÉNÉRER MON REEL" }).click();
+  const tts: string[] = [];
+  let zipBytes = 0;
+  await mockBee(page, {
+    "": (body) => { briefs.push(String(body.brief ?? "")); return { text: reply }; },
+    tts: (body) => { tts.push(String(body.text)); return { duration: 2.4, receiptId: "a".repeat(64), audioBase64: "bXAz", words: [] }; },
+    "upload-url": () => ({ jobId: "11111111-1111-4111-8111-111111111111", uploadUrl: "https://upload.test/projet.zip" }),
+    jobs: () => ({ jobs: [] }),
+    submit: () => ({ renderId: "render-123" }),
+    status: () => ({ state: "done", narrationVerified: true, url: "https://video.test/reel.mp4", size: 1000 }),
+  });
+  await page.route("https://upload.test/**", async (route) => { zipBytes = route.request().postDataBuffer()?.length ?? 0; await route.fulfill({ status: 200, body: "" }); });
+  await page.route("https://video.test/**", (route) => route.fulfill({ status: 200, contentType: "video/mp4", body: "" }));
+  await page.goto("/reels/nouveau/ia");
+  await page.getByLabel("Mon idée").fill(IDEA);
+  await expect(page.getByLabel("Mascotte BeeRecos")).toBeChecked();
+  await page.getByRole("button", { name: "Structurer ma vidéo (Hook → CTA)" }).click();
 
   const board = page.getByRole("list", { name: "Storyboard" });
   await expect(board.getByRole("listitem")).toHaveCount(5);
-  await expect(page.getByText("Storyboard proposé par l'IA")).toBeVisible();
-  expect(briefs[0]).toContain("AI MOTION DIRECTOR");
-  expect(briefs[0]).toContain("Commente RÉSEAU");
-  await expect(page.getByText("✅ Aucun problème détecté.")).toBeVisible();
-  await expect(page.getByRole("group", { name: "Timeline" })).toBeVisible();
-
-  // Modifier un texte : la carte garde la valeur, l'aperçu est recalculé.
+  expect(briefs[0]).toContain("IDÉE :");
+  expect(briefs[0]).toContain(IDEA);
   const first = board.getByRole("listitem").first();
-  await expect(first).toContainText("Accroche chiffrée");
-  await first.getByLabel("Mot en couleur").fill("QUI TE RECOMMANDENT ?");
-  await first.getByLabel("Mot en couleur").blur();
-  await expect(first.getByLabel("Mot en couleur")).toHaveValue("QUI TE RECOMMANDENT ?");
-
-  // Verrouiller la 1re carte puis régénérer : elle reste, le reste est remplacé (repli automatique, IA illisible).
-  await first.getByRole("button", { name: "Verrouiller" }).click();
-  reply = "pas de JSON";
-  await page.getByRole("button", { name: /RÉGÉNÉRER/ }).click();
-  await expect(page.getByText("storyboard construit automatiquement")).toBeVisible();
-  await expect(board.getByRole("listitem").first().getByLabel("Mot en couleur")).toHaveValue("QUI TE RECOMMANDENT ?");
+  await expect(first).toContainText("Accroche");
+  await expect(first).toContainText("Audrey dit : Tu connais 500 personnes.");
   await expect(board.getByRole("listitem").last()).toContainText("Appel à l'action");
 
-  // Supprimer une carte.
-  const before = await board.getByRole("listitem").count();
-  await board.getByRole("listitem").nth(1).getByRole("button", { name: "Supprimer" }).click();
-  await expect(board.getByRole("listitem")).toHaveCount(before - 1);
+  // Modifier : la phrase d'Audrey et le texte à l'écran se changent sur la carte.
+  await first.getByRole("button", { name: "Modifier" }).click();
+  await first.getByLabel("Mot en couleur").fill("QUI TE RECOMMANDENT ?");
+  await first.getByLabel("Mot en couleur").blur();
+  await expect(first).toContainText("QUI TE RECOMMANDENT ?");
+
+  // Garder la 1re carte puis demander une autre structure : elle reste.
+  await first.getByRole("button", { name: "Garder" }).click();
+  reply = "pas de JSON";
+  await page.getByRole("button", { name: "Proposer une autre structure" }).click();
+  await expect(page.getByText(/structure construite à partir de ton texte/)).toBeVisible();
+  await expect(board.getByRole("listitem").first()).toContainText("QUI TE RECOMMANDENT ?");
+
+  // Valider → aperçu, avec retour possible à la structure.
+  await page.getByRole("button", { name: "Valider la structure" }).click();
+  await expect(page.getByRole("group", { name: "Timeline" })).toBeVisible();
+  await expect(page.getByText("Fin BeeRecos")).toBeVisible();
+
+  // Compiler avec la voix d'Audrey : une voix par phrase, projet envoyé, vidéo revenue (rien n'est publié).
+  await page.getByRole("button", { name: "Compiler la vidéo avec la voix d'Audrey" }).click();
+  await expect(page.getByLabel("Réel IA avec la voix d'Audrey")).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText("✅ Vidéo compilée avec la voix d'Audrey")).toBeVisible();
+  // Une voix par scène qui a une phrase (ici la carte gardée ; le CTA automatique n'en a pas).
+  expect(tts).toEqual(["Tu connais 500 personnes. Mais qui te recommande vraiment ?"]);
+  expect(zipBytes).toBeGreaterThan(10000);
+  await expect(page.getByRole("link", { name: "Télécharger le MP4" })).toHaveAttribute("href", "https://video.test/reel.mp4");
+
+  await page.getByRole("button", { name: "Modifier la structure" }).click();
+  await expect(board).toBeVisible();
   expect(errors).toEqual([]);
 });
 
-test("Réel IA : lien vers le Reel éditorial", async ({ page }) => {
-  await mockBee(page);
+test("Réel IA : un chiffre absent de l'idée bloque la validation", async ({ page }) => {
+  const bad = { ...withVoice, scenes: withVoice.scenes.map((s: Record<string, unknown>, i: number) => (i === 1 ? { ...s, voice: "Plus de 300 entrepreneurs nous rejoignent chaque mois." } : s)) };
+  await mockBee(page, { "": () => ({ text: JSON.stringify(bad) }) });
   await page.goto("/reels/nouveau/ia");
-  await page.getByRole("link", { name: /Nouveau : Reel éditorial/ }).click();
-  await expect(page).toHaveURL(/\/reels\/nouveau\/editorial$/);
-  await expect(page.getByRole("heading", { name: "Reel éditorial" })).toBeVisible();
+  await page.getByLabel("Mon idée").fill(IDEA);
+  await page.getByRole("button", { name: "Structurer ma vidéo (Hook → CTA)" }).click();
+  await expect(page.getByText(/Chiffre absent de ton idée : 300/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Valider la structure" })).toBeDisabled();
+});
+
+test("Réel IA : l'éditeur détaillé reste accessible, l'ancienne adresse redirige", async ({ page }) => {
+  await mockBee(page);
+  await page.goto("/reels/nouveau/editorial");
+  await expect(page).toHaveURL(/\/reels\/nouveau\/ia$/);
+  await page.getByRole("link", { name: "Éditeur détaillé" }).click();
+  await expect(page).toHaveURL(/mode=detaille/);
+  await expect(page.getByRole("link", { name: "Revenir au Studio simple" })).toBeVisible();
 });

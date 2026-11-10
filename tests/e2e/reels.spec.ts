@@ -69,7 +69,7 @@ test("les deux entrées de création ouvrent le même studio", async ({ page }) 
   await page.goto("/reels/nouveau/video");
   await expect(page.getByRole("heading", { name: "Montage vidéo" })).toBeAttached();
   await expect(page.getByRole("link", { name: "Découper un tournage" })).toBeVisible();
-  await page.goto("/reels/nouveau/ia");
+  await page.goto("/reels/nouveau/ia?mode=detaille");
   await expect(page.getByRole("heading", { name: "Montage vidéo" })).toBeAttached();
 });
 
@@ -92,7 +92,7 @@ test("autres formats : les carrousels restent accessibles", async ({ page }) => 
 });
 
 test("vidéo IA : un seul éditeur, le modèle Recommandation devient des scènes modifiables", async ({ page }) => {
-  await page.goto("/reels/nouveau/ia");
+  await page.goto("/reels/nouveau/ia?mode=detaille");
   await expect(page.getByRole("radiogroup", { name: "Style de la vidéo IA" })).toHaveCount(0);
   // Charger le modèle remplace le travail affiché : confirmation demandée.
   page.once("dialog", (d) => void d.accept());

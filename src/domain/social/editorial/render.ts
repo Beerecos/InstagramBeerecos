@@ -13,6 +13,9 @@ const SKEW_DEG = 9;
 const SKEW_PX = Math.round(Math.tan((SKEW_DEG * Math.PI) / 180) * H); // décalage haut/bas du front diagonal
 const BAND = Math.round(W * 0.16);
 export const INNER_W = W - SAFE.left - SAFE.right;
+/** Mascotte officielle (454 × 640, fournie par Cédric) : taille et marge à droite. */
+export const MASCOT = { file: "brand/beerecos-mascotte.webp", w: 180, h: Math.round((180 * 640) / 454) } as const;
+const MASCOT_RIGHT = 70;
 const s = (msv: number) => Math.round(msv) / 1000;
 
 /** « BeeRecos » toujours écrit ainsi, même dans un titre en capitales. */
@@ -177,11 +180,14 @@ const CSS = `
       .logo { height: 168px; width: auto; margin-top: 46px; visibility: hidden; }
       .cta-btn { display: inline-block; margin-top: 30px; padding: 32px 56px; border-radius: 999px; background: ${PALETTE.brand}; color: ${PALETTE.white}; font-size: 50px; font-weight: 700; letter-spacing: 0.01em; visibility: hidden; }
       .scene.brand .cta-btn { background: ${PALETTE.white}; color: ${PALETTE.brand}; }
+      .bee { position: absolute; left: ${W - MASCOT_RIGHT - MASCOT.w}px; top: ${H - SAFE.bottom - MASCOT.h - 10}px; width: ${MASCOT.w}px; height: ${MASCOT.h}px; z-index: 55; transform-origin: 50% 100%; }
+      .bee img { width: 100%; height: 100%; display: block; }
+      .with-bee .content { bottom: ${SAFE.bottom + MASCOT.h + 20}px; }
       .end-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 60; }
       .band { position: absolute; top: 0; left: 0; height: ${H}px; width: ${BAND}px; transform: skewX(-${SKEW_DEG}deg); visibility: hidden; z-index: 50; }`;
 
 /** `outro` (par défaut oui) : la vidéo de fin officielle des Reels BeeRecos, jouée après l'appel à l'action. */
-export type RenderOptions = { assetBase: string; preview?: boolean; mediaUrl?: (file: string) => string; outro?: boolean };
+export type RenderOptions = { assetBase: string; preview?: boolean; mediaUrl?: (file: string) => string; outro?: boolean; resolveVoice?: (src: string, sceneId: string) => string };
 
 /** Composition complète (aperçu = rendu). */
 export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan = planStoryboard(sb)): string {
@@ -219,10 +225,39 @@ export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan 
       `tl.set("#band-${k}", { autoAlpha: 0 }, ${s(tr.atMs + tr.durMs / 2)});`,
     );
   });
+  // Mascotte officielle (option du Studio IA) : en bas à droite, au-dessus de la zone Instagram ; le texte lui laisse
+  // la place. Elle arrive, saute à chaque changement de scène, réagit aux moments forts, puis part avant la fin.
+  if (sb.mascot) {
+    clips.push(`      <div id="bee" class="bee" style="visibility:hidden"><img src="${base}/${MASCOT.file}" alt="" width="${MASCOT.w}" height="${MASCOT.h}" /></div>`);
+    tweens.push(`tl.fromTo("#bee", { autoAlpha: 0, y: 80, scale: 0.8 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.4, ease: E.springCard, immediateRender: false }, 0.35);`);
+    plan.transitions.forEach((tr, k) => {
+      const t0 = Math.max(0.5, (tr.atMs - 260) / 1000);
+      tweens.push(
+        `tl.to("#bee", { y: -70, rotation: ${k % 2 ? 6 : -6}, duration: 0.22, ease: E.sharpOut }, ${s(t0 * 1000)});`,
+        `tl.to("#bee", { y: 0, rotation: 0, duration: 0.3, ease: E.springCard }, ${s(t0 * 1000 + 220)});`,
+      );
+    });
+    // Sur fond bleu, un fin contour blanc la détache (mascotte bleue).
+    for (const p of plan.scenes) tweens.push(`tl.set("#bee img", { filter: "${p.scene.background === "brand" ? "drop-shadow(0 0 3px #FFFFFF) drop-shadow(0 0 2px #FFFFFF)" : "none"}" }, ${s(p.startMs + (p.index ? 180 : 0))});`);
+    // Réaction : le chiffre qui se pose, le mot accent, le bouton.
+    for (const p of plan.scenes) for (const e of p.events) {
+      if (e.anim !== "counter" && e.anim !== "accent" && e.anim !== "button") continue;
+      const at = e.atMs + (e.anim === "counter" ? e.durMs : 60);
+      tweens.push(`tl.to("#bee", { scale: 1.1, duration: 0.12, ease: E.sharpOut }, ${s(at)});`, `tl.to("#bee", { scale: 1, duration: 0.25, ease: E.springCard }, ${s(at + 120)});`);
+    }
+    tweens.push(`tl.to("#bee", { autoAlpha: 0, y: 60, duration: 0.3, ease: E.editorialOut }, ${s(Math.max(0, total - 450))});`);
+  }
+  // Voix d'Audrey (rendu) : chaque phrase commence avec le contenu de sa scène.
+  for (const p of plan.scenes) {
+    const a = sb.assets?.voice[p.scene.id];
+    if (!a || p.voiceAtMs === undefined) continue;
+    const src = opts.resolveVoice ? opts.resolveVoice(a.src, p.scene.id) : a.src;
+    clips.push(`      <audio id="vo-${escapeHtml(p.scene.id)}" src="${escapeHtml(src)}" data-start="${s(p.voiceAtMs)}" data-duration="${a.duration}" data-track-index="2" data-volume="1"></audio>`);
+  }
   // Sons : le pic de chaque son tombe sur l'instant visé (centre du wipe, valeur finale du compteur…).
   plan.audio.forEach((a, i) => {
     const at = Math.max(0, a.atMs - SFX_PEAK_MS[a.sfx]);
-    clips.push(`      <audio id="sfx-${i}" src="${base}/sfx/${a.sfx}.wav" data-start="${s(at)}" data-duration="0.6" data-volume="${Math.min(1, 0.55 * a.gain).toFixed(2)}" data-track-index="${3 + (i % 3)}"></audio>`);
+    clips.push(`      <audio id="sfx-${i}" src="${base}/sfx/${a.sfx}.wav" data-start="${s(at)}" data-duration="0.6" data-volume="${Math.min(1, (sb.assets ? 0.38 : 0.55) * a.gain).toFixed(2)}" data-track-index="${3 + (i % 3)}"></audio>`);
   });
   if (sb.music) {
     const url = opts.mediaUrl?.(sb.music.file) ?? `${base}/${sb.music.file}`;
@@ -247,7 +282,7 @@ export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan 
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-width="${W}" data-height="${H}" data-duration="${s(length)}" data-fps="30">
+    <div id="root"${sb.mascot ? ` class="with-bee"` : ""} data-composition-id="main" data-start="0" data-width="${W}" data-height="${H}" data-duration="${s(length)}" data-fps="30">
 ${clips.join("\n")}
     </div>
     <script>
@@ -260,4 +295,14 @@ ${clips.join("\n")}
   </body>
 </html>
 `;
+}
+
+/** Fichiers de public/hyperframes/ nécessaires au rendu de ce Reel (voix en plus). */
+export function editorialAssets(sb: Storyboard, plan: Plan = planStoryboard(sb)): string[] {
+  const logos = sb.scenes.some((x) => x.type === "cta" && x.brand) ? ["brand/beerecos-logo-white.svg", "brand/beerecos-logo-blue.svg"] : [];
+  return [
+    ...[500, 600, 700, 800].map((w) => `fonts/poppins-latin-${w}-normal.woff2`),
+    "gsap-3.14.2.min.js", ...logos, ...(sb.mascot ? [MASCOT.file] : []),
+    ...[...new Set(plan.audio.map((a) => `sfx/${a.sfx}.wav`))], END_VIDEO.file,
+  ];
 }

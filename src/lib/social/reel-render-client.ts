@@ -1,3 +1,4 @@
+import type { Storyboard } from "@/domain/social/editorial/schema";
 import type { MotionSpec, MotionVoiceAsset, SequenceKey, StorySpec, VoiceAsset } from "@/domain/social/reel-story";
 import { apiUrl } from "./api-config";
 import { getAccessToken } from "./supabase";
@@ -101,7 +102,7 @@ async function call<T>(path: string, init?: RequestInit, fetcher: typeof fetch =
   return body;
 }
 
-export const startRender = async (spec: StorySpec | MotionSpec, fetcher?: typeof fetch): Promise<{ id: string }> =>
+export const startRender = async (spec: StorySpec | MotionSpec | Storyboard, fetcher?: typeof fetch): Promise<{ id: string }> =>
   RENDER_MODE === "online" && !fetcher ? onlineRenderer().start(spec) : call<{ id: string }>("/api/reels/render", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ spec }) }, fetcher);
 
 /** `saved` : dernier état enregistré du rendu (reprise après rechargement, sans relancer de génération). */

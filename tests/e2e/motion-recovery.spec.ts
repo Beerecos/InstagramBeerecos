@@ -19,12 +19,13 @@ for (const kind of ["motion", "story"] as const) {
       await page.getByRole("button", { name: "Reprendre en scènes" }).click();
       await expect(page.getByText("Audrey · voix obligatoire des Reels IA")).toBeVisible();
     }
-    await page.getByRole("navigation", { name: "Fil d'Ariane" }).getByRole("link").click();
+    await page.getByRole("navigation", { name: "Fil d'Ariane" }).getByRole("link", { name: "Mes réels" }).click();
     await page.getByRole("button", { name: "Créer", exact: true }).click();
     await page.getByRole("dialog").getByRole("link", { name: /Réel IA/ }).click();
     await expect(page).toHaveURL(/\/reels\/nouveau\/ia$/);
-    await expect(page.getByRole("button", { name: "Modèle « Recommandation »" })).toBeVisible();
-    await expect(page.getByText("Audrey · voix obligatoire des Reels IA")).toBeVisible();
+    // Nouvelle création : le Studio IA simple, sans rien de la source précédente.
+    await expect(page.getByLabel("Mon idée")).toHaveValue("");
+    await expect(page.getByText("Audrey · voix obligatoire des Reels IA")).toHaveCount(0);
     await expect(page.getByRole("radiogroup", { name: "Style de la vidéo IA" })).toHaveCount(0);
     expect(calls.filter((c) => c.action === "asset-get").every((c) => c.assetId === source.assetId && c.revision === 2)).toBe(true);
     expect(calls.some((c) => /render|generate|publish|asset-save/.test(String(c.action)))).toBe(false);

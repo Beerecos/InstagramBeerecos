@@ -6,6 +6,9 @@ import {
 import type { RenderJob } from "./reel-render-client";
 import { motionFingerprint } from "@/domain/social/reel-story/motion-spec";
 import { specFingerprint } from "@/domain/social/spec-fingerprint";
+import { StoryboardSchema, type Storyboard, type EditorialVoiceAsset } from "@/domain/social/editorial/schema";
+import { editorialAssets, renderEditorial } from "@/domain/social/editorial/render";
+import { planStoryboard } from "@/domain/social/editorial/schedule";
 
 /**
  * RENDU EN LIGNE d'une Vidéo IA (2026-10-24, « les vidéos se génèrent depuis le site en ligne ») : aucun poste de rendu.
@@ -122,6 +125,32 @@ async function buildStory(deps: OnlineDeps, spec: StorySpec, progress: (p: numbe
   return { entries, voice, warnings, title: spec.title };
 }
 
+/** Réel IA « Editorial Impact » : une voix d'Audrey par scène, durées réelles, même composition que l'aperçu. */
+async function buildEditorial(deps: OnlineDeps, sb: Storyboard, progress: (p: number) => void): Promise<Built> {
+  const voice: Record<string, EditorialVoiceAsset> = {};
+  const files: ZipEntry[] = [];
+  const spoken = sb.scenes.filter((x) => x.voice?.trim());
+  if (!spoken.length) throw new Error("Aucune phrase pour Audrey : ajoute la voix off d'au moins une scène.");
+  for (const [i, sc] of spoken.entries()) {
+    const text = sc.voice!.trim();
+    const v = await speak(deps, spokenFrench(text), AUDREY_VOICE_ID, sb.voiceSpeed);
+    voice[sc.id] = { src: deps.objectUrl(v.audio, "audio/mpeg"), duration: v.duration, text, voiceId: AUDREY_VOICE_ID, speed: sb.voiceSpeed, pronunciationVersion: PRONUNCIATION_VERSION, receiptId: v.receiptId };
+    files.push({ path: `voix/${sc.id}.mp3`, data: v.audio });
+    progress(Math.round(((i + 1) / spoken.length) * 15));
+  }
+  const voiced: Storyboard = { ...sb, voiceDurations: undefined, assets: { voice } };
+  const plan = planStoryboard(voiced);
+  const html = renderEditorial(voiced, { assetBase: ".", resolveVoice: (_src, id) => `voix/${id}.mp3` }, plan);
+  const entries: ZipEntry[] = [
+    { path: "index.html", data: new TextEncoder().encode(html) },
+    { path: "narration.json", data: new TextEncoder().encode(JSON.stringify(voiced)) },
+    ...files,
+    ...(await assets(deps, editorialAssets(voiced, plan))),
+  ];
+  return { entries, voice: {}, warnings: [], title: "Réel IA BeeRecos" };
+}
+
+const isEditorial = (spec: unknown): spec is Storyboard => (spec as { preset?: string } | null)?.preset === "editorial-impact";
 const isMotionSpec = (spec: StorySpec | MotionSpec): spec is MotionSpec => (spec as { kind?: string }).kind === "motion";
 
 type Running = { job: RenderJob; jobId?: string; renderId?: string; lastPoll: number; srtUrl?: string };
@@ -131,14 +160,15 @@ export function createOnlineRenderer(deps: OnlineDeps) {
   const jobs = new Map<string, Running>();
   let n = 0;
 
-  async function run(r: Running, spec: StorySpec | MotionSpec) {
+  async function run(r: Running, spec: StorySpec | MotionSpec | Storyboard) {
     const job = r.job;
     try {
       job.state = "running";
-      const motion = isMotionSpec(spec);
+      const editorial = isEditorial(spec);
+      const motion = !editorial && isMotionSpec(spec as StorySpec | MotionSpec);
       // Instagram BeeRecos : cette version a-t-elle déjà été soumise (autre appareil, onglet fermé) ? Alors on suit ce
       // rendu au lieu de payer voix et rendu une seconde fois. Serveur non mis à jour (action inconnue) : on continue.
-      const fingerprint = motion ? motionFingerprint(spec) : specFingerprint(spec);
+      const fingerprint = editorial ? `ei-${specFingerprint({ ...spec, assets: undefined } as unknown as StorySpec)}` : motion ? motionFingerprint(spec as MotionSpec) : specFingerprint(spec as StorySpec);
       try {
         const known = await deps.api({ action: "jobs", fingerprint });
         const prior = (Array.isArray(known.jobs) ? known.jobs : []).find((e: { state?: string; jobId?: string; renderId?: string }) => e && e.state !== "failed" && e.jobId && e.renderId) as { jobId: string; renderId: string } | undefined;
@@ -152,7 +182,8 @@ export function createOnlineRenderer(deps: OnlineDeps) {
         }
       } catch { /* index des rendus indisponible : génération normale */ }
       job.step = "Voix off";
-      const built = motion ? await buildMotion(deps, spec, (p) => { job.progress = p; }) : await buildStory(deps, spec, (p) => { job.progress = p; });
+      const built = editorial ? await buildEditorial(deps, spec, (p) => { job.progress = p; })
+        : motion ? await buildMotion(deps, spec as MotionSpec, (p) => { job.progress = p; }) : await buildStory(deps, spec as StorySpec, (p) => { job.progress = p; });
       job.voice = built.voice;
       if (built.motionVoice) job.motionVoice = built.motionVoice;
       job.warnings.push(...built.warnings);
@@ -176,6 +207,15 @@ export function createOnlineRenderer(deps: OnlineDeps) {
   }
 
   function start(spec: unknown): { id: string } {
+    if (isEditorial(spec)) {
+      const p = StoryboardSchema.safeParse(spec);
+      if (!p.success) throw new Error("La vidéo ne peut pas être générée : structure invalide.");
+      const id = `en-ligne-${++n}-${deps.now()}`;
+      const r: Running = { job: { id, state: "queued", step: "En attente", progress: 0, voice: {}, warnings: [] }, lastPoll: 0 };
+      jobs.set(id, r);
+      void run(r, { ...p.data, assets: undefined, voiceDurations: undefined });
+      return { id };
+    }
     const isMotion = (spec as { kind?: string } | null)?.kind === "motion";
     const parsed = isMotion ? parseMotionSpec(spec) : parseStorySpec(spec);
     if (!parsed.ok) throw new Error(["La vidéo ne peut pas être générée.", ...parsed.errors].join(" "));
