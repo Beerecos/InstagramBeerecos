@@ -65,7 +65,7 @@ function withAccents(line: string, accents: string[]) {
   return out;
 }
 
-function sceneHtml(sc: EditorialScene, base: string): string {
+function sceneHtml(sc: EditorialScene): string {
   const id = sc.id;
   const align = "layout" in sc && (sc.layout === "center") ? "center" : "left";
   const box = (inner: string, cls = "") => `<div class="content ${align} ${cls}">${inner}</div>`;
@@ -126,7 +126,7 @@ function sceneHtml(sc: EditorialScene, base: string): string {
       return box([
         ...sc.lines.map((l, i) => mask(`${id}-l${i}`, esc(l), block(sc.lines, 150), i === sc.lines.length - 1 ? ";color:var(--accent)" : "")),
         sc.sub ? `<p id="${id}-sub" class="micro sub">${esc(sc.sub)}</p>` : "",
-        sc.brand ? `<img id="${id}-logo" class="logo" src="${base}/brand/beerecos-logo-${sc.background === "light" ? "blue" : "white"}.svg" alt="BeeRecos" />` : "",
+        // Pas de logo sur cet écran : la signature BeeRecos est la vidéo de fin, identique à celle des Reels (Cédric, 2026-11-11).
         `<span id="${id}-btn" class="cta-btn">${esc(sc.button)}</span>`,
       ].join(""), "cta");
   }
@@ -215,7 +215,6 @@ const CSS = `
       .rating .stars i { font-style: normal; font-size: 44px; color: ${PALETTE.brand}; display: inline-block; visibility: hidden; }
       .rating .count { font-size: 26px; opacity: 0.75; }
       .content.testi { justify-content: flex-start; }
-      .logo { height: 168px; width: auto; margin-top: 46px; visibility: hidden; }
       .cta-btn { display: inline-block; margin-top: 30px; padding: 32px 56px; border-radius: 999px; background: ${PALETTE.brand}; color: ${PALETTE.white}; font-size: 50px; font-weight: 700; letter-spacing: 0.01em; visibility: hidden; }
       .scene.brand .cta-btn { background: ${PALETTE.white}; color: ${PALETTE.brand}; }
       .bee { position: absolute; left: 0; top: ${MASCOT_TOP}px; width: ${MASCOT.w}px; height: ${MASCOT.h}px; z-index: 55; }
@@ -251,7 +250,7 @@ export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan 
     const startMs = i === 0 ? 0 : (enter as Plan["transitions"][number]).atMs - (enter as Plan["transitions"][number]).durMs / 2;
     const out = plan.transitions[i];
     const endMs = out ? out.atMs + out.durMs / 2 : total;
-    clips.push(`      <section id="sc-${p.scene.id}" class="clip scene ${p.scene.background}${t.texture ? " tex" : ""}" data-start="${s(startMs)}" data-duration="${s(endMs - startMs)}" data-track-index="0" style="z-index:${i + 1};--fill:${t.fill};--text:${t.text};--accent:${t.accent};--tex:${t.texture ?? "transparent"};visibility:hidden">${sceneHtml(p.scene, base)}</section>`);
+    clips.push(`      <section id="sc-${p.scene.id}" class="clip scene ${p.scene.background}${t.texture ? " tex" : ""}" data-start="${s(startMs)}" data-duration="${s(endMs - startMs)}" data-track-index="0" style="z-index:${i + 1};--fill:${t.fill};--text:${t.text};--accent:${t.accent};--tex:${t.texture ?? "transparent"};visibility:hidden">${sceneHtml(p.scene)}</section>`);
     tweens.push(`tl.set("#sc-${p.scene.id}", { autoAlpha: 1 }, ${s(startMs)});`, `tl.set("#sc-${p.scene.id}", { autoAlpha: 0 }, ${s(endMs)});`);
     for (const e of p.events) tweens.push(tween(e));
   });
@@ -481,9 +480,10 @@ export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan 
         continue;
       }
       if (sc.type === "cta") {
-        // Bouton de l'appel à l'action : trampoline dessus (elle y reste jusqu'à la sortie).
+        // Bouton de l'appel à l'action : elle se pose À CÔTÉ et le pousse avec le corps (le bouton s'écrase), sans
+        // jamais cacher le texte ; elle y reste jusqu'à la sortie.
         const b = find((e) => e.anim === "button");
-        if (b) react(b.atMs + b.durMs + 1240 < next ? "trampoline" : "perch", b.el, b.atMs + b.durMs + 120, next, home, true, true);
+        if (b) react("push", b.el, b.atMs + b.durMs + 120, next, home, false, true);
         continue;
       }
       // Frisson sur une affirmation choc (mot-impact, titre 3D).
@@ -582,10 +582,9 @@ ${clips.join("\n")}
 
 /** Fichiers de public/hyperframes/ nécessaires au rendu de ce Reel (voix en plus). */
 export function editorialAssets(sb: Storyboard, plan: Plan = planStoryboard(sb)): string[] {
-  const logos = sb.scenes.some((x) => x.type === "cta" && x.brand) ? ["brand/beerecos-logo-white.svg", "brand/beerecos-logo-blue.svg"] : [];
   return [
     ...[500, 600, 700, 800].map((w) => `fonts/poppins-latin-${w}-normal.woff2`),
-    "gsap-3.14.2.min.js", ...logos, ...(sb.mascot ? [MASCOT.file] : []),
+    "gsap-3.14.2.min.js", ...(sb.mascot ? [MASCOT.file] : []),
     ...[...new Set(plan.audio.map((a) => `sfx/${a.sfx}.wav`))], END_VIDEO.file,
   ];
 }

@@ -4,7 +4,7 @@ import { beatTicks, snap, snapToBeat, snapToHalfBeat } from "@/domain/social/edi
 import { bezier, EASE } from "@/domain/social/editorial/easings";
 import { StoryboardSchema, type EditorialScene, type Storyboard } from "@/domain/social/editorial/schema";
 import { baseGap, planStoryboard, SFX_PEAK_MS, voiceMs } from "@/domain/social/editorial/schedule";
-import { brandCase, fit, renderEditorial, textEm, INNER_W } from "@/domain/social/editorial/render";
+import { brandCase, editorialAssets, fit, renderEditorial, textEm, INNER_W } from "@/domain/social/editorial/render";
 import { directFromScript, directorBrief, editorialLines, finalize, inventedNumbers, parseDirector } from "@/domain/social/editorial/director";
 import { qaStoryboard } from "@/domain/social/editorial/qa";
 
@@ -231,10 +231,17 @@ describe("Editorial Impact — QA", () => {
     // éjection du mot barré, frisson sur l'affirmation choc.
     expect(html).toMatch(/[BP]X\("#a-l1 em"\)/);
     expect(html).toContain('BX("#c-word")');
-    expect(html).toContain(`BX("#${base.scenes[4].id}-btn")`);
+    expect(html).toContain(`PX("#${base.scenes[4].id}-btn")`);
     expect(html).toContain('x: () => 420 * PD("#b-before")');
     expect(html).toContain('tl.fromTo("#bee-sq", { x: -7 }');
     expect(qaStoryboard(v, plan).filter((i) => i.level === "error")).toEqual([]);
+  });
+  it("signature : pas de logo sur l'écran de l'appel à l'action, la vidéo de fin est celle des Reels", () => {
+    const base = sb();
+    const html = renderEditorial(base, { assetBase: "/hf" });
+    expect(html).not.toMatch(/beerecos-logo|class="logo/);
+    expect(html).toContain(`src="/hf/brand/beerecos-video-fin.mp4"`);
+    expect(editorialAssets(base).some((f) => f.includes("logo"))).toBe(false);
   });
   it("mascotte variée : chaque Réel pioche ses gestes d'après son texte, toujours le même rendu pour le même texte", () => {
     const scene = (id: string, w: string) => ({ id, type: "statement", style: "plain", background: id === "x2" ? "light" : "dark", lines: [`PARLE DE ${w}`, "AVANT TOUT."], accentWords: [w], voice: "Une phrase dite par Audrey qui laisse le temps de voir le geste de la mascotte." });
