@@ -51,7 +51,9 @@ export function parseStudioAssetData<K extends StudioAssetKind>(kind: K, input: 
   if (kind === "editorial") {
     // Réel IA « Editorial Impact » : seule la structure déclarative est gardée (voix générées, durées mesurées et
     // cartes verrouillées sont propres à un rendu ou à l'écran d'édition).
-    const sb = StoryboardSchema.parse(input);
+    const parsedSb = StoryboardSchema.safeParse(input);
+    if (!parsedSb.success) throw new Error(parsedSb.error.issues.map((i) => `${i.path.join(".") || "structure"} : ${i.message}`).join(" "));
+    const sb = parsedSb.data;
     const source: Storyboard = { ...sb, scenes: sb.scenes.map((scene) => { const copy = { ...scene }; delete copy.locked; return copy; }) };
     delete source.assets;
     delete source.voiceDurations;
