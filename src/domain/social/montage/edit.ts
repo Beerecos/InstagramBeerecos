@@ -90,7 +90,37 @@ export const CaptionStyleSchema = z.strictObject({
   fontSize: z.number().int().min(32).max(120).optional(),
   /** Style des sous-titres (caption-modes.ts) : absent = « Highlight », le rendu d'avant. */
   mode: z.enum(CAPTION_MODES).optional(),
+  /** Mots d'accentuation (Studio, 2026-11-11) : couleur, fond ou taille ; absent = « couleur ». */
+  accent: z.enum(["couleur", "fond", "taille"]).optional(),
 });
+
+/**
+ * Zoom d'accentuation (Studio, 2026-11-11), en temps de la prise (il suit les coupes) : « accent » = rapprochement
+ * rapide puis retour fluide, « progressif » = rapprochement lent pendant une explication puis retour. Amplitude 3 à
+ * 20 %, ancrée sur le point focal (visage : 50 % / 32 % par défaut, faute de détection automatique du visage).
+ */
+export const ZoomSchema = z.strictObject({
+  fromMs: ms, toMs: ms,
+  type: z.enum(["accent", "progressif"]).default("accent"),
+  amplitude: z.number().min(1.03, "doit être à 103 % au moins").max(1.2, "doit être à 120 % au plus").default(1.08),
+  focusX: z.number().min(0).max(100).default(50),
+  focusY: z.number().min(0).max(100).default(32),
+});
+export type Zoom = z.infer<typeof ZoomSchema>;
+
+/**
+ * Mise en page de la vidéo (Studio, 2026-11-11), en temps de la prise : « carte » = la vidéo réduite dans une carte
+ * arrondie sous un titre ; « mosaique » = la carte vidéo rejoint une grille de miniatures (images de la bibliothèque).
+ */
+export const LayoutSchema = z.strictObject({
+  fromMs: ms, toMs: ms,
+  type: z.enum(["carte", "mosaique"]).default("carte"),
+  titre: z.string().trim().max(48).optional(),
+  texte: z.string().trim().max(90).optional(),
+  fond: z.enum(["blanc", "bleu", "noir"]).default("blanc"),
+  images: z.array(fileName(/\.(png|jpe?g|webp)$/i, "image (.png, .jpg, .webp)")).max(5, "5 images au plus").optional(),
+}).refine((l) => l.type !== "mosaique" || (l.images?.length ?? 0) >= 1, "La mosaïque demande au moins une image de la bibliothèque.");
+export type Layout = z.infer<typeof LayoutSchema>;
 
 /**
  * Rythme du montage (lot S6, Reels dynamiques) : zoom alterné à chaque coupe (plan large / plan serré, l'astuce des
@@ -180,6 +210,12 @@ export const EditSchema = z.strictObject({
       glisse: z.number().min(0).max(1).default(0.2),
     }).default({ clic: 0.22, saisie: 0.18, glisse: 0.2 }),
   }).optional(),
+  /** Mots d'accentuation des sous-titres : début de chaque mot dans la prise (ms, temps source, survit aux coupes). */
+  motsAccent: z.array(ms).max(80, "80 mots d'accentuation au plus").optional(),
+  /** Zooms d'accentuation et rapprochements progressifs (absent = aucun). */
+  zooms: z.array(ZoomSchema).max(40, "40 zooms au plus").optional(),
+  /** Vidéo en carte ou en mosaïque (absent = plein cadre). */
+  miseEnPage: z.array(LayoutSchema).max(20, "20 mises en page au plus").optional(),
   /** Optional official BeeRecos logo, kept separate from timed animation cards. */
   logo: z.strictObject({
     width: z.number().int().min(150).max(360).default(220),
@@ -344,7 +380,8 @@ export function toOutputMs(segments: Segment[], sourceMs: number): number {
 }
 
 /** Mot recalé sur le montage, avec le numéro du morceau qui le contient (pour changer de page à chaque raccord). */
-export type PlacedWord = CaptionWord & { segment?: number };
+/** Mot recalé sur le montage ; `sourceMs` = son début dans la prise (repère stable, il survit aux coupes). */
+export type PlacedWord = CaptionWord & { segment?: number; sourceMs?: number };
 
 /** Recale le transcript sur le montage : un mot est gardé si son milieu tombe dans un morceau. */
 export function remapCaptions(words: CaptionWord[], segments: Segment[]): PlacedWord[] {
@@ -355,7 +392,7 @@ export function remapCaptions(words: CaptionWord[], segments: Segment[]): Placed
     if (segment < 0) continue;
     const s = segments[segment];
     const clamp = (t: number) => s.atMs + Math.min(Math.max(t, s.fromMs), s.toMs) - s.fromMs;
-    out.push({ text: w.text, startMs: clamp(w.startMs), endMs: clamp(w.endMs), segment });
+    out.push({ text: w.text, startMs: clamp(w.startMs), endMs: clamp(w.endMs), segment, sourceMs: w.startMs });
   }
   return out;
 }

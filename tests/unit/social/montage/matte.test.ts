@@ -71,7 +71,7 @@ describe("détourage d'une prise", () => {
 describe("composition : titre sous le détourage", () => {
   it("empile prise, titre, détourage (visible seulement pendant le titre), sous-titres", () => {
     const html = buildEditComposition({ ...two, custom: [behind(5000)] }, [], { assetBase: "." });
-    expect(html).toContain('<div id="mw-1" class="matte-wrap"><video id="matte-1" class="take" src="./prise-2.matte.webm" data-start="4" data-duration="5" data-media-start="0" data-has-audio="false" muted playsinline data-track-index="4"></video></div>');
+    expect(html).toContain('<div id="mw-1" class="matte-wrap cadre"><video id="matte-1" class="take" src="./prise-2.matte.webm" data-start="4" data-duration="5" data-media-start="0" data-has-audio="false" muted playsinline data-track-index="4"></video></div>');
     expect(html).not.toContain('id="mw-0"');
     expect(html).toContain('class="clip anim-host behind"');
     expect(html).toContain('tl.set("#mw-1", { opacity: 1 }, 5);');
