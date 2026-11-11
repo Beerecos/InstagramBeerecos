@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import sample from "../fixtures/editorial-sample.json";
 import { beatTicks, snap, snapToBeat, snapToHalfBeat } from "@/domain/social/editorial/beat";
 import { bezier, EASE } from "@/domain/social/editorial/easings";
-import { StoryboardSchema, type Storyboard } from "@/domain/social/editorial/schema";
+import { StoryboardSchema, type EditorialScene, type Storyboard } from "@/domain/social/editorial/schema";
 import { baseGap, planStoryboard, SFX_PEAK_MS, voiceMs } from "@/domain/social/editorial/schedule";
 import { brandCase, fit, renderEditorial, textEm, INNER_W } from "@/domain/social/editorial/render";
 import { directFromScript, directorBrief, editorialLines, finalize, inventedNumbers, parseDirector } from "@/domain/social/editorial/director";
@@ -140,6 +140,34 @@ describe("Editorial Impact — AI Motion Director", () => {
     const r = parseDirector("désolé, pas de JSON", script);
     expect(r.source).toBe("rules");
     expect(r.storyboard.scenes.length).toBeGreaterThanOrEqual(2);
+  });
+  it("petits écarts de l'IA réparés au lieu de rejeter toute la structure", () => {
+    const ai = {
+      preset: "editorial-impact", intensity: 4, bpm: 120, sfx: "normal", mascot: true, title: "3 erreurs",
+      scenes: [
+        { id: "s1", type: "statement", background: "dark", layout: "left", style: "3d", lines: ["3 ERREURS", "QUI FONT FUIR", "TES CLIENTS"], accentWords: ["FUIR"], voice: "Trois erreurs font fuir tes clients sans que tu le voies.", animation: "deep" },
+        { id: "s2", type: "strike", background: "brand", layout: "right", before: "RÉPONDRE DEMAIN", after: "RÉPONDRE TOUT DE SUITE MAINTENANT", micro: "Le délai tue la vente.", voice: "Erreur un : répondre demain. Un prospect qui attend part ailleurs." },
+        { id: "s3", type: "impact", background: "dark", word: "LE SUIVI.", sub: "Personne ne relance.", style: "3d", accentWords: ["SUIVI"], voice: "Erreur deux : oublier le suivi après le premier rendez-vous." },
+        { id: "s4", type: "statement", background: "light", lines: ["PARLER DE TOI", "PLUTÔT QUE", "DE LUI"], accentWords: ["LUI"], style: "cartouche", voice: "Erreur trois : parler de toi plutôt que de son problème." },
+        { id: "s5", type: "video", background: "dark", voice: "scène inconnue" },
+        { id: "s6", type: "cta", background: "dark", lines: ["ALORS,", "ON SE VOIT", "AU CLUB ?"], sub: "Chez BeeRecos, des chefs d'entreprise se recommandent chaque semaine des clients qualifiés.", button: "DÉCOUVRIR UN CLUB", brand: true, voice: "Chez BeeRecos, on se recommande des clients chaque semaine. Viens découvrir un club." },
+      ],
+    };
+    const r = parseDirector(JSON.stringify(ai), "3 erreurs qui font perdre des clients", { mascot: true });
+    expect(r.source).toBe("ai");
+    expect(r.storyboard.scenes.map((s) => s.type)).toEqual(["statement", "strike", "impact", "statement", "cta"]);
+    expect(r.storyboard.scenes.map((s) => s.id)).toEqual(["s1", "s2", "s3", "s4", "s5"]);
+    const strike = r.storyboard.scenes[1] as Extract<EditorialScene, { type: "strike" }>;
+    expect(strike.layout).toBe("left");
+    expect(strike.after.length).toBeLessThanOrEqual(40);
+    expect(strike.after.endsWith(" ")).toBe(false);
+    const cta = r.storyboard.scenes[4] as Extract<EditorialScene, { type: "cta" }>;
+    expect(cta.sub!.length).toBeLessThanOrEqual(60);
+    expect(r.storyboard.mascot).toBe(true);
+  });
+  it("réponse sans appel à l'action ou trop courte → structure de secours", () => {
+    const short = { preset: "editorial-impact", scenes: [{ id: "a", type: "impact", background: "dark", word: "STOP." }, { id: "b", type: "impact", background: "dark", word: "GO." }] };
+    expect(parseDirector(JSON.stringify(short), "idée").source).toBe("rules");
   });
 });
 

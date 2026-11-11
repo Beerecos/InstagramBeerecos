@@ -169,11 +169,15 @@ export default function EditorialStudio() {
     // 2. Structure Hook → CTA par l'IA (base de connaissances BeeRecos + faits trouvés).
     setBusyLabel("L'IA écrit ta structure (jusqu'à une minute)…");
     try {
-      const raw = await generateEditorialText({ channel: "reel", workspaceId: null, brief: directorBrief(idea, { ...opts, facts: found }) });
-      const r = parseDirector(raw, source, opts);
+      // Réponse inutilisable : une seconde tentative avant la structure de secours.
+      let r = parseDirector(await generateEditorialText({ channel: "reel", workspaceId: null, brief: directorBrief(idea, { ...opts, facts: found }) }), source, opts);
+      if (r.source !== "ai") {
+        setBusyLabel("L'IA retravaille ta structure…");
+        r = parseDirector(await generateEditorialText({ channel: "reel", workspaceId: null, brief: directorBrief(idea, { ...opts, facts: found }) }), source, opts);
+      }
       // Réponse illisible : la structure de secours part de l'idée seule (jamais des faits bruts).
       adopt(r.source === "ai" ? r.storyboard : directFromScript(idea, opts));
-      setNote(searchNote + (r.source === "ai" ? "Structure proposée par l'IA : modifie une carte ou valide." : "Réponse de l'IA inutilisable : structure construite à partir de ton texte. Modifie-la ou relance."));
+      setNote(searchNote + (r.source === "ai" ? "Structure proposée par l'IA : modifie une carte ou valide." : "Réponse de l'IA inutilisable deux fois : structure de secours (trop courte pour 30 s). Clique sur « Proposer une autre structure »."));
     } catch (e) {
       adopt(directFromScript(idea, opts));
       setNote(`${searchNote}IA indisponible (${e instanceof Error ? e.message : "erreur"}) : structure construite à partir de ton texte.`);

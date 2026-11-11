@@ -1,4 +1,4 @@
-import { StoryboardSchema, type EditorialScene, type Storyboard } from "./schema";
+import { CtaScene, HookStatScene, HumanScene, ImpactScene, PillsScene, StatementScene, StoryboardSchema, StrikeScene, TestimonialsScene, type EditorialScene, type Storyboard } from "./schema";
 import { brandCase } from "./render";
 
 /**
@@ -125,10 +125,64 @@ export function parseDirector(raw: string, script: string, opts: { intensity?: n
   try {
     const json = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "");
     // Chiffre à l'écran : seulement s'il est dans l'idée ou le texte fourni (finalize) ; voix : voir inventedNumbers.
-    return { storyboard: finalize({ ...json, intensity: opts.intensity ?? json.intensity ?? 4, mascot: opts.mascot ?? false }, script), source: "ai" };
+    const storyboard = finalize({ ...repairDirector(json), intensity: opts.intensity ?? 4, mascot: opts.mascot ?? false }, script);
+    if (storyboard.scenes.length < 3 || storyboard.scenes[storyboard.scenes.length - 1].type !== "cta") throw new Error("structure incomplète");
+    return { storyboard, source: "ai" };
   } catch {
     return { storyboard: directFromScript(script, opts), source: "rules" };
   }
+}
+
+const TYPE_SCHEMA = { "hook-stat": HookStatScene, statement: StatementScene, impact: ImpactScene, strike: StrikeScene, pills: PillsScene, human: HumanScene, testimonials: TestimonialsScene, cta: CtaScene } as const;
+type Bag = Record<string, unknown>;
+const at = (o: unknown, path: PropertyKey[]): unknown => path.reduce<unknown>((x, k) => (x && typeof x === "object" ? (x as Bag)[k as string] : undefined), o);
+/** Texte trop long : coupé entre deux mots. */
+const cut = (v: string, max: number) => { const t = v.slice(0, max); const w = t.replace(/\s+\S*$/, "").trim(); return v.length > max && w ? w : t.trim(); };
+
+/**
+ * Une scène de l'IA avec un petit écart (champ en trop, texte un peu long, mise en page inconnue) est réparée au lieu
+ * de faire rejeter toute la réponse : champ inconnu retiré, texte coupé entre deux mots, liste raccourcie, réglage
+ * invalide remis par défaut. Une scène irréparable (type inconnu, champ obligatoire absent) est retirée.
+ */
+export function repairScene(raw: unknown): EditorialScene | null {
+  if (!raw || typeof raw !== "object") return null;
+  const schema = TYPE_SCHEMA[(raw as Bag).type as keyof typeof TYPE_SCHEMA];
+  if (!schema) return null;
+  const s = structuredClone(raw) as Bag;
+  for (let n = 0; n < 10; n++) {
+    const r = schema.safeParse(s);
+    if (r.success) return r.data as EditorialScene;
+    let fixed = false;
+    for (const is of r.error.issues) {
+      const key = is.path[is.path.length - 1] as string | number | undefined;
+      const parent = (is.path.length ? at(s, is.path.slice(0, -1)) : s) as Bag | undefined;
+      if (is.code === "unrecognized_keys") {
+        const target = (at(s, is.path) ?? s) as Bag;
+        for (const k of is.keys) delete target[k];
+        fixed = true;
+      } else if (is.code === "too_big" && parent && key !== undefined) {
+        const v = parent[key as string];
+        if (typeof v === "string") { parent[key as string] = cut(v, Number(is.maximum)); fixed = true; }
+        else if (Array.isArray(v)) { parent[key as string] = v.slice(0, Number(is.maximum)); fixed = true; }
+      } else if ((is.code === "invalid_value" || is.code === "invalid_type") && parent && typeof key === "string" && key in parent) {
+        if (key === "background") parent[key] = "dark";
+        else delete parent[key];
+        fixed = true;
+      }
+    }
+    if (!fixed) return null;
+  }
+  return null;
+}
+
+/** Réponse de l'IA → objet storyboard réparé (scènes réparées une à une, identifiants uniques). */
+export function repairDirector(json: unknown): Bag {
+  const j = (json && typeof json === "object" ? json : {}) as Bag;
+  const scenes = (Array.isArray(j.scenes) ? j.scenes : []).map(repairScene).filter((x): x is EditorialScene => !!x).slice(0, 10);
+  const out: Bag = { preset: "editorial-impact", scenes: scenes.map((sc, i) => ({ ...sc, id: `s${i + 1}` })) };
+  if (typeof j.bpm === "number" && j.bpm >= 80 && j.bpm <= 160) out.bpm = j.bpm;
+  if (["off", "subtle", "normal", "impact"].includes(j.sfx as string)) out.sfx = j.sfx;
+  return out;
 }
 
 /** Chiffres de la voix off absents du texte fourni : affichés à corriger (aucun chiffre inventé ne part en vidéo). */
