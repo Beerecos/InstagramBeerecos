@@ -7,6 +7,7 @@ import { baseGap, planStoryboard, SFX_PEAK_MS, voiceMs } from "@/domain/social/e
 import { brandCase, editorialAssets, fit, renderEditorial, textEm, INNER_W } from "@/domain/social/editorial/render";
 import { directFromScript, directorBrief, editorialLines, finalize, inventedNumbers, parseDirector } from "@/domain/social/editorial/director";
 import { qaStoryboard } from "@/domain/social/editorial/qa";
+import { END_VIDEO } from "@/domain/social/montage/brand";
 
 const sb = () => StoryboardSchema.parse(sample);
 
@@ -236,14 +237,12 @@ describe("Editorial Impact — QA", () => {
     expect(html).toContain('tl.fromTo("#bee-sq", { x: -7 }');
     expect(qaStoryboard(v, plan).filter((i) => i.level === "error")).toEqual([]);
   });
-  it("logo officiel sur l'écran de l'appel à l'action (« Bee » noir, « Recos » bleu), sur carte blanche hors fond clair", () => {
+  it("pas de logo sur l'écran de l'appel à l'action : le logo n'apparaît que dans la vidéo de fin officielle", () => {
     const base = sb();
-    const dark = renderEditorial(base, { assetBase: "/hf" });
-    expect(dark).toContain('<div id="' + base.scenes[4].id + '-logo" class="logo"><img src="/hf/brand/beerecos-logo-transparent.png" alt="BeeRecos" /></div>');
-    expect(dark).not.toMatch(/beerecos-logo-(white|blue)\.svg/);
-    const light = renderEditorial({ ...base, scenes: base.scenes.map((x, i) => (i === 4 ? { ...x, background: "light" } : x)) } as Storyboard, { assetBase: "/hf" });
-    expect(light).toContain('class="logo bare"');
-    expect(editorialAssets(base)).toContain("brand/beerecos-logo-transparent.png");
+    const html = renderEditorial(base, { assetBase: "/hf" });
+    expect(html).not.toMatch(/beerecos-logo|class="logo/);
+    expect(html).toContain(END_VIDEO.file);
+    expect(editorialAssets(base).some((f) => f.includes("logo"))).toBe(false);
   });
   it("mascotte variée : chaque Réel pioche ses gestes d'après son texte, toujours le même rendu pour le même texte", () => {
     const scene = (id: string, w: string) => ({ id, type: "statement", style: "plain", background: id === "x2" ? "light" : "dark", lines: [`PARLE DE ${w}`, "AVANT TOUT."], accentWords: [w], voice: "Une phrase dite par Audrey qui laisse le temps de voir le geste de la mascotte." });
