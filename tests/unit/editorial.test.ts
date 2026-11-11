@@ -231,19 +231,20 @@ describe("Editorial Impact — QA", () => {
     // éjection du mot barré, frisson sur l'affirmation choc.
     expect(html).toMatch(/[BP]X\("#a-l1 em"\)/);
     expect(html).toContain('BX("#c-word")');
-    expect(html).toContain(`BX("#${base.scenes[4].id}-btn")`);
+    expect(html).toContain(`PX("#${base.scenes[4].id}-btn")`);
     expect(html).toContain('x: () => 420 * PD("#b-before")');
     expect(html).toContain('tl.fromTo("#bee-sq", { x: -7 }');
     expect(qaStoryboard(v, plan).filter((i) => i.level === "error")).toEqual([]);
   });
-  it("logo officiel sur l'écran de l'appel à l'action (« Bee » noir, « Recos » bleu), sur carte blanche hors fond clair", () => {
+  it("logo officiel sur l'écran de l'appel à l'action : rond blanc sur fond sombre ou bleu, horizontal sur fond clair", () => {
     const base = sb();
     const dark = renderEditorial(base, { assetBase: "/hf" });
-    expect(dark).toContain('<div id="' + base.scenes[4].id + '-logo" class="logo"><img src="/hf/brand/beerecos-logo-transparent.png" alt="BeeRecos" /></div>');
+    expect(dark).toContain(`<img id="${base.scenes[4].id}-logo" class="logo logo-rond" src="/hf/brand/beerecos-logo-rond.png" alt="BeeRecos" />`);
     expect(dark).not.toMatch(/beerecos-logo-(white|blue)\.svg/);
-    const light = renderEditorial({ ...base, scenes: base.scenes.map((x, i) => (i === 4 ? { ...x, background: "light" } : x)) } as Storyboard, { assetBase: "/hf" });
-    expect(light).toContain('class="logo bare"');
-    expect(editorialAssets(base)).toContain("brand/beerecos-logo-transparent.png");
+    const lightSb = { ...base, scenes: base.scenes.map((x, i) => (i === 4 ? { ...x, background: "light" } : x)) } as Storyboard;
+    expect(renderEditorial(lightSb, { assetBase: "/hf" })).toContain('src="/hf/brand/beerecos-logo-horizontal-officiel.png"');
+    expect(editorialAssets(base)).toContain("brand/beerecos-logo-rond.png");
+    expect(editorialAssets(lightSb)).toContain("brand/beerecos-logo-horizontal-officiel.png");
   });
   it("mascotte variée : chaque Réel pioche ses gestes d'après son texte, toujours le même rendu pour le même texte", () => {
     const scene = (id: string, w: string) => ({ id, type: "statement", style: "plain", background: id === "x2" ? "light" : "dark", lines: [`PARLE DE ${w}`, "AVANT TOUT."], accentWords: [w], voice: "Une phrase dite par Audrey qui laisse le temps de voir le geste de la mascotte." });
