@@ -185,7 +185,7 @@ const CSS = `
       .content.human, .content.cta { gap: 10px; }
       .mask { overflow: hidden; padding: 0.04em 0.02em 0.06em; margin: -0.04em 0; max-width: 100%; }
       .in { display: inline-block; font-weight: 800; line-height: 0.96; letter-spacing: -0.03em; white-space: nowrap; will-change: transform; visibility: hidden; }
-      .in em { font-style: normal; color: var(--accent); }
+      .in em { font-style: normal; color: var(--accent); display: inline-block; }
       @property --n { syntax: "<integer>"; inherits: true; initial-value: 0; }
       @property --i { syntax: "<integer>"; inherits: true; initial-value: 0; }
       @property --d { syntax: "<integer>"; inherits: true; initial-value: 0; }
@@ -278,30 +278,59 @@ export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan 
       `tl.set("#band-${k}", { autoAlpha: 0 }, ${s(tr.atMs + tr.durMs / 2)});`,
     );
   });
-  // Mascotte officielle (option du Studio IA) : personnage central, toujours en mouvement. Elle entre en sautant,
-  // respire (léger rebond continu), saute d'une place à l'autre à chaque scène (arc + écrasement à l'atterrissage),
-  // réagit aux moments forts (bond + frétillement), saute sur le bouton de l'appel à l'action (sans bras ni jambes : tout passe par le corps), puis sort avant la vidéo de fin.
+  // Mascotte officielle (option du Studio IA) : personnage central, toujours en mouvement, sans bras ni jambes (tout
+  // passe par le corps). Entrée (jaillit du bas ou tombe du ciel), respiration continue, changement de place à chaque
+  // scène (salto, chute du ciel, saut, coucou depuis le bord), réactions sur le mot fort (se pose dessus, trampoline,
+  // pousse le mot, cache-cache derrière le mot, éjecte le mot barré), frisson sur une affirmation choc, trampoline sur
+  // le bouton de l'appel à l'action, puis sortie avant la vidéo de fin.
   // Calques : #bee (place, x) > #bee-hop (sauts, y) > #bee-bob (respiration) > #bee-sq (écrasement, réactions) > img.
   if (sb.mascot) {
     const T = (ms: number) => s(ms);
     clips.push(`      <div id="bee" class="bee" style="opacity:0"><div id="bee-hop"><div id="bee-bob"><div id="bee-sq"><img src="${base}/${MASCOT.file}" alt="" width="${MASCOT.w}" height="${MASCOT.h}" /></div></div></div></div>`);
-    tweens.push(
-      `tl.set("#bee", { autoAlpha: 0, x: ${MASCOT_X[0]} }, 0);`,
-      // Entrée : jaillit du bas avec un rebond.
-      `tl.fromTo("#bee-hop", { y: 420 }, { y: 0, duration: 0.55, ease: "back.out(2.2)", immediateRender: false }, 0.2);`,
-      `tl.to("#bee", { autoAlpha: 1, duration: 0.15 }, 0.2);`,
-      `tl.fromTo("#bee-sq", { scaleX: 0.8, scaleY: 1.25 }, { scaleX: 1, scaleY: 1, duration: 0.6, ease: "elastic.out(1, 0.45)", immediateRender: false }, 0.6);`,
-    );
-    // Respiration continue (nombre de répétitions fini : la timeline garde une durée exacte).
-    const bobs = Math.max(1, Math.floor((total - 1200) / 550) | 1);
-    tweens.push(`tl.fromTo("#bee-bob", { y: 0, rotation: -2 }, { y: -16, rotation: 2, duration: 0.55, ease: "sine.inOut", yoyo: true, repeat: ${bobs}, immediateRender: false }, 0.8);`);
-    // Place de repos par scène (gauche ↔ centre) ; la scène du milieu fait « coucou » depuis le bord droit.
-    const spot = (i: number) => MASCOT_X[i % 2];
-    const peekAt = plan.transitions.length >= 3 ? Math.floor(plan.transitions.length / 2) : -1;
+    // Variété : chaque Réel pioche son entrée, ses déplacements et ses réactions d'après son texte (même texte = même
+    // chorégraphie, donc rendu reproductible ; texte différent = Réel différent).
+    let seed = 2166136261;
+    for (const c of JSON.stringify(sb.scenes.map((sc) => ({ ...sc, voice: undefined, locked: undefined })))) seed = Math.imul(seed ^ c.charCodeAt(0), 16777619) >>> 0;
+    seed = Math.imul(seed ^ (seed >>> 16), 0x45d9f3b) >>> 0;
+    seed = (seed ^ (seed >>> 16)) >>> 0;
+    const SKY = -(MASCOT_TOP + MASCOT.h + 80);
     const squash = (at: number) => [
       `tl.to("#bee-sq", { scaleX: 1.2, scaleY: 0.8, duration: 0.07, ease: "power2.out" }, ${T(at)});`,
       `tl.to("#bee-sq", { scaleX: 1, scaleY: 1, duration: 0.45, ease: "elastic.out(1, 0.4)" }, ${T(at + 70)});`,
     ];
+    // Frisson : tout le corps tremble (affirmation choc, mot-impact, atterrissage du ciel).
+    const shiver = (at: number, n = 7) => [
+      `tl.fromTo("#bee-sq", { x: -7 }, { x: 7, duration: 0.04, ease: "none", yoyo: true, repeat: ${n}, immediateRender: false }, ${T(at)});`,
+      `tl.set("#bee-sq", { x: 0 }, ${T(at + (n + 1) * 40)});`,
+    ];
+    // Écrasement en gelée à l'arrivée d'une chute.
+    const splat = (at: number) => [
+      `tl.to("#bee-sq", { scaleX: 1.4, scaleY: 0.6, duration: 0.06, ease: "power2.out" }, ${T(at)});`,
+      `tl.to("#bee-sq", { scaleX: 1, scaleY: 1, duration: 0.7, ease: "elastic.out(1.1, 0.3)" }, ${T(at + 60)});`,
+      ...shiver(at + 120, 5),
+    ];
+    tweens.push(`tl.set("#bee", { autoAlpha: 0, x: ${MASCOT_X[0]} }, 0);`, `tl.to("#bee", { autoAlpha: 1, duration: 0.15 }, 0.2);`);
+    if (seed % 2) {
+      // Entrée : chute du ciel, écrasement en gelée.
+      tweens.push(`tl.fromTo("#bee-hop", { y: ${SKY} }, { y: 0, duration: 0.45, ease: "power2.in", immediateRender: false }, 0.2);`, ...splat(650));
+    } else {
+      // Entrée : jaillit du bas avec un rebond.
+      tweens.push(
+        `tl.fromTo("#bee-hop", { y: 420 }, { y: 0, duration: 0.55, ease: "back.out(2.2)", immediateRender: false }, 0.2);`,
+        `tl.fromTo("#bee-sq", { scaleX: 0.8, scaleY: 1.25 }, { scaleX: 1, scaleY: 1, duration: 0.6, ease: "elastic.out(1, 0.45)", immediateRender: false }, 0.6);`,
+      );
+    }
+    // Respiration continue (nombre de répétitions fini : la timeline garde une durée exacte).
+    const bobs = Math.max(1, Math.floor((total - 1200) / 550) | 1);
+    tweens.push(`tl.fromTo("#bee-bob", { y: 0, rotation: -2 }, { y: -16, rotation: 2, duration: 0.55, ease: "sine.inOut", yoyo: true, repeat: ${bobs}, immediateRender: false }, 0.8);`);
+    // Place de repos par scène (gauche ↔ centre) ; la scène du milieu fait « coucou » depuis le bord droit ; les autres
+    // changements de place enchaînent salto, chute du ciel et saut simple, à tour de rôle.
+    const spot = (i: number) => MASCOT_X[i % 2];
+    const peekAt = plan.transitions.length >= 3 ? Math.floor(plan.transitions.length / 2) : -1;
+    const MOVES = ["salto", "sky", "hop"] as const;
+    let moves = 0;
+    // Fin du déplacement de chaque transition : une réaction de la scène suivante ne commence jamais avant.
+    const freeAt: number[] = [1300]; // l'entrée se termine vers 1,3 s
     plan.transitions.forEach((tr, k) => {
       const t0 = Math.max(900, tr.atMs - 250);
       const x = spot(k + 1);
@@ -319,71 +348,163 @@ export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan 
           `tl.to("#bee-hop", { y: 0, duration: 0.25, ease: "power2.in" }, ${T(t0 + 1400)});`,
           ...squash(t0 + 1650),
         );
+        freeAt[k + 1] = t0 + 2150;
+        return;
+      }
+      const move = MOVES[(seed + moves++) % MOVES.length];
+      if (move === "sky") {
+        // Chute du ciel : elle s'envole hors champ pendant le balayage et retombe à sa nouvelle place.
+        tweens.push(
+          `tl.to("#bee-sq", { scaleX: 0.85, scaleY: 1.2, duration: 0.1, ease: "power2.out" }, ${T(t0)});`,
+          `tl.to("#bee-hop", { y: ${SKY}, duration: 0.3, ease: "power2.in" }, ${T(t0 + 60)});`,
+          `tl.set("#bee", { x: ${x} }, ${T(t0 + 380)});`,
+          `tl.to("#bee-hop", { y: 0, duration: 0.38, ease: "power2.in" }, ${T(t0 + 420)});`,
+          ...splat(t0 + 800),
+        );
+        freeAt[k + 1] = t0 + 1500;
         return;
       }
       tweens.push(
         `tl.to("#bee-sq", { scaleX: 1.15, scaleY: 0.82, duration: 0.09, ease: "power2.out" }, ${T(t0)});`,
         `tl.to("#bee-sq", { scaleX: 0.9, scaleY: 1.12, duration: 0.12, ease: "power2.out" }, ${T(t0 + 90)});`,
         `tl.to("#bee", { x: ${x}, duration: 0.5, ease: "power1.inOut" }, ${T(t0 + 90)});`,
-        `tl.to("#bee-hop", { y: -230, rotation: ${k % 2 ? -14 : 14}, duration: 0.25, ease: "power2.out" }, ${T(t0 + 90)});`,
+        `tl.to("#bee-hop", { y: ${move === "salto" ? -300 : -230}, rotation: ${k % 2 ? -14 : 14}, duration: 0.25, ease: "power2.out" }, ${T(t0 + 90)});`,
         `tl.to("#bee-hop", { y: 0, rotation: 0, duration: 0.25, ease: "power2.in" }, ${T(t0 + 340)});`,
+        // Salto : un tour complet pendant le vol (rotation remise à zéro à l'atterrissage).
+        ...(move === "salto" ? [`tl.fromTo("#bee-sq", { rotation: 0 }, { rotation: ${k % 2 ? -360 : 360}, duration: 0.46, ease: "power1.inOut", immediateRender: false }, ${T(t0 + 110)});`, `tl.set("#bee-sq", { rotation: 0 }, ${T(t0 + 580)});`] : []),
         ...squash(t0 + 590),
       );
+      freeAt[k + 1] = t0 + 1100;
     });
     // Sur fond bleu, un fin contour blanc la détache (mascotte bleue).
     for (const p of plan.scenes) tweens.push(`tl.set("#bee img", { filter: "${p.scene.background === "brand" ? "drop-shadow(0 0 4px #FFFFFF) drop-shadow(0 0 2px #FFFFFF) drop-shadow(0 18px 18px rgba(0,0,0,0.28))" : "drop-shadow(0 18px 18px rgba(0,0,0,0.28))"}" }, ${T(p.startMs + (p.index ? 180 : 0))});`);
-    // Saut SUR un élément (mot fort, chiffre, bouton) : position mesurée sur l'élément réel au moment du saut.
-    // Le mot s'écrase sous son poids puis rebondit ; elle revient à sa place avant le changement de scène.
-    const jumpOn = (el: string, land: number, back: number, home: number, press = false) => {
-      // Elle rapetisse pendant le saut (moitié de sa taille) et se pose AU-DESSUS du mot, la base au ras des lettres :
-      // le mot reste lisible ; elle ne s'attarde pas (0,7 s) puis revient à sa place, à sa taille.
-      const sel = JSON.stringify(`#${el}`);
-      tweens.push(
-        `tl.to("#bee-sq", { scaleX: 1.15, scaleY: 0.82, duration: 0.08, ease: "power2.out" }, ${T(land - 330)});`,
-        `tl.to("#bee-sq", { scaleX: 0.9, scaleY: 1.12, duration: 0.1, ease: "power2.out" }, ${T(land - 250)});`,
-        `tl.to("#bee", { x: () => BX(${sel}), duration: 0.42, ease: "power1.inOut" }, ${T(land - 250)});`,
-        // Réduction sur un calque intérieur (jamais sur #bee : elle écraserait aussi la hauteur du saut).
-        `tl.to("#bee-bob", { scale: ${PERCH}, transformOrigin: "50% 100%", duration: 0.42, ease: "power1.inOut" }, ${T(land - 250)});`,
-        `tl.to("#bee-hop", { y: () => BY(${sel}) - 170, rotation: 10, duration: 0.24, ease: "power2.out" }, ${T(land - 250)});`,
-        `tl.to("#bee-hop", { y: () => BY(${sel}), rotation: 0, duration: 0.18, ease: "power2.in" }, ${T(land - 10)});`,
-        ...squash(land + 170),
-        `tl.to(${sel}, { scaleY: ${press ? 0.86 : 0.9}, scaleX: 1.04, transformOrigin: "50% 100%", duration: 0.07, ease: "power2.out" }, ${T(land + 170)});`,
-        `tl.to(${sel}, { scaleY: 1, scaleX: 1, duration: 0.5, ease: "elastic.out(1, 0.35)" }, ${T(land + 240)});`,
-      );
-      if (back <= land + 400) return;
-      tweens.push(
-        `tl.to("#bee", { x: ${home}, duration: 0.45, ease: "power1.inOut" }, ${T(back)});`,
-        `tl.to("#bee-bob", { scale: 1, duration: 0.45, ease: "power1.inOut" }, ${T(back)});`,
-        `tl.to("#bee-hop", { y: () => BY(${sel}) - 120, duration: 0.2, ease: "power2.out" }, ${T(back)});`,
-        `tl.to("#bee-hop", { y: 0, duration: 0.25, ease: "power2.in" }, ${T(back + 200)});`,
-        ...squash(back + 450),
-      );
+
+    // Réactions sur un élément (mot fort, chiffre, bouton) : position mesurée sur l'élément réel au moment du geste.
+    // Elle rapetisse (PERCH) pour ne jamais cacher le mot, puis revient à sa place et à sa taille avant la scène suivante.
+    const sel = (el: string) => JSON.stringify(`#${el}`);
+    const press = (q: string, at: number, deep = false) => [
+      `tl.to(${q}, { scaleY: ${deep ? 0.86 : 0.9}, scaleX: 1.04, transformOrigin: "50% 100%", duration: 0.07, ease: "power2.out" }, ${T(at)});`,
+      `tl.to(${q}, { scaleY: 1, scaleX: 1, duration: 0.5, ease: "elastic.out(1, 0.35)" }, ${T(at + 70)});`,
+    ];
+    // Élan puis saut jusqu'à la hauteur y (expression) au-dessus de la place x (expression), atterrissage à `land`.
+    const hopTo = (x: string, y: string, land: number) => [
+      `tl.to("#bee-sq", { scaleX: 1.15, scaleY: 0.82, duration: 0.08, ease: "power2.out" }, ${T(land - 330)});`,
+      `tl.to("#bee-sq", { scaleX: 0.9, scaleY: 1.12, duration: 0.1, ease: "power2.out" }, ${T(land - 250)});`,
+      `tl.to("#bee", { x: ${x}, duration: 0.42, ease: "power1.inOut" }, ${T(land - 250)});`,
+      // Réduction sur un calque intérieur (jamais sur #bee : elle écraserait aussi la hauteur du saut).
+      `tl.to("#bee-bob", { scale: ${PERCH}, transformOrigin: "50% 100%", duration: 0.42, ease: "power1.inOut" }, ${T(land - 250)});`,
+      `tl.to("#bee-hop", { y: () => ${y} - 170, rotation: 10, duration: 0.24, ease: "power2.out" }, ${T(land - 250)});`,
+      `tl.to("#bee-hop", { y: () => ${y}, rotation: 0, duration: 0.18, ease: "power2.in" }, ${T(land - 10)});`,
+      ...squash(land + 170),
+    ];
+    const goHome = (y: string, back: number, home: number) => [
+      `tl.to("#bee", { x: ${home}, duration: 0.45, ease: "power1.inOut" }, ${T(back)});`,
+      // Elle reprend sa taille en redescendant (jamais en grand au-dessus du texte qu'elle survole).
+      `tl.to("#bee-bob", { scale: 1, duration: 0.3, ease: "power1.out" }, ${T(back + 200)});`,
+      `tl.to("#bee-hop", { y: () => ${y} - 120, rotation: 0, duration: 0.2, ease: "power2.out" }, ${T(back)});`,
+      `tl.to("#bee-hop", { y: 0, duration: 0.25, ease: "power2.in" }, ${T(back + 200)});`,
+      ...squash(back + 450),
+    ];
+    type React = "perch" | "trampoline" | "push" | "hide" | "eject";
+    // Temps nécessaire à chaque geste avant de pouvoir rentrer (ms après l'atterrissage).
+    const NEED: Record<React, number> = { perch: 600, trampoline: 1300, push: 1300, eject: 1300, hide: 1900 };
+    const react = (kind: React, el: string, at: number, next: number, home: number, deep = false, stay = false): boolean => {
+      const land = Math.max(at, (freeAt[scene] ?? 0) + 340);
+      if (!stay && land + NEED[kind] >= next) return false;
+      const q = sel(el), Y = `BY(${q})`, back = Math.min(land + NEED[kind] + 350, next - 800);
+      const ret = !stay && back > land + NEED[kind] - 200;
+      if (kind === "perch" || kind === "trampoline") {
+        tweens.push(...hopTo(`() => BX(${q})`, Y, land), ...press(q, land + 170, deep));
+        // Trampoline : deux rebonds de plus sur le mot, qui s'écrase à chaque fois.
+        if (kind === "trampoline") for (const r of [520, 900]) tweens.push(
+          `tl.to("#bee-hop", { y: () => ${Y} - 150, duration: 0.17, ease: "power2.out" }, ${T(land + r - 170)});`,
+          `tl.to("#bee-hop", { y: () => ${Y}, duration: 0.15, ease: "power2.in" }, ${T(land + r)});`,
+          ...squash(land + r + 150), ...press(q, land + r + 150, deep),
+        );
+      } else if (kind === "push" || kind === "eject") {
+        // Pousse le mot : elle se pose à côté du mot, prend son élan (penchée en arrière) puis fonce dedans avec le corps.
+        // « eject » (barré puis remplacé) : l'ancien mot est éjecté hors de l'écran ; sinon il glisse puis revient.
+        const Yb = `BB(${q})`;
+        tweens.push(
+          ...hopTo(`() => PX(${q})`, Yb, land),
+          `tl.to("#bee-hop", { rotation: () => -14 * PD(${q}), duration: 0.18, ease: "power2.out" }, ${T(land + 420)});`,
+          `tl.to("#bee", { x: () => PX(${q}) + 46 * PD(${q}), duration: 0.12, ease: "power3.in" }, ${T(land + 620)});`,
+          `tl.to("#bee-hop", { rotation: () => 16 * PD(${q}), duration: 0.12, ease: "power3.in" }, ${T(land + 620)});`,
+          ...squash(land + 740),
+          ...(kind === "eject"
+            ? [`tl.to(${q}, { x: () => 420 * PD(${q}), y: -60, rotation: () => 32 * PD(${q}), autoAlpha: 0, duration: 0.55, ease: "power2.in" }, ${T(land + 730)});`]
+            // Sinon le mot s'écrase de côté sous le choc (sur place : il ne sort jamais de sa ligne) puis rebondit.
+            : [`tl.to(${q}, { scaleX: 0.84, skewX: () => -10 * PD(${q}), transformOrigin: () => (PD(${q}) > 0 ? "100% 100%" : "0% 100%"), duration: 0.1, ease: "power2.out" }, ${T(land + 730)});`,
+               `tl.to(${q}, { scaleX: 1, skewX: 0, duration: 0.7, ease: "elastic.out(1, 0.35)" }, ${T(land + 830)});`]),
+          `tl.to("#bee-hop", { rotation: 0, duration: 0.3, ease: "power2.out" }, ${T(land + 860)});`,
+        );
+        if (ret) tweens.push(...goHome(Yb, back, home));
+        return true;
+      } else {
+        // Cache-cache : elle disparaît, se glisse DERRIÈRE le mot (son corps est coupé au ras du haut des lettres),
+        // passe la tête en espionnant, puis bondit dessus.
+        const hp = Math.round(MASCOT.h * PERCH);
+        tweens.push(
+          `tl.to("#bee-hop", { y: 60, duration: 0.15, ease: "power2.in" }, ${T(land - 320)});`,
+          `tl.to("#bee", { autoAlpha: 0, duration: 0.12 }, ${T(land - 300)});`,
+          `tl.set("#bee", { x: () => BX(${q}) }, ${T(land - 160)});`,
+          `tl.set("#bee-bob", { scale: ${PERCH}, transformOrigin: "50% 100%" }, ${T(land - 160)});`,
+          `tl.set("#bee-hop", { y: () => ${Y} + ${hp} }, ${T(land - 160)});`,
+          `tl.set("#bee-sq", { clipPath: "inset(0% 0% 100% 0%)" }, ${T(land - 160)});`,
+          `tl.set("#bee", { autoAlpha: 1 }, ${T(land - 140)});`,
+          `tl.to("#bee-hop", { y: () => ${Y} + ${Math.round(hp * 0.4)}, duration: 0.35, ease: "power2.out" }, ${T(land)});`,
+          `tl.to("#bee-sq", { clipPath: "inset(0% 0% 40% 0%)", duration: 0.35, ease: "power2.out" }, ${T(land)});`,
+          `tl.to("#bee-sq", { x: -14, duration: 0.16, ease: "sine.inOut", yoyo: true, repeat: 3 }, ${T(land + 400)});`,
+          `tl.set("#bee-sq", { x: 0 }, ${T(land + 1040)});`,
+          `tl.to("#bee-hop", { y: () => ${Y}, duration: 0.12, ease: "power2.out" }, ${T(land + 1100)});`,
+          `tl.to("#bee-sq", { clipPath: "inset(0% 0% 0% 0%)", duration: 0.12, ease: "power2.out" }, ${T(land + 1100)});`,
+          `tl.to("#bee-hop", { y: () => ${Y} - 150, duration: 0.18, ease: "power2.out" }, ${T(land + 1220)});`,
+          `tl.to("#bee-hop", { y: () => ${Y}, duration: 0.16, ease: "power2.in" }, ${T(land + 1400)});`,
+          ...squash(land + 1560), ...press(q, land + 1560),
+          `tl.set("#bee-sq", { clipPath: "none" }, ${T(land + 1700)});`,
+        );
+      }
+      if (ret) tweens.push(...goHome(Y, back, home));
+      return true;
     };
+    const REACTS = ["perch", "hide", "push", "trampoline"] as const;
+    let scene = 0;
     for (const p of plan.scenes) {
       const i = p.index, home = spot(i), sc = p.scene;
+      scene = i;
       const next = plan.transitions[i] ? plan.transitions[i].atMs - 250 : total - 700;
-      const backAt = (land: number) => Math.min(land + 950, next - 800);
       const find = (pred: (e: PlanEvent) => boolean) => p.events.find(pred);
       if (sc.type === "hook-stat") {
         // Stoppe le chiffre : elle saute dessus pendant qu'il tourne et l'arrête pile sur la valeur.
         const c = find((e) => e.anim === "counter");
-        if (c) jumpOn(c.el, c.atMs + c.durMs - 170, backAt(c.atMs + c.durMs), home, true);
+        if (c) react("perch", c.el, c.atMs + c.durMs - 170, next, home, true);
         continue;
       }
       if (sc.type === "cta") {
+        // Bouton de l'appel à l'action : trampoline dessus (elle y reste jusqu'à la sortie).
         const b = find((e) => e.anim === "button");
-        if (b) jumpOn(b.el, b.atMs + b.durMs + 120, 0, home, true);
+        if (b) react(b.atMs + b.durMs + 1240 < next ? "trampoline" : "perch", b.el, b.atMs + b.durMs + 120, next, home, true, true);
         continue;
       }
-      // Saut sur le mot fort : mot en couleur (réponse, mot remplacé, mot-impact, ligne accentuée).
+      // Frisson sur une affirmation choc (mot-impact, titre 3D).
+      if (sc.type === "impact" || (sc.type === "statement" && sc.style === "3d")) { const f = p.events[0]; if (f) tweens.push(...shiver(f.atMs + 120)); }
+      if (sc.type === "strike") {
+        // Barré puis remplacé : elle éjecte l'ancien mot une fois le bon mot arrivé.
+        const a = find((e) => e.el === `${sc.id}-after`);
+        if (a && !react("eject", `${sc.id}-before`, a.atMs + a.durMs + 250, next, home)) react("perch", `${sc.id}-after`, a.atMs + a.durMs + 250, next, home);
+        continue;
+      }
+      // Mot fort : mot en couleur (réponse, mot-impact, mot accentué d'une ligne).
       const target = sc.type === "human" ? find((e) => e.el === `${sc.id}-ans`)
-        : sc.type === "strike" ? find((e) => e.el === `${sc.id}-after`)
         : sc.type === "impact" ? find((e) => e.el === `${sc.id}-word`)
         : sc.type === "statement" && sc.accentWords.length ? find((e) => e.el === `${sc.id}-l${Math.max(0, sc.lines.findIndex((l) => sc.accentWords.some((a) => l.toLowerCase().includes(a.toLowerCase()))))}`)
         : undefined;
+      if (!target) continue;
       // Sur une ligne qui contient un mot en couleur, elle vise le mot lui-même.
-      const el = target && sc.type === "statement" ? `${target.el} em` : target?.el;
-      if (target && el) { const land = target.atMs + target.durMs + 250; if (land + 600 < next) jumpOn(el, land, backAt(land), home); }
+      const el = sc.type === "statement" && sc.lines.some((l) => sc.accentWords.some((a) => l.toLowerCase().includes(a.toLowerCase()))) ? `${target.el} em` : target.el;
+      const land = target.atMs + target.durMs + 250;
+      const kind: React = sc.type === "impact" ? "trampoline" : REACTS[(seed + i) % REACTS.length];
+      if (!react(kind, el, land, next, home)) react("perch", el, land, next, home);
     }
     // Sortie : petit bond puis plongeon avant la vidéo de fin.
     tweens.push(
@@ -437,7 +558,18 @@ ${clips.join("\n")}
       const POS = (sel) => { const el = document.querySelector(sel); let x = 0, y = 0, n = el; while (n && n !== ROOT) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; } return { x, y, w: el.offsetWidth, h: el.offsetHeight }; };
       const BX = (sel) => { const p = POS(sel); return Math.max(0, Math.min(${W - MASCOT.w - 150}, Math.round(p.x + p.w / 2 - ${MASCOT.w / 2}))); };
       // Base de la mascotte (réduite, ancrée en bas) posée juste au-dessus du haut des lettres.
-      const BY = (sel) => Math.round(POS(sel).y + ${Math.round(MASCOT.h * 0.06)} - ${MASCOT.h} - ${MASCOT_TOP});` : ""}
+      const BY = (sel) => Math.round(POS(sel).y + ${Math.round(MASCOT.h * 0.06)} - ${MASCOT.h} - ${MASCOT_TOP});
+      // Pousse le mot : côté où il y a de la place (1 = elle est à gauche et pousse vers la droite), place à côté du mot,
+      // base au ras du bas des lettres.
+      const PD = (sel) => {
+        const p = POS(sel), line = document.querySelector(sel).parentElement.closest(".in"), l = line ? POS("#" + line.id) : p, room = ${Math.round(MASCOT.w * PERCH) + 16};
+        // D'abord le côté du mot où il n'y a pas d'autre texte sur la ligne, s'il reste la place à l'écran.
+        if (l.x + l.w - (p.x + p.w) < 12 && ${W} - (p.x + p.w) >= room) return -1;
+        if (p.x - l.x < 12 && p.x >= room) return 1;
+        return ${W} - (p.x + p.w) > p.x ? -1 : 1;
+      };
+      const PX = (sel) => { const p = POS(sel); const x = PD(sel) > 0 ? p.x - 8 - ${Math.round((MASCOT.w * PERCH) / 2 + MASCOT.w / 2)} : p.x + p.w + 8 + ${Math.round((MASCOT.w * PERCH) / 2 - MASCOT.w / 2)}; return Math.max(${Math.round((MASCOT.w * PERCH) / 2 - MASCOT.w / 2)}, Math.min(${Math.round(W - MASCOT.w / 2 - (MASCOT.w * PERCH) / 2)}, Math.round(x))); };
+      const BB = (sel) => { const p = POS(sel); return Math.round(p.y + p.h - ${MASCOT.h} - ${MASCOT_TOP}); };` : ""}
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
       ${tweens.join("\n      ")}
