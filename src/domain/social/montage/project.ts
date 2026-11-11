@@ -5,6 +5,7 @@ import { usedMedia } from "./media";
 import { END_LOGO, END_VIDEO, STUDIO_LOGO } from "./brand";
 import { usedMattes } from "./matte";
 import { ANIMATIONS } from "./registry";
+import { SFX_FILES } from "./fx";
 
 /**
  * Projet Hyperframes complet d'un montage (index.html + prises + polices + GSAP + logo officiel), assemblé en ZIP pour
@@ -58,7 +59,8 @@ export async function buildMontageProject(edit: Edit, captions: CaptionWord[], v
     if (!data?.length) throw new Error(`Média de la bibliothèque introuvable : ${file}`);
     entries.push({ path: file, data });
   }
-  for (const path of MONTAGE_ASSETS) {
+  // Accents sonores des animations (Studio, 2026-11-11) : ajoutés seulement quand le montage les active.
+  for (const path of [...MONTAGE_ASSETS, ...(edit.effetsSonores?.actif ? Object.values(SFX_FILES) : [])]) {
     const data = await loadAsset(path);
     if (!data?.length) throw new Error(`Ressource de rendu introuvable : ${path}`);
     entries.push({ path, data });

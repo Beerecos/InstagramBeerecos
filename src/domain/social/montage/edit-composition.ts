@@ -4,7 +4,8 @@ import { fixBrandWords } from "./brand-words";
 import { directorShots, shotAt, type Shot } from "./director";
 import { studioSequences } from "./studio-sequences";
 import { captionPages, layout, parseEdit, remapCaptions, takeIndexAt, takeStrip, toOutputMs, totalMs, type CaptionWord, type Edit } from "./edit";
-import { ERROR_CSS, renderAnimation, type AnimationDef } from "./animations";
+import { ERROR_CSS, renderAnimation, type AnimationDef, type SfxKind } from "./animations";
+import { SFX_FILES } from "./fx";
 import { ANIMATIONS } from "./registry";
 import { isBehind, usedMattes } from "./matte";
 import { motionRegistryKey, renderRegistry } from "./beemotion";
@@ -194,6 +195,9 @@ export function buildEditComposition(input: unknown, rawWords: CaptionWord[], op
 
   // Chaque animation se rend dans la version figée à l'enregistrement (BeeMotion) ; sans version, la version courante.
   const versioned = renderRegistry(registry);
+  // Accents sonores demandés par les animations (clic, saisie, glissé) : seulement si le montage les active.
+  const sfxOn = Boolean(edit.effetsSonores?.actif);
+  const sfxEvents: { at: number; kind: SfxKind }[] = [];
   edit.custom.forEach((c, i) => {
     // Logo de fin : remplacé par la vidéo de fin officielle, ajoutée après la dernière image (plus de page blanche).
     if (c.name === "logo-fin") return;
@@ -202,7 +206,10 @@ export function buildEditComposition(input: unknown, rawWords: CaptionWord[], op
     if (visible <= 0) return;
     const duration = Math.max(visible, 100);
     const key = motionRegistryKey(c.name, c.version);
-    const out = renderAnimation(key, c.props, { id: `a${i}`, start: s(start), duration: s(duration), accent, assetBase: base, media: rawMedia }, versioned);
+    // Repères des éléments (temps source) recalculés comme le début : ils suivent les coupes.
+    const marks = c.reperes?.map((m) => s(F(m)));
+    const out = renderAnimation(key, c.props, { id: `a${i}`, start: s(start), duration: s(duration), accent, assetBase: base, media: rawMedia, ...(c.intensite !== undefined ? { intensity: c.intensite } : {}), ...(marks ? { marks } : {}) }, versioned);
+    if (sfxOn) for (const e of out.sfx ?? []) if (e.at >= s(start) && e.at < s(start + duration)) sfxEvents.push(e);
     if (!out.error) css.add(versioned[key].css);
     const p = c.placement;
     const content = p ? `<div id="placement-${i}" style="position:absolute;inset:0;transform:translate(${p.x}px,${p.y}px) scale(${p.scale});transform-origin:50% 50%;opacity:${p.opacity}"><div id="motion-${i}" style="position:absolute;inset:0">${out.html}</div></div>` : out.html;
@@ -246,6 +253,15 @@ export function buildEditComposition(input: unknown, rawWords: CaptionWord[], op
     if (c.name === "logo-fin") return;
     clips.push(`      <audio id="whoosh-${i}" src="${media(son)}" data-start="${s(F(c.fromMs))}" data-duration="1" data-volume="${edit.rythme?.volumeSon ?? 0.35}" data-track-index="5"></audio>`);
   });
+
+  // Accents sonores (piste 9) : fichiers de la charte sonore du Studio, une demi-seconde au plus, volume par type.
+  if (sfxOn) {
+    const volumes = edit.effetsSonores!.volumes;
+    sfxEvents.sort((a, b) => a.at - b.at).forEach((e, k) => {
+      if (volumes[e.kind] <= 0) return;
+      clips.push(`      <audio id="accent-${k}" src="${escapeHtml(base)}/${SFX_FILES[e.kind]}" data-start="${e.at}" data-duration="0.5" data-volume="${volumes[e.kind]}" data-track-index="9"></audio>`);
+    });
+  }
 
   // Clips d'illustration (B-roll) : au-dessus de la prise, sous les titres, le détourage et les sous-titres ; muets.
   (edit.broll ?? []).forEach((b, i) => {

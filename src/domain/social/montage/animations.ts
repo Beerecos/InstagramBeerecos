@@ -22,9 +22,15 @@ export type AnimationContext = {
   assetBase?: string;
   /** Adresse d'un média de la bibliothèque (image) ; par défaut le fichier à côté de la composition. */
   media?: (file: string) => string;
+  /** Intensité du mouvement (0 à 2, 1 par défaut) : multiplie les déplacements et variations d'échelle. */
+  intensity?: number;
+  /** Repères des éléments (secondes du montage, déjà recalculés après les coupes) ; absents = répartition régulière. */
+  marks?: number[];
 };
 
-export type AnimationOutput = { html: string; tweens: string[] };
+/** Accent sonore demandé par une animation (clic, saisie, glissé), à l'instant `at` (secondes du montage). */
+export type SfxKind = "clic" | "saisie" | "glisse";
+export type AnimationOutput = { html: string; tweens: string[]; sfx?: { at: number; kind: SfxKind }[] };
 
 export type AnimationDef<P extends z.ZodType = z.ZodType> = {
   label: string;
