@@ -1,6 +1,11 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Check, Copy, Lock, LockOpen, Pencil, Sparkles, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Clapperboard, Copy, Lock, LockOpen, Pencil, Sparkles, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { montage } from "@/lib/social/montage-api";
+import { studioAssets } from "@/lib/social/studio-assets-api";
+import { videoDurationMs } from "@/lib/social/video-duration";
+import { BriefSchema, StoryboardSchema as MontageStoryboardSchema } from "@/domain/social/montage/ideation";
 import ReelPreview, { type ReelPreviewHandle } from "@/components/social/ReelPreview";
 import { generateEditorialText, researchCarouselFacts, type ResearchFact } from "@/lib/social/editorial-api";
 import { getRender, startRender, type RenderJob } from "@/lib/social/reel-render-client";
@@ -110,9 +115,12 @@ export default function EditorialStudio() {
   const preview = useRef<ReelPreviewHandle>(null);
   // Compilation avec la voix d'Audrey (rendu serveur) ; la vidéo n'est valable que pour la structure compilée.
   const [job, setJob] = useState<RenderJob | null>(null);
-  const [video, setVideo] = useState<{ fp: string; url: string; file: string } | null>(null);
+  const [video, setVideo] = useState<{ fp: string; url: string; file: string; jobId?: string; renderId?: string; sb: Storyboard } | null>(null);
+  const [sending, setSending] = useState(false);
+  const router = useRouter();
   const [jobError, setJobError] = useState<string | null>(null);
   const compiledFp = useRef("");
+  const compiledSb = useRef<Storyboard | null>(null);
   const fp = sb ? specFingerprint({ ...sb, assets: undefined } as unknown as StorySpec) : "";
   const current = video && video.fp === fp ? video : null;
   const running = job?.state === "queued" || job?.state === "running";
@@ -122,7 +130,7 @@ export default function EditorialStudio() {
       try {
         const next = await getRender(job.id, undefined, job);
         setJob(next);
-        if (next.state === "done" && next.url) setVideo({ fp: compiledFp.current, url: next.url, file: next.file ?? "reel-ia.mp4" });
+        if (next.state === "done" && next.url && compiledSb.current) setVideo({ fp: compiledFp.current, url: next.url, file: next.file ?? "reel-ia.mp4", jobId: next.serverJobId, renderId: next.renderId, sb: compiledSb.current });
         if (next.state === "error") setJobError(next.error ?? "La compilation a échoué.");
       } catch (e) { setJobError(e instanceof Error ? e.message : "Compilation interrompue."); setJob({ ...job, state: "error" }); }
     }, 1000);
@@ -131,8 +139,41 @@ export default function EditorialStudio() {
   const compile = async () => {
     if (!sb || running) return;
     setJobError(null);
-    try { compiledFp.current = fp; const { id } = await startRender(sb); setJob({ id, state: "queued", step: "En attente", progress: 0, voice: {}, warnings: [] }); }
+    try { compiledFp.current = fp; compiledSb.current = sb; const { id } = await startRender(sb); setJob({ id, state: "queued", step: "En attente", progress: 0, voice: {}, warnings: [] }); }
     catch (e) { setJobError(e instanceof Error ? e.message : "Compilation impossible."); }
+  };
+
+  // Envoyer au montage : la source (structure compilée) est enregistrée, puis le MP4 part au montage avec la preuve du
+  // rendu (le serveur vérifie la voix d'Audrey et que la vidéo correspond bien à cette structure). Rien n'est publié.
+  const sendToMontage = async () => {
+    if (!current || sending) return;
+    if (!current.jobId || !current.renderId) { setJobError("Rendu sans preuve serveur : compile à nouveau avant d'envoyer au montage."); return; }
+    setSending(true); setJobError(null);
+    try {
+      const title = (idea.trim() || "Réel IA").slice(0, 120);
+      const { asset } = await studioAssets.save({ kind: "editorial", title, data: current.sb });
+      const res = await fetch(current.url);
+      if (!res.ok) throw new Error("Vidéo compilée introuvable : compile à nouveau.");
+      const file = new File([await res.blob()], current.file, { type: "video/mp4" });
+      const durationMs = await videoDurationMs(file);
+      const created = await montage.create({ title, fileName: file.name, size: file.size, aiSource: { source: { assetId: asset.id, revision: asset.revision, kind: "editorial" }, jobId: current.jobId, renderId: current.renderId } });
+      const put = await fetch(created.uploadUrl, { method: "PUT", headers: { "Content-Type": "video/mp4" }, body: file });
+      if (!put.ok) throw new Error("Envoi interrompu : relance « Envoyer au montage ».");
+      await montage.uploaded(created.id, { durationMs, islands: null });
+      // Le script suit la vidéo dans le montage (facultatif : sans mot-clé, le brief reste à compléter là-bas).
+      try {
+        const p = planStoryboard(current.sb);
+        const kw = keyword.trim().toUpperCase();
+        await montage.saveBrief(created.id, BriefSchema.parse({ sujet: title, angle: (current.sb.scenes[0]?.voice ?? title).slice(0, 300), motCle: kw }));
+        const now = await montage.get(created.id);
+        await montage.saveStoryboard(created.id, MontageStoryboardSchema.parse({
+          sequences: p.scenes.slice(0, 12).map((x) => ({ idee: SCENE_LABEL[x.scene.type], parole: (x.scene.voice ?? "").slice(0, 400), titre: "", traitement: "aucun", dureeS: Math.min(60, Math.max(1, Math.round((x.endMs - x.startMs) / 100) / 10)) })),
+          cta: `Commente ${kw}`, baseline: true,
+        }), now.montage.updatedAt);
+      } catch { /* brief incomplet : à reprendre dans le montage */ }
+      router.push(`/reels/${created.id}`);
+    } catch (e) { setJobError(e instanceof Error ? e.message : "Envoi au montage impossible."); }
+    finally { setSending(false); }
   };
 
   const plan = useMemo(() => (sb ? planStoryboard(sb) : null), [sb]);
@@ -296,7 +337,12 @@ export default function EditorialStudio() {
               <button type="button" className="btn-red min-h-12 px-6 text-base" onClick={() => void compile()} disabled={running} aria-busy={running}>
                 <Sparkles aria-hidden size={18} />{running ? "Compilation en cours…" : video ? "Compiler à nouveau avec la voix d'Audrey" : "Compiler la vidéo avec la voix d'Audrey"}
               </button>
-            ) : <a className="btn-ghost flex min-h-11 items-center justify-center" href={current.url} download={current.file}>Télécharger le MP4</a>}
+            ) : <>
+              <button type="button" className="btn-red min-h-12 px-6 text-base" onClick={() => void sendToMontage()} disabled={sending} aria-busy={sending}>
+                <Clapperboard aria-hidden size={18} />{sending ? "Envoi au montage…" : "Envoyer au montage"}
+              </button>
+              <a className="btn-ghost flex min-h-11 items-center justify-center" href={current.url} download={current.file}>Télécharger le MP4</a>
+            </>}
             <div role="status" aria-live="polite" className="text-sm">
               {running && job ? <div><p className="font-medium">{job.step} · {job.progress} %</p><div className="mt-1 h-2 overflow-hidden rounded-full bg-black/[0.07]"><div className="h-full rounded-full bg-brand transition-[width]" style={{ width: `${job.progress}%` }} /></div></div> : null}
               {video && !current ? <p className="text-amber-800">🟡 La structure a changé depuis la dernière compilation : compile à nouveau pour entendre cette version.</p> : null}

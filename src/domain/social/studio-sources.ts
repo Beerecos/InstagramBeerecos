@@ -1,5 +1,5 @@
 import { parseStudioAssetData, type StudioAssetData } from "./studio-assets";
-export type StudioSourceKind = "motion" | "story";
+export type StudioSourceKind = "motion" | "story" | "editorial";
 export type StudioSourceRef = { assetId: string; revision: number; kind: StudioSourceKind };
 /** References only: the server retrieves the private proof, never a browser boolean. */
 export type StudioSourceTransfer = { source: StudioSourceRef; jobId: string; renderId: string };

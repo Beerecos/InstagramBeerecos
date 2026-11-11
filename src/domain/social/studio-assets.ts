@@ -5,10 +5,11 @@ import { ANIMATIONS, ARCHIVED_ANIMATIONS } from "./montage/registry";
 import { motionRegistryKey, stampMotionVersions } from "./montage/beemotion";
 import { parseMotionSpec, type MotionSpec } from "./reel-story/motion-spec";
 import { parseStorySpec, type StorySpec } from "./reel-story/spec";
+import { StoryboardSchema, type Storyboard } from "./editorial/schema";
 
-export type StudioAssetKind = "effect" | "motion" | "story";
+export type StudioAssetKind = "effect" | "motion" | "story" | "editorial";
 export type StudioEffect = { schemaVersion: 1; layers: CustomAnimation[]; durationMs: number };
-export type StudioAssetData = { effect: StudioEffect; motion: MotionSpec; story: StorySpec };
+export type StudioAssetData = { effect: StudioEffect; motion: MotionSpec; story: StorySpec; editorial: Storyboard };
 export type StudioAsset<K extends StudioAssetKind = StudioAssetKind> = K extends StudioAssetKind ? {
   id: string; kind: K; title: string; revision: number; status: "draft" | "approved" | "archived";
   data: StudioAssetData[K]; createdAt: string; updatedAt: string;
@@ -46,6 +47,15 @@ export function parseStudioAssetData<K extends StudioAssetKind>(kind: K, input: 
       return { ...layer, props };
     });
     return { ...effect, layers: stampMotionVersions(layers) } as StudioAssetData[K];
+  }
+  if (kind === "editorial") {
+    // Réel IA « Editorial Impact » : seule la structure déclarative est gardée (voix générées, durées mesurées et
+    // cartes verrouillées sont propres à un rendu ou à l'écran d'édition).
+    const sb = StoryboardSchema.parse(input);
+    const source: Storyboard = { ...sb, scenes: sb.scenes.map((scene) => { const copy = { ...scene }; delete copy.locked; return copy; }) };
+    delete source.assets;
+    delete source.voiceDurations;
+    return source as StudioAssetData[K];
   }
   const parsed = kind === "motion" ? parseMotionSpec(input) : parseStorySpec(input);
   if (!parsed.ok) throw new Error(parsed.errors.join(" "));

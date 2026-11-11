@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Film, Upload } from "lucide-react";
 import { BriefSchema, StoryboardSchema } from "@/domain/social/montage/ideation";
+import { videoDurationMs } from "@/lib/social/video-duration";
 import { MOTION_STYLE_LABEL, motionPlan, PILLAR_LABEL, SEQUENCES, SEQUENCE_LABEL, type MotionSpec, type StorySpec } from "@/domain/social/reel-story";
 import { useSearchParams } from "@/components/social/router";
 import StudioCutPlan from "@/components/social/studio/StudioCutPlan";
@@ -72,24 +73,6 @@ import type { AnimationTemplate } from "@/domain/social/montage/template";
 
 const sec = (ms: number | null | undefined) => `${((ms ?? 0) / 1000).toFixed(1).replace(".", ",")} s`;
 
-/** Durée lue par le navigateur (métadonnées seules). */
-function videoDurationMs(file: File): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const v = document.createElement("video");
-    v.preload = "metadata";
-    v.onloadedmetadata = () => {
-      URL.revokeObjectURL(url);
-      if (Number.isFinite(v.duration)) resolve(Math.round(v.duration * 1000));
-      else reject(new Error("Durée illisible."));
-    };
-    v.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Ce navigateur ne sait pas lire cette vidéo : exportez-la en .mp4 (H.264)."));
-    };
-    v.src = url;
-  });
-}
 
 /** Îlots de parole (énergie par fenêtres de 20 ms) pour recaler le transcript ; facultatif. */
 async function measureSpeech(file: File): Promise<{ fromMs: number; toMs: number }[] | null> {
