@@ -126,6 +126,7 @@ function sceneEvents(s: EditorialScene, g: number, bpm: number, audio: (at: numb
       const gaps = [350, 300, 500];
       s.lines.forEach((_, i) => { push(t, `${id}-l${i}`, i === s.lines.length - 1 ? "accent" : "mask", ms("fast")); t += gaps[Math.min(i, gaps.length - 1)]; });
       if (s.sub) { push(t + 300, `${id}-sub`, "fade", ms("normal")); t += 800; }
+      if (s.brand) { push(t, `${id}-logo`, "logo", ms("normal")); t += 400; }
       const b = push(t, `${id}-btn`, "button", ms("fast") + 34);
       audio(b, "uiClick", 3);
       // Écran complet tenu 1,5 à 2 s pour laisser le temps d'agir.

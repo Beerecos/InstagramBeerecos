@@ -41,7 +41,7 @@ function contentHeight(s: EditorialScene): number {
     case "pills": return line(s.title, 116) + 40 + s.pills.length * (56 * 1.1 + 48 + 22);
     case "human": return [...s.question, s.answer].reduce((h, t) => h + line(t, 150), 0) + (s.micro ? 110 : 0);
     case "testimonials": return line(s.title, 104) + 40 + 640;
-    case "cta": return s.lines.reduce((h, t) => h + line(t, 150), 0) + (s.sub ? 110 : 0) + 156;
+    case "cta": return s.lines.reduce((h, t) => h + line(t, 150), 0) + (s.sub ? 110 : 0) + (s.brand ? 284 : 0) + 156;
   }
 }
 

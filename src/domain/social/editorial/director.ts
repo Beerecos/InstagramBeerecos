@@ -109,7 +109,7 @@ ANIMATIONS (varie-les, une seule « héroïne » par scène) :
 - impact {word, sub?} : UN mot énorme qui claque (ex. « CONFIANCE. »), pour l'idée-clé ou la chute d'un tip.
 - strike {lead?, before, after, micro?} : un mot barré puis remplacé (erreur → bon réflexe, mythe → vérité), idéal pour les tips.
 - statement {lines[], accentWords[], micro?, style} : style "3d" (titre en profondeur, pour l'accroche), "cartouche" (lignes en cartouches, pour un conseil), "plain" sinon.
-Types (tous avec "voice") : hook-stat {lead?, stat:{value,suffix,decimals}, lines[], accent?}, statement {lines[], accentWords[], micro?, style}, impact {word, sub?}, strike {lead?, before, after, micro?}, pills {title, pills[2-5]}, human {question[], answer, micro?}, testimonials {title, cards[{quote,author}], rating?}, cta {lines[], sub?, button}.
+Types (tous avec "voice") : hook-stat {lead?, stat:{value,suffix,decimals}, lines[], accent?}, statement {lines[], accentWords[], micro?, style}, impact {word, sub?}, strike {lead?, before, after, micro?}, pills {title, pills[2-5]}, human {question[], answer, micro?}, testimonials {title, cards[{quote,author}], rating?}, cta {lines[], sub?, button, brand:true}.
 Réponds UNIQUEMENT par un objet JSON : {"preset":"editorial-impact","intensity":4,"bpm":120,"sfx":"normal","scenes":[{"id":"s1","type":"…","background":"…","layout":"left",…}]}
 ${opts.testimonials?.length ? `\nTÉMOIGNAGES FOURNIS (seuls autorisés, 12 à 20 mots chacun, raccourcis sans changer le sens) :\n${opts.testimonials.map((t) => `- « ${t.quote} » — ${t.author}`).join("\n")}` : ""}${opts.rating ? `\nNOTE FOURNIE : ${opts.rating} / 5` : ""}
 
