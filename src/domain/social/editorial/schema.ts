@@ -20,6 +20,18 @@ export const HookStatScene = z.strictObject({
 export const StatementScene = z.strictObject({
   ...common, type: z.literal("statement"), layout: z.enum(["center", "left", "stack"]).default("left"),
   lines: z.array(line).min(1).max(5), accentWords: z.array(z.string().trim().min(1).max(30)).max(3).default([]), micro: z.string().trim().max(90).optional(),
+  /** Habillage des lignes (repris des Réels filmés) : sobre, titre en profondeur 3D, ou cartouches. */
+  style: z.enum(["plain", "3d", "cartouche"]).default("plain"),
+});
+/** Mot-impact (style Punch des Réels filmés) : un seul mot énorme qui claque plein écran, avec un flash. */
+export const ImpactScene = z.strictObject({
+  ...common, type: z.literal("impact"), layout: z.enum(["center", "left"]).default("center"),
+  word: z.string().trim().min(1).max(24), sub: z.string().trim().max(90).optional(),
+});
+/** Barré puis remplacé : un mot se fait barrer puis remplacer (erreur → bon réflexe, mythe → vérité). */
+export const StrikeScene = z.strictObject({
+  ...common, type: z.literal("strike"), layout: z.enum(["left", "center"]).default("left"),
+  lead: line.optional(), before: line, after: line, micro: z.string().trim().max(90).optional(),
 });
 export const PillsScene = z.strictObject({
   ...common, type: z.literal("pills"), layout: z.enum(["center", "left", "alternate"]).default("left"),
@@ -39,7 +51,7 @@ export const CtaScene = z.strictObject({
   lines: z.array(line).min(1).max(4), sub: z.string().trim().max(60).optional(), button: z.string().trim().min(2).max(32), brand: z.boolean().default(true),
 });
 
-export const SceneSchema = z.discriminatedUnion("type", [HookStatScene, StatementScene, PillsScene, HumanScene, TestimonialsScene, CtaScene]);
+export const SceneSchema = z.discriminatedUnion("type", [HookStatScene, StatementScene, ImpactScene, StrikeScene, PillsScene, HumanScene, TestimonialsScene, CtaScene]);
 export type EditorialScene = z.infer<typeof SceneSchema>;
 export type SceneType = EditorialScene["type"];
 
@@ -69,5 +81,5 @@ export const StoryboardSchema = z.strictObject({
 export type Storyboard = z.infer<typeof StoryboardSchema>;
 
 export const SCENE_LABEL: Record<SceneType, string> = {
-  "hook-stat": "Accroche chiffrée", statement: "Affirmation", pills: "Capsules", human: "Rupture humaine", testimonials: "Témoignages", cta: "Appel à l'action",
+  "hook-stat": "Accroche chiffrée", statement: "Affirmation", impact: "Mot-impact", strike: "Barré puis remplacé", pills: "Capsules", human: "Rupture humaine", testimonials: "Témoignages", cta: "Appel à l'action",
 };

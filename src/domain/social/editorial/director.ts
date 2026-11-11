@@ -63,7 +63,7 @@ export function directFromScript(script: string, opts: { intensity?: number; key
     } else {
       const lines = editorialLines(sent, 4);
       const accent = STRONG.find((w) => lines.join(" ").toLowerCase().includes(w));
-      scenes.push({ id: id(), voice, type: "statement", background: "dark", layout: "left", transitionOut: "wipe-lr", lines, accentWords: accent ? [accent.toUpperCase()] : [] });
+      scenes.push({ id: id(), voice, type: "statement", background: "dark", layout: "left", transitionOut: "wipe-lr", style: "plain", lines, accentWords: accent ? [accent.toUpperCase()] : [] });
     }
   });
   const keyword = opts.keyword?.toUpperCase() ?? (cta?.match(/comment(?:e|ez)\s+«?\s*([A-ZÀ-Ýa-zà-ÿ]+)/i)?.[1]?.toUpperCase() ?? null);
@@ -105,7 +105,11 @@ Règles :
 - Fonds alternés (dark, brand, dark, light, light, dark…), jamais trois fois le même à la suite. Scène human sur fond light.
 - transitionOut : "wipe-lr" le plus souvent, "wipe-rl" parfois, "cut" rarement ; la dernière scène "none".
 - Bouton du CTA : DÉCOUVRIR UN CLUB, PARTICIPER À UNE RÉUNION, RECEVOIR MON INVITATION ou EN SAVOIR PLUS, selon le texte.${opts.keyword ? `\n- Mot-clé du CTA : « Commente ${opts.keyword.toUpperCase()} ».` : ""}
-Types (tous avec "voice") : hook-stat {lead?, stat:{value,suffix,decimals}, lines[], accent?}, statement {lines[], accentWords[], micro?}, pills {title, pills[2-5]}, human {question[], answer, micro?}, testimonials {title, cards[{quote,author}], rating?}, cta {lines[], sub?, button, brand:true}.
+ANIMATIONS (varie-les, une seule « héroïne » par scène) :
+- impact {word, sub?} : UN mot énorme qui claque (ex. « CONFIANCE. »), pour l'idée-clé ou la chute d'un tip.
+- strike {lead?, before, after, micro?} : un mot barré puis remplacé (erreur → bon réflexe, mythe → vérité), idéal pour les tips.
+- statement {lines[], accentWords[], micro?, style} : style "3d" (titre en profondeur, pour l'accroche), "cartouche" (lignes en cartouches, pour un conseil), "plain" sinon.
+Types (tous avec "voice") : hook-stat {lead?, stat:{value,suffix,decimals}, lines[], accent?}, statement {lines[], accentWords[], micro?, style}, impact {word, sub?}, strike {lead?, before, after, micro?}, pills {title, pills[2-5]}, human {question[], answer, micro?}, testimonials {title, cards[{quote,author}], rating?}, cta {lines[], sub?, button, brand:true}.
 Réponds UNIQUEMENT par un objet JSON : {"preset":"editorial-impact","intensity":4,"bpm":120,"sfx":"normal","scenes":[{"id":"s1","type":"…","background":"…","layout":"left",…}]}
 ${opts.testimonials?.length ? `\nTÉMOIGNAGES FOURNIS (seuls autorisés, 12 à 20 mots chacun, raccourcis sans changer le sens) :\n${opts.testimonials.map((t) => `- « ${t.quote} » — ${t.author}`).join("\n")}` : ""}${opts.rating ? `\nNOTE FOURNIE : ${opts.rating} / 5` : ""}
 

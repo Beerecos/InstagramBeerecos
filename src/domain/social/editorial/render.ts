@@ -13,9 +13,15 @@ const SKEW_DEG = 9;
 const SKEW_PX = Math.round(Math.tan((SKEW_DEG * Math.PI) / 180) * H); // décalage haut/bas du front diagonal
 const BAND = Math.round(W * 0.16);
 export const INNER_W = W - SAFE.left - SAFE.right;
-/** Mascotte officielle (454 × 640, fournie par Cédric) : taille et marge à droite. */
-export const MASCOT = { file: "brand/beerecos-mascotte.webp", w: 180, h: Math.round((180 * 640) / 454) } as const;
-const MASCOT_RIGHT = 70;
+/** Mascotte officielle (454 × 640, fournie par Cédric) : personnage central du Réel (grande, en bas de l'écran). */
+export const MASCOT = { file: "brand/beerecos-mascotte.webp", w: 260, h: Math.round((260 * 640) / 454) } as const;
+/** Deux places, jamais sous les boutons Instagram (colonne de droite) : à gauche, puis au centre. */
+const MASCOT_X = [70, 520] as const;
+const MASCOT_TOP = H - SAFE.bottom - MASCOT.h + 60;
+/** Taille de la mascotte quand elle se pose sur un mot. */
+const PERCH = 0.4;
+/** Hauteur retirée à la zone de texte quand la mascotte est là. */
+export const MASCOT_RESERVE = H - MASCOT_TOP + 20 - SAFE.bottom;
 const s = (msv: number) => Math.round(msv) / 1000;
 
 /** « BeeRecos » toujours écrit ainsi, même dans un titre en capitales. */
@@ -47,8 +53,8 @@ export function fit(text: string, max: number, width = INNER_W): number {
 const block = (lines: string[], max: number) => Math.min(...lines.map((l) => fit(l, max)));
 const formatStat = (v: number, d: number) => v.toFixed(d).replace(".", ",");
 
-function mask(id: string, text: string, size: number, extra = "") {
-  return `<div class="mask"><span id="${id}" class="in" style="font-size:${size}px${extra}">${text}</span></div>`;
+function mask(id: string, text: string, size: number, extra = "", cls = "") {
+  return `<div class="mask${cls ? ` mask-${cls}` : ""}"><span id="${id}" class="in${cls ? ` ${cls}` : ""}" style="font-size:${size}px${extra}">${text}</span></div>`;
 }
 function withAccents(line: string, accents: string[]) {
   let out = esc(line);
@@ -76,11 +82,29 @@ function sceneHtml(sc: EditorialScene, base: string): string {
         sc.accent ? mask(`${id}-acc`, esc(sc.accent), fit(sc.accent, 120), ";color:var(--accent)") : "",
       ].join(""), sc.layout === "full" ? "full" : "");
     }
-    case "statement":
+    case "statement": {
+      const cls = sc.style === "3d" ? "deep" : sc.style === "cartouche" ? "cart" : "";
+      // Cartouche : la boîte ajoute un peu de largeur (marges internes) ; taille légèrement réduite.
+      const size = Math.round(block(sc.lines, sc.style === "cartouche" ? 120 : 150) * (sc.style === "cartouche" ? 0.86 : 1));
       return box([
-        ...sc.lines.map((l, i) => mask(`${id}-l${i}`, withAccents(l, sc.accentWords), block(sc.lines, 150))),
+        ...sc.lines.map((l, i) => mask(`${id}-l${i}`, withAccents(l, sc.accentWords), size, "", cls)),
         sc.micro ? `<p id="${id}-micro" class="micro">${esc(sc.micro)}</p>` : "",
       ].join(""), sc.layout === "stack" ? "stack" : "");
+    }
+    case "impact":
+      return `<div id="${id}-flash" class="flash"></div>` + box([
+        mask(`${id}-word`, esc(sc.word), fit(sc.word, 400), ";color:var(--accent)", "impact"),
+        sc.sub ? `<p id="${id}-sub" class="micro">${esc(sc.sub)}</p>` : "",
+      ].join(""));
+    case "strike": {
+      const size = block([sc.before, sc.after], 150);
+      return box([
+        sc.lead ? mask(`${id}-lead`, esc(sc.lead), Math.min(92, fit(sc.lead, 92)), ";font-weight:700") : "",
+        `<div class="mask mask-strike"><span id="${id}-before" class="in" style="font-size:${size}px">${esc(sc.before)}<i id="${id}-line" class="strike-line"></i></span></div>`,
+        mask(`${id}-after`, esc(sc.after), size, ";color:var(--accent)"),
+        sc.micro ? `<p id="${id}-micro" class="micro">${esc(sc.micro)}</p>` : "",
+      ].join(""));
+    }
     case "pills":
       return box([
         mask(`${id}-title`, esc(sc.title), fit(sc.title, 116)),
@@ -130,6 +154,20 @@ function tween(e: PlanEvent): string {
     case "button": return `tl.fromTo(${sel}, { scale: 0.92, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: ${d}, ease: E.springCard, immediateRender: false }, ${t});`;
     case "logo": return `tl.fromTo(${sel}, { y: 20, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: ${d}, ease: E.editorialOut, immediateRender: false }, ${t});`;
     case "fade": return `tl.fromTo(${sel}, { y: 14, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: ${d}, ease: E.editorialOut, immediateRender: false }, ${t});`;
+    // Mot-impact : flash blanc bref, puis le mot claque (grand → taille finale) avec une secousse.
+    case "flash": return `tl.fromTo(${sel}, { autoAlpha: 0.9 }, { autoAlpha: 0, duration: 0.28, ease: "power2.out", immediateRender: false }, ${t});`;
+    case "impact": return [
+      `tl.fromTo(${sel}, { scale: 1.75, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.32, ease: "expo.out", immediateRender: false }, ${t});`,
+      `tl.fromTo(${sel}, { x: -10 }, { x: 10, duration: 0.05, ease: "none", yoyo: true, repeat: 3, immediateRender: false }, ${s(e.atMs + 300)});`,
+      `tl.to(${sel}, { x: 0, duration: 0.05 }, ${s(e.atMs + 500)});`,
+    ].join("\n      ");
+    // Barré : le trait se dessine de gauche à droite ; le mot barré s'estompe.
+    case "strike": return `tl.fromTo(${sel}, { scaleX: 0, autoAlpha: 1 }, { scaleX: 1, autoAlpha: 1, duration: ${d}, ease: E.sharpOut, immediateRender: false }, ${t});`;
+    case "dim": return `tl.to(${sel}, { opacity: 0.35, duration: ${d}, ease: "power1.out" }, ${t});`;
+    // Titre en profondeur 3D (Réels filmés) : bascule depuis l'arrière, perspective.
+    case "deep": return `tl.fromTo(${sel}, { rotationX: 80, yPercent: 35, autoAlpha: 0, transformPerspective: 900, transformOrigin: "50% 100%" }, { rotationX: 0, yPercent: 0, autoAlpha: 1, duration: ${d}, ease: E.sharpOut, immediateRender: false }, ${t});`;
+    // Cartouche : la boîte se déroule de gauche à droite.
+    case "cart": return `tl.fromTo(${sel}, { clipPath: "inset(0% 100% 0% 0%)", autoAlpha: 1 }, { clipPath: "inset(0% 0% 0% 0%)", duration: ${d}, ease: E.wipe, immediateRender: false }, ${t});`;
   }
 }
 
@@ -180,9 +218,21 @@ const CSS = `
       .logo { height: 168px; width: auto; margin-top: 46px; visibility: hidden; }
       .cta-btn { display: inline-block; margin-top: 30px; padding: 32px 56px; border-radius: 999px; background: ${PALETTE.brand}; color: ${PALETTE.white}; font-size: 50px; font-weight: 700; letter-spacing: 0.01em; visibility: hidden; }
       .scene.brand .cta-btn { background: ${PALETTE.white}; color: ${PALETTE.brand}; }
-      .bee { position: absolute; left: ${W - MASCOT_RIGHT - MASCOT.w}px; top: ${H - SAFE.bottom - MASCOT.h - 10}px; width: ${MASCOT.w}px; height: ${MASCOT.h}px; z-index: 55; transform-origin: 50% 100%; }
-      .bee img { width: 100%; height: 100%; display: block; }
-      .with-bee .content { bottom: ${SAFE.bottom + MASCOT.h + 20}px; }
+      .bee { position: absolute; left: 0; top: ${MASCOT_TOP}px; width: ${MASCOT.w}px; height: ${MASCOT.h}px; z-index: 55; }
+      .bee div { width: 100%; height: 100%; transform-origin: 50% 100%; }
+      .bee img { width: 100%; height: 100%; display: block; filter: drop-shadow(0 18px 18px rgba(0,0,0,0.28)); }
+      .with-bee .content { bottom: ${H - MASCOT_TOP + 20}px; }
+      .flash { position: absolute; inset: 0; background: #FFFFFF; opacity: 0; visibility: hidden; z-index: 40; pointer-events: none; }
+      .impact { letter-spacing: -0.05em; line-height: 0.9; }
+      .mask-impact { overflow: visible; }
+      .mask-strike { overflow: visible; }
+      .mask-strike .in { position: relative; }
+      .strike-line { position: absolute; left: -2%; right: -2%; top: 50%; height: 0.11em; margin-top: -0.055em; background: var(--accent); transform-origin: 0 50%; border-radius: 0.05em; visibility: hidden; }
+      .deep { text-shadow: 0.02em 0.02em 0 rgba(0,0,0,0.22), 0.04em 0.04em 0 rgba(0,0,0,0.18), 0.06em 0.06em 0 rgba(0,0,0,0.14), 0.08em 0.08em 0.02em rgba(0,0,0,0.12); }
+      .mask-deep { overflow: visible; }
+      .cart { background: var(--accent); color: #FFFFFF; padding: 0.08em 0.22em 0.12em; border-radius: 0.14em; }
+      .cart em { color: #FFFFFF; text-decoration: underline; text-decoration-thickness: 0.07em; text-underline-offset: 0.08em; }
+      .mask-cart { overflow: visible; margin: 0.06em 0; }
       .end-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 60; }
       .band { position: absolute; top: 0; left: 0; height: ${H}px; width: ${BAND}px; transform: skewX(-${SKEW_DEG}deg); visibility: hidden; z-index: 50; }`;
 
@@ -210,7 +260,9 @@ export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan 
     const next = plan.scenes[k + 1].scene.id;
     if (tr.kind === "cut") return;
     const lr = tr.kind === "wipe-lr";
-    clips.push(`      <div id="band-${k}" class="band" style="background:${bandColor(tr.from, tr.to)}"></div>`);
+    // Opacité 0 au départ : le lecteur Hyperframes force « visibility: visible » sur les éléments sans timing ;
+    // la bande n'existe à l'écran que pendant sa transition (sinon elle reste figée sur le bord gauche).
+    clips.push(`      <div id="band-${k}" class="band" style="background:${bandColor(tr.from, tr.to)};opacity:0"></div>`);
     const from = lr ? -(SKEW_PX / 2 + BAND) : W + SKEW_PX / 2 + BAND, to = lr ? W + SKEW_PX / 2 : -SKEW_PX / 2;
     const half = SKEW_PX / 2;
     const poly = (e: number) => lr
@@ -221,31 +273,124 @@ export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan 
     // Sans fonction de rappel : le clip-path (chaîne de nombres) et la bande sont animés directement par GSAP.
     tweens.push(
       `tl.fromTo("#sc-${next}", { clipPath: "${poly(from)}" }, { clipPath: "${poly(to)}", duration: ${dur}, ease: E.wipe, immediateRender: false }, ${t0});`,
+      `tl.set("#band-${k}", { autoAlpha: 0, x: ${bandX(from)} }, 0);`,
       `tl.fromTo("#band-${k}", { x: ${bandX(from)}, autoAlpha: 1 }, { x: ${bandX(to)}, duration: ${dur}, ease: E.wipe, immediateRender: false }, ${t0});`,
       `tl.set("#band-${k}", { autoAlpha: 0 }, ${s(tr.atMs + tr.durMs / 2)});`,
     );
   });
-  // Mascotte officielle (option du Studio IA) : en bas à droite, au-dessus de la zone Instagram ; le texte lui laisse
-  // la place. Elle arrive, saute à chaque changement de scène, réagit aux moments forts, puis part avant la fin.
+  // Mascotte officielle (option du Studio IA) : personnage central, toujours en mouvement. Elle entre en sautant,
+  // respire (léger rebond continu), saute d'une place à l'autre à chaque scène (arc + écrasement à l'atterrissage),
+  // réagit aux moments forts (bond + frétillement), saute sur le bouton de l'appel à l'action (sans bras ni jambes : tout passe par le corps), puis sort avant la vidéo de fin.
+  // Calques : #bee (place, x) > #bee-hop (sauts, y) > #bee-bob (respiration) > #bee-sq (écrasement, réactions) > img.
   if (sb.mascot) {
-    clips.push(`      <div id="bee" class="bee" style="visibility:hidden"><img src="${base}/${MASCOT.file}" alt="" width="${MASCOT.w}" height="${MASCOT.h}" /></div>`);
-    tweens.push(`tl.fromTo("#bee", { autoAlpha: 0, y: 80, scale: 0.8 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.4, ease: E.springCard, immediateRender: false }, 0.35);`);
+    const T = (ms: number) => s(ms);
+    clips.push(`      <div id="bee" class="bee" style="opacity:0"><div id="bee-hop"><div id="bee-bob"><div id="bee-sq"><img src="${base}/${MASCOT.file}" alt="" width="${MASCOT.w}" height="${MASCOT.h}" /></div></div></div></div>`);
+    tweens.push(
+      `tl.set("#bee", { autoAlpha: 0, x: ${MASCOT_X[0]} }, 0);`,
+      // Entrée : jaillit du bas avec un rebond.
+      `tl.fromTo("#bee-hop", { y: 420 }, { y: 0, duration: 0.55, ease: "back.out(2.2)", immediateRender: false }, 0.2);`,
+      `tl.to("#bee", { autoAlpha: 1, duration: 0.15 }, 0.2);`,
+      `tl.fromTo("#bee-sq", { scaleX: 0.8, scaleY: 1.25 }, { scaleX: 1, scaleY: 1, duration: 0.6, ease: "elastic.out(1, 0.45)", immediateRender: false }, 0.6);`,
+    );
+    // Respiration continue (nombre de répétitions fini : la timeline garde une durée exacte).
+    const bobs = Math.max(1, Math.floor((total - 1200) / 550) | 1);
+    tweens.push(`tl.fromTo("#bee-bob", { y: 0, rotation: -2 }, { y: -16, rotation: 2, duration: 0.55, ease: "sine.inOut", yoyo: true, repeat: ${bobs}, immediateRender: false }, 0.8);`);
+    // Place de repos par scène (gauche ↔ centre) ; la scène du milieu fait « coucou » depuis le bord droit.
+    const spot = (i: number) => MASCOT_X[i % 2];
+    const peekAt = plan.transitions.length >= 3 ? Math.floor(plan.transitions.length / 2) : -1;
+    const squash = (at: number) => [
+      `tl.to("#bee-sq", { scaleX: 1.2, scaleY: 0.8, duration: 0.07, ease: "power2.out" }, ${T(at)});`,
+      `tl.to("#bee-sq", { scaleX: 1, scaleY: 1, duration: 0.45, ease: "elastic.out(1, 0.4)" }, ${T(at + 70)});`,
+    ];
     plan.transitions.forEach((tr, k) => {
-      const t0 = Math.max(0.5, (tr.atMs - 260) / 1000);
+      const t0 = Math.max(900, tr.atMs - 250);
+      const x = spot(k + 1);
+      if (k === peekAt) {
+        // Coucou : elle file hors champ pendant le balayage, passe la tête par le bord droit, puis saute à sa place.
+        tweens.push(
+          `tl.to("#bee", { x: -${MASCOT.w + 60}, duration: 0.3, ease: "power2.in" }, ${T(t0)});`,
+          `tl.set("#bee", { x: ${W - Math.round(MASCOT.w * 0.42)} }, ${T(t0 + 320)});`,
+          `tl.set("#bee-sq", { rotation: -28 }, ${T(t0 + 320)});`,
+          `tl.fromTo("#bee-hop", { y: 60 }, { y: -40, duration: 0.3, ease: "back.out(2)", immediateRender: false }, ${T(t0 + 330)});`,
+          `tl.to("#bee-sq", { rotation: -18, duration: 0.12, ease: "sine.inOut", yoyo: true, repeat: 3 }, ${T(t0 + 650)});`,
+          `tl.to("#bee", { x: ${x}, duration: 0.5, ease: "power1.inOut" }, ${T(t0 + 1150)});`,
+          `tl.to("#bee-hop", { y: -200, duration: 0.25, ease: "power2.out" }, ${T(t0 + 1150)});`,
+          `tl.to("#bee-sq", { rotation: 0, duration: 0.3, ease: "power2.out" }, ${T(t0 + 1150)});`,
+          `tl.to("#bee-hop", { y: 0, duration: 0.25, ease: "power2.in" }, ${T(t0 + 1400)});`,
+          ...squash(t0 + 1650),
+        );
+        return;
+      }
       tweens.push(
-        `tl.to("#bee", { y: -70, rotation: ${k % 2 ? 6 : -6}, duration: 0.22, ease: E.sharpOut }, ${s(t0 * 1000)});`,
-        `tl.to("#bee", { y: 0, rotation: 0, duration: 0.3, ease: E.springCard }, ${s(t0 * 1000 + 220)});`,
+        `tl.to("#bee-sq", { scaleX: 1.15, scaleY: 0.82, duration: 0.09, ease: "power2.out" }, ${T(t0)});`,
+        `tl.to("#bee-sq", { scaleX: 0.9, scaleY: 1.12, duration: 0.12, ease: "power2.out" }, ${T(t0 + 90)});`,
+        `tl.to("#bee", { x: ${x}, duration: 0.5, ease: "power1.inOut" }, ${T(t0 + 90)});`,
+        `tl.to("#bee-hop", { y: -230, rotation: ${k % 2 ? -14 : 14}, duration: 0.25, ease: "power2.out" }, ${T(t0 + 90)});`,
+        `tl.to("#bee-hop", { y: 0, rotation: 0, duration: 0.25, ease: "power2.in" }, ${T(t0 + 340)});`,
+        ...squash(t0 + 590),
       );
     });
     // Sur fond bleu, un fin contour blanc la détache (mascotte bleue).
-    for (const p of plan.scenes) tweens.push(`tl.set("#bee img", { filter: "${p.scene.background === "brand" ? "drop-shadow(0 0 3px #FFFFFF) drop-shadow(0 0 2px #FFFFFF)" : "none"}" }, ${s(p.startMs + (p.index ? 180 : 0))});`);
-    // Réaction : le chiffre qui se pose, le mot accent, le bouton.
-    for (const p of plan.scenes) for (const e of p.events) {
-      if (e.anim !== "counter" && e.anim !== "accent" && e.anim !== "button") continue;
-      const at = e.atMs + (e.anim === "counter" ? e.durMs : 60);
-      tweens.push(`tl.to("#bee", { scale: 1.1, duration: 0.12, ease: E.sharpOut }, ${s(at)});`, `tl.to("#bee", { scale: 1, duration: 0.25, ease: E.springCard }, ${s(at + 120)});`);
+    for (const p of plan.scenes) tweens.push(`tl.set("#bee img", { filter: "${p.scene.background === "brand" ? "drop-shadow(0 0 4px #FFFFFF) drop-shadow(0 0 2px #FFFFFF) drop-shadow(0 18px 18px rgba(0,0,0,0.28))" : "drop-shadow(0 18px 18px rgba(0,0,0,0.28))"}" }, ${T(p.startMs + (p.index ? 180 : 0))});`);
+    // Saut SUR un élément (mot fort, chiffre, bouton) : position mesurée sur l'élément réel au moment du saut.
+    // Le mot s'écrase sous son poids puis rebondit ; elle revient à sa place avant le changement de scène.
+    const jumpOn = (el: string, land: number, back: number, home: number, press = false) => {
+      // Elle rapetisse pendant le saut (moitié de sa taille) et se pose AU-DESSUS du mot, la base au ras des lettres :
+      // le mot reste lisible ; elle ne s'attarde pas (0,7 s) puis revient à sa place, à sa taille.
+      const sel = JSON.stringify(`#${el}`);
+      tweens.push(
+        `tl.to("#bee-sq", { scaleX: 1.15, scaleY: 0.82, duration: 0.08, ease: "power2.out" }, ${T(land - 330)});`,
+        `tl.to("#bee-sq", { scaleX: 0.9, scaleY: 1.12, duration: 0.1, ease: "power2.out" }, ${T(land - 250)});`,
+        `tl.to("#bee", { x: () => BX(${sel}), duration: 0.42, ease: "power1.inOut" }, ${T(land - 250)});`,
+        // Réduction sur un calque intérieur (jamais sur #bee : elle écraserait aussi la hauteur du saut).
+        `tl.to("#bee-bob", { scale: ${PERCH}, transformOrigin: "50% 100%", duration: 0.42, ease: "power1.inOut" }, ${T(land - 250)});`,
+        `tl.to("#bee-hop", { y: () => BY(${sel}) - 170, rotation: 10, duration: 0.24, ease: "power2.out" }, ${T(land - 250)});`,
+        `tl.to("#bee-hop", { y: () => BY(${sel}), rotation: 0, duration: 0.18, ease: "power2.in" }, ${T(land - 10)});`,
+        ...squash(land + 170),
+        `tl.to(${sel}, { scaleY: ${press ? 0.86 : 0.9}, scaleX: 1.04, transformOrigin: "50% 100%", duration: 0.07, ease: "power2.out" }, ${T(land + 170)});`,
+        `tl.to(${sel}, { scaleY: 1, scaleX: 1, duration: 0.5, ease: "elastic.out(1, 0.35)" }, ${T(land + 240)});`,
+      );
+      if (back <= land + 400) return;
+      tweens.push(
+        `tl.to("#bee", { x: ${home}, duration: 0.45, ease: "power1.inOut" }, ${T(back)});`,
+        `tl.to("#bee-bob", { scale: 1, duration: 0.45, ease: "power1.inOut" }, ${T(back)});`,
+        `tl.to("#bee-hop", { y: () => BY(${sel}) - 120, duration: 0.2, ease: "power2.out" }, ${T(back)});`,
+        `tl.to("#bee-hop", { y: 0, duration: 0.25, ease: "power2.in" }, ${T(back + 200)});`,
+        ...squash(back + 450),
+      );
+    };
+    for (const p of plan.scenes) {
+      const i = p.index, home = spot(i), sc = p.scene;
+      const next = plan.transitions[i] ? plan.transitions[i].atMs - 250 : total - 700;
+      const backAt = (land: number) => Math.min(land + 950, next - 800);
+      const find = (pred: (e: PlanEvent) => boolean) => p.events.find(pred);
+      if (sc.type === "hook-stat") {
+        // Stoppe le chiffre : elle saute dessus pendant qu'il tourne et l'arrête pile sur la valeur.
+        const c = find((e) => e.anim === "counter");
+        if (c) jumpOn(c.el, c.atMs + c.durMs - 170, backAt(c.atMs + c.durMs), home, true);
+        continue;
+      }
+      if (sc.type === "cta") {
+        const b = find((e) => e.anim === "button");
+        if (b) jumpOn(b.el, b.atMs + b.durMs + 120, 0, home, true);
+        continue;
+      }
+      // Saut sur le mot fort : mot en couleur (réponse, mot remplacé, mot-impact, ligne accentuée).
+      const target = sc.type === "human" ? find((e) => e.el === `${sc.id}-ans`)
+        : sc.type === "strike" ? find((e) => e.el === `${sc.id}-after`)
+        : sc.type === "impact" ? find((e) => e.el === `${sc.id}-word`)
+        : sc.type === "statement" && sc.accentWords.length ? find((e) => e.el === `${sc.id}-l${Math.max(0, sc.lines.findIndex((l) => sc.accentWords.some((a) => l.toLowerCase().includes(a.toLowerCase()))))}`)
+        : undefined;
+      // Sur une ligne qui contient un mot en couleur, elle vise le mot lui-même.
+      const el = target && sc.type === "statement" ? `${target.el} em` : target?.el;
+      if (target && el) { const land = target.atMs + target.durMs + 250; if (land + 600 < next) jumpOn(el, land, backAt(land), home); }
     }
-    tweens.push(`tl.to("#bee", { autoAlpha: 0, y: 60, duration: 0.3, ease: E.editorialOut }, ${s(Math.max(0, total - 450))});`);
+    // Sortie : petit bond puis plongeon avant la vidéo de fin.
+    tweens.push(
+      `tl.to("#bee-hop", { y: -120, duration: 0.18, ease: "power2.out" }, ${T(Math.max(0, total - 650))});`,
+      `tl.to("#bee-hop", { y: 520, duration: 0.35, ease: "power2.in" }, ${T(Math.max(0, total - 470))});`,
+      `tl.to("#bee", { autoAlpha: 0, duration: 0.1 }, ${T(Math.max(0, total - 120))});`,
+    );
   }
   // Voix d'Audrey (rendu) : chaque phrase commence avec le contenu de sa scène.
   for (const p of plan.scenes) {
@@ -286,7 +431,13 @@ export function renderEditorial(sb: Storyboard, opts: RenderOptions, plan: Plan 
 ${clips.join("\n")}
     </div>
     <script>
-      ${easingSource()}
+      ${easingSource()}${sb.mascot ? `
+      // Position d'un élément dans la composition (1080 × 1920), sans les transformations animées.
+      const ROOT = document.getElementById("root");
+      const POS = (sel) => { const el = document.querySelector(sel); let x = 0, y = 0, n = el; while (n && n !== ROOT) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; } return { x, y, w: el.offsetWidth, h: el.offsetHeight }; };
+      const BX = (sel) => { const p = POS(sel); return Math.max(0, Math.min(${W - MASCOT.w - 150}, Math.round(p.x + p.w / 2 - ${MASCOT.w / 2}))); };
+      // Base de la mascotte (réduite, ancrée en bas) posée juste au-dessus du haut des lettres.
+      const BY = (sel) => Math.round(POS(sel).y + ${Math.round(MASCOT.h * 0.06)} - ${MASCOT.h} - ${MASCOT_TOP});` : ""}
       window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
       ${tweens.join("\n      ")}

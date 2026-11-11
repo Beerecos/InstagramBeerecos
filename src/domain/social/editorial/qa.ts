@@ -1,4 +1,4 @@
-import { INNER_W, MASCOT, textEm } from "./render";
+import { INNER_W, MASCOT_RESERVE, textEm } from "./render";
 import type { Plan } from "./schedule";
 import type { EditorialScene, Storyboard } from "./schema";
 import { SAFE, H } from "./tokens";
@@ -18,6 +18,8 @@ const texts = (s: EditorialScene): string[] => {
   switch (s.type) {
     case "hook-stat": return [s.lead ?? "", ...s.lines, s.accent ?? ""].filter(Boolean);
     case "statement": return s.lines;
+    case "impact": return [s.word];
+    case "strike": return [s.lead ?? "", s.before, s.after].filter(Boolean);
     case "pills": return [s.title];
     case "human": return [...s.question, s.answer];
     case "testimonials": return [s.title];
@@ -34,6 +36,8 @@ function contentHeight(s: EditorialScene): number {
   switch (s.type) {
     case "hook-stat": return texts(s).reduce((h, t) => h + line(t, 120), 0) + 380;
     case "statement": return s.lines.reduce((h, t) => h + line(t, 150), 0) + (s.micro ? 110 : 0);
+    case "impact": return line(s.word, 400) + (s.sub ? 110 : 0);
+    case "strike": return texts(s).reduce((h, t) => h + line(t, 150), 0) + (s.micro ? 110 : 0);
     case "pills": return line(s.title, 116) + 40 + s.pills.length * (56 * 1.1 + 48 + 22);
     case "human": return [...s.question, s.answer].reduce((h, t) => h + line(t, 150), 0) + (s.micro ? 110 : 0);
     case "testimonials": return line(s.title, 104) + 40 + 640;
@@ -49,7 +53,7 @@ export function qaStoryboard(sb: Storyboard, plan: Plan): QaIssue[] {
   for (const s of sb.scenes) for (const t of texts(s)) if (sizeFor(t) < MIN_SIZE) add("error", "overflow", `« ${t} » est trop long pour une ligne : coupe-le en deux.`, s.id);
   // 2. Zones de sécurité : le contenu doit tenir entre le haut (230 px) et la barre Instagram (360 px).
   // Avec la mascotte, le texte lui laisse sa place en bas.
-  const usable = USABLE_H - (sb.mascot ? MASCOT.h + 20 : 0);
+  const usable = USABLE_H - (sb.mascot ? MASCOT_RESERVE : 0);
   for (const s of sb.scenes) if (contentHeight(s) > usable) add("error", "safe-zone", sb.mascot ? "Trop de contenu avec la mascotte : retire une ligne ou une capsule." : "Trop de contenu pour la zone visible : retire une ligne ou une capsule.", s.id);
   // 3. Densité : chaque scène reste à l'écran le temps de lire ses mots.
   for (const p of plan.scenes) {

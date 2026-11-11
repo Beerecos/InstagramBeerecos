@@ -182,6 +182,29 @@ describe("Editorial Impact — QA", () => {
     const ok = { ...s, scenes: s.scenes.map((x, i) => (i === 1 && x.type === "statement" ? { ...x, lines: ["TU NE VIENS PAS", "CHERCHER DES", "CARTES DE VISITE."], micro: undefined } : x)) } as Storyboard;
     expect(qaStoryboard(ok, planStoryboard(ok)).map((i) => i.code)).not.toContain("brand-early");
   });
+  it("nouvelles animations : mot-impact, barré puis remplacé, titre 3D, cartouches (Réels filmés)", () => {
+    const base = sb();
+    const v = StoryboardSchema.parse({ ...base, mascot: true, scenes: [
+      { id: "a", type: "statement", style: "3d", background: "dark", lines: ["3 ERREURS", "QUI FONT FUIR"], accentWords: ["FUIR"], voice: "Une phrase dite par Audrey qui laisse le temps de voir le saut de la mascotte." },
+      { id: "b", type: "strike", background: "brand", lead: "ERREUR N°1", before: "VENDRE", after: "ÉCOUTER", voice: "Une phrase dite par Audrey qui laisse le temps de voir le saut de la mascotte." },
+      { id: "c", type: "impact", background: "dark", word: "RELANCE.", voice: "Une phrase dite par Audrey qui laisse le temps de voir le saut de la mascotte." },
+      { id: "d", type: "statement", style: "cartouche", background: "light", lines: ["PARLE DE LUI."], accentWords: ["LUI"], voice: "Une phrase dite par Audrey qui laisse le temps de voir le saut de la mascotte." },
+      base.scenes[4],
+    ] });
+    const plan = planStoryboard(v);
+    const anims = plan.scenes.flatMap((p) => p.events.map((e) => e.anim));
+    for (const a of ["deep", "strike", "dim", "flash", "impact", "cart"]) expect(anims).toContain(a);
+    const html = renderEditorial(v, { assetBase: "/hf" }, plan);
+    expect(html).toContain('id="b-line" class="strike-line"');
+    expect(html).toContain('id="c-flash" class="flash"');
+    expect(html).toContain("class=\"in deep\"");
+    expect(html).toContain("class=\"in cart\"");
+    // Mascotte : sauts sur le mot (mesuré à l'exécution), sur le bouton, et « coucou » au milieu.
+    expect(html).toContain('BX("#a-l1 em")');
+    expect(html).toContain('BX("#c-word")');
+    expect(html).toContain(`BX("#${base.scenes[4].id}-btn")`);
+    expect(qaStoryboard(v, plan).filter((i) => i.level === "error")).toEqual([]);
+  });
   it("signale un texte répété", () => {
     const s = sb();
     const dup = { ...s, scenes: [s.scenes[1], { ...s.scenes[1], id: "s9" }, s.scenes[4]] } as Storyboard;
