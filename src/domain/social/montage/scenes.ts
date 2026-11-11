@@ -122,6 +122,7 @@ function prefill(id: string, scene: Scene, keyword: string | null): { values: Re
     case "titre-derriere": return { values: { texte: (pivot ?? firstWords(scene.text, 3)).toUpperCase(), entree: "rebond" } };
     case "titre": return { values: { texte: firstWords(scene.text, 8) } };
     case "onglet": return { values: { texte: pivot ? pivot.toUpperCase() : firstWords(scene.text, 5) } };
+    case "cta-saisie": return keyword ? { values: { mot: keyword, consigne: "" } } : { values: { mot: "" }, note: "Mot-clé à saisir : seulement un mot-clé déjà actif dans le moteur de DM." };
     case "mot-cle": return keyword ? { values: { mot: keyword } } : { values: { mot: "" }, note: "Mot-clé à saisir : seulement un mot-clé déjà actif dans le moteur de DM." };
     case "chiffre": {
       const m = /(\d[\d\s]*(?:[.,]\d+)?)\s*(%|€)?/.exec(scene.text);

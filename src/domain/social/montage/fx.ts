@@ -63,3 +63,31 @@ export function countUp(id: string, opts: { to: number; from?: number; at: numbe
   }
   return out;
 }
+
+/**
+ * Accents sonores du Studio (fichiers de public/hyperframes/sfx, courts et discrets) : un par type d'événement.
+ * Joués seulement si le montage les active (edit.effetsSonores) ; la voix reste toujours devant.
+ */
+export const SFX_FILES = { clic: "sfx/uiClick.wav", saisie: "sfx/digitalTick.wav", glisse: "sfx/cardSlide.wav" } as const;
+
+/** Intensité bornée (0 à 2), 1 par défaut. */
+export const intensityOf = (ctx: { intensity?: number }) => Math.max(0, Math.min(2, ctx.intensity ?? 1));
+
+/**
+ * Instant d'apparition de l'élément `i` sur `n` : son repère s'il existe (borné à la durée de l'effet), sinon une
+ * répartition régulière sur `share` de la durée, après `lead` secondes.
+ */
+export function itemAt(ctx: { start: number; duration: number; marks?: number[] }, i: number, n: number, opts: { lead?: number; share?: number } = {}): number {
+  const { lead = 0.15, share = 0.6 } = opts;
+  const mark = ctx.marks?.[i];
+  const last = ctx.start + Math.max(0.1, ctx.duration - 0.6);
+  if (mark !== undefined && Number.isFinite(mark)) return r2(Math.min(Math.max(mark, ctx.start), last));
+  return r2(Math.min(ctx.start + lead + (n <= 1 ? 0 : (i * ctx.duration * share) / n), last));
+}
+
+/** Entrée « carte » : 180 à 280 ms, fondu, petit déplacement vers le haut et légère variation d'échelle. */
+export const cardIn = (id: string, at: number, ctx: { intensity?: number }, opts: { y?: number; duration?: number } = {}) => {
+  const k = intensityOf(ctx);
+  const { y = 28, duration = 0.24 } = opts;
+  return `tl.fromTo(${sel(id)}, { opacity: 0, y: ${r2(y * k)}, scale: ${r2(1 - 0.05 * k)} }, { opacity: 1, y: 0, scale: 1, duration: ${duration}, ease: "power3.out" }, ${r2(at)});`;
+};

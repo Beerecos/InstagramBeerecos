@@ -44,6 +44,17 @@ export const CustomAnimationSchema = z.strictObject({
   /** Version BeeMotion figée à l'enregistrement ; absente = montage antérieur, rendu avec la version courante. */
   version: z.number().int().min(1).max(999).optional(),
   placement: PlacementSchema.optional(),
+  /**
+   * Intensité du mouvement (Studio animations, 2026-11-11) : 0 = immobile, 1 = réglage de l'effet, 2 = deux fois plus
+   * ample. Absente = 1 (rendu d'avant).
+   */
+  intensite: z.number().min(0).max(2).optional(),
+  /**
+   * Repères (Studio animations, 2026-11-11) : instants de la PRISE (ms, temps source) où chaque élément de l'effet
+   * apparaît (ligne d'une checklist, étape d'un parcours, capsule). En temps source : ils suivent les coupes comme le
+   * début de l'animation. Absents = éléments répartis régulièrement.
+   */
+  reperes: z.array(ms).max(12, "12 repères au plus").optional(),
 }).refine((c) => c.name !== "logo-fin" || c.placement?.enter !== "slide", "Le logo officiel s’anime uniquement en opacité.");
 
 export const SoundSchema = z.strictObject({
@@ -157,6 +168,18 @@ export const EditSchema = z.strictObject({
    */
   sceneMarks: z.record(z.string().regex(/^\d{1,9}$/), z.enum(["validated", "modified"]))
     .refine((m) => Object.keys(m).length <= 200, "200 séquences au plus").optional(),
+  /**
+   * Accents sonores des animations (Studio animations, 2026-11-11) : clic à une validation, saisie sur un CTA, glissé à
+   * l'entrée d'une carte. Absent ou inactif = aucun son ajouté (rendu d'avant). Volume par type, voix toujours devant.
+   */
+  effetsSonores: z.strictObject({
+    actif: z.boolean().default(false),
+    volumes: z.strictObject({
+      clic: z.number().min(0).max(1).default(0.22),
+      saisie: z.number().min(0).max(1).default(0.18),
+      glisse: z.number().min(0).max(1).default(0.2),
+    }).default({ clic: 0.22, saisie: 0.18, glisse: 0.2 }),
+  }).optional(),
   /** Optional official BeeRecos logo, kept separate from timed animation cards. */
   logo: z.strictObject({
     width: z.number().int().min(150).max(360).default(220),
