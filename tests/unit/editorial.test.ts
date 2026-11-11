@@ -227,11 +227,26 @@ describe("Editorial Impact — QA", () => {
     expect(html).toContain('id="c-flash" class="flash"');
     expect(html).toContain("class=\"in deep\"");
     expect(html).toContain("class=\"in cart\"");
-    // Mascotte : sauts sur le mot (mesuré à l'exécution), sur le bouton, et « coucou » au milieu.
-    expect(html).toContain('BX("#a-l1 em")');
+    // Mascotte : réaction sur le mot fort (position mesurée à l'exécution), trampoline sur le mot-impact et sur le bouton,
+    // éjection du mot barré, frisson sur l'affirmation choc.
+    expect(html).toMatch(/[BP]X\("#a-l1 em"\)/);
     expect(html).toContain('BX("#c-word")');
     expect(html).toContain(`BX("#${base.scenes[4].id}-btn")`);
+    expect(html).toContain('x: () => 420 * PD("#b-before")');
+    expect(html).toContain('tl.fromTo("#bee-sq", { x: -7 }');
     expect(qaStoryboard(v, plan).filter((i) => i.level === "error")).toEqual([]);
+  });
+  it("mascotte variée : chaque Réel pioche ses gestes d'après son texte, toujours le même rendu pour le même texte", () => {
+    const scene = (id: string, w: string) => ({ id, type: "statement", style: "plain", background: id === "x2" ? "light" : "dark", lines: [`PARLE DE ${w}`, "AVANT TOUT."], accentWords: [w], voice: "Une phrase dite par Audrey qui laisse le temps de voir le geste de la mascotte." });
+    const make = (w: string) => StoryboardSchema.parse({ preset: "editorial-impact", mascot: true, scenes: [scene("x1", w), scene("x2", w), scene("x3", w), scene("x4", w), sb().scenes[4]] });
+    const gestures = (h: string) => ({ salto: /rotation: -?360/.test(h), sky: h.includes("y: -1"), hide: h.includes('clipPath: "inset(0% 0% 100% 0%)"'), push: h.includes("PX("), trampoline: (h.match(/y: \(\) => BY\([^)]*\) - 150/g) ?? []).length > 2 });
+    const all = ["LUI", "ELLE", "EUX", "NOUS", "TOI", "MOI"].map((w) => renderEditorial(make(w), { assetBase: "/hf" }));
+    expect(renderEditorial(make("LUI"), { assetBase: "/hf" })).toBe(all[0]);
+    const seen = all.map(gestures);
+    for (const g of ["salto", "sky", "hide", "push", "trampoline"] as const) expect(seen.some((x) => x[g])).toBe(true);
+    // Le geste sur la 1re scène change d'un Réel à l'autre.
+    const first = (h: string) => h.includes('PX("#x1-l0 em")') ? "push" : h.includes('tl.set("#bee", { x: () => BX("#x1-l0 em") }') ? "hide" : (h.match(/BY\("#x1-l0 em"\) - 150/g) ?? []).length >= 2 ? "trampoline" : "perch";
+    expect(new Set(all.map(first)).size).toBeGreaterThan(1);
   });
   it("signale un texte répété", () => {
     const s = sb();
