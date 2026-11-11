@@ -53,8 +53,10 @@ test("Réel IA : idée + mascotte → structure Hook → CTA, garder, modifier, 
   // Garder la 1re carte puis demander une autre structure : elle reste.
   await first.getByRole("button", { name: "Garder" }).click();
   reply = "pas de JSON";
+  const before = briefs.length;
   await page.getByRole("button", { name: "Proposer une autre structure" }).click();
-  await expect(page.getByText(/structure construite à partir de ton texte/)).toBeVisible();
+  await expect(page.getByText(/Réponse de l'IA inutilisable deux fois/)).toBeVisible();
+  expect(briefs.length - before).toBe(2); // une seconde tentative avant la structure de secours
   await expect(board.getByRole("listitem").first()).toContainText("QUI TE RECOMMANDENT ?");
 
   // Valider → aperçu, avec retour possible à la structure.
