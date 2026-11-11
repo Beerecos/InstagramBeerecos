@@ -1,4 +1,4 @@
-import { END_VIDEO, escapeHtml } from "../montage/brand";
+import { END_VIDEO, escapeHtml, STUDIO_LOGO } from "../montage/brand";
 import { easingSource } from "./easings";
 import { planStoryboard, SFX_PEAK_MS, type Plan, type PlanEvent } from "./schedule";
 import { BG, H, PALETTE, SAFE, TYPE, W, type Background } from "./tokens";
@@ -126,7 +126,9 @@ function sceneHtml(sc: EditorialScene, base: string): string {
       return box([
         ...sc.lines.map((l, i) => mask(`${id}-l${i}`, esc(l), block(sc.lines, 150), i === sc.lines.length - 1 ? ";color:var(--accent)" : "")),
         sc.sub ? `<p id="${id}-sub" class="micro sub">${esc(sc.sub)}</p>` : "",
-        sc.brand ? `<img id="${id}-logo" class="logo" src="${base}/brand/beerecos-logo-${sc.background === "light" ? "blue" : "white"}.svg" alt="BeeRecos" />` : "",
+        // Logo officiel BeeRecos (pictogramme bleu, « Bee » noir, « Recos » bleu), jamais recoloré : sur fond sombre ou
+        // bleu, il est posé sur une carte blanche pour rester lisible.
+        sc.brand ? `<div id="${id}-logo" class="logo${sc.background === "light" ? " bare" : ""}"><img src="${base}/${STUDIO_LOGO.file}" alt="BeeRecos" /></div>` : "",
         `<span id="${id}-btn" class="cta-btn">${esc(sc.button)}</span>`,
       ].join(""), "cta");
   }
@@ -215,7 +217,9 @@ const CSS = `
       .rating .stars i { font-style: normal; font-size: 44px; color: ${PALETTE.brand}; display: inline-block; visibility: hidden; }
       .rating .count { font-size: 26px; opacity: 0.75; }
       .content.testi { justify-content: flex-start; }
-      .logo { height: 168px; width: auto; margin-top: 46px; visibility: hidden; }
+      .logo { display: inline-block; margin-top: 46px; padding: 14px 22px; border-radius: 32px; background: #FFFFFF; visibility: hidden; }
+      .logo.bare { padding: 0; background: transparent; }
+      .logo img { display: block; height: 210px; width: auto; }
       .cta-btn { display: inline-block; margin-top: 30px; padding: 32px 56px; border-radius: 999px; background: ${PALETTE.brand}; color: ${PALETTE.white}; font-size: 50px; font-weight: 700; letter-spacing: 0.01em; visibility: hidden; }
       .scene.brand .cta-btn { background: ${PALETTE.white}; color: ${PALETTE.brand}; }
       .bee { position: absolute; left: 0; top: ${MASCOT_TOP}px; width: ${MASCOT.w}px; height: ${MASCOT.h}px; z-index: 55; }
@@ -582,7 +586,7 @@ ${clips.join("\n")}
 
 /** Fichiers de public/hyperframes/ nécessaires au rendu de ce Reel (voix en plus). */
 export function editorialAssets(sb: Storyboard, plan: Plan = planStoryboard(sb)): string[] {
-  const logos = sb.scenes.some((x) => x.type === "cta" && x.brand) ? ["brand/beerecos-logo-white.svg", "brand/beerecos-logo-blue.svg"] : [];
+  const logos = sb.scenes.some((x) => x.type === "cta" && x.brand) ? [STUDIO_LOGO.file] : [];
   return [
     ...[500, 600, 700, 800].map((w) => `fonts/poppins-latin-${w}-normal.woff2`),
     "gsap-3.14.2.min.js", ...logos, ...(sb.mascot ? [MASCOT.file] : []),
