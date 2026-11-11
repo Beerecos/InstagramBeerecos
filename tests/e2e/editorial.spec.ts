@@ -25,7 +25,7 @@ test("Réel IA : idée + mascotte → structure Hook → CTA, garder, modifier, 
     status: () => ({ state: "done", narrationVerified: true, url: "https://video.test/reel.mp4", size: 1000 }),
   });
   await page.route("https://upload.test/**", async (route) => { zipBytes = route.request().postDataBuffer()?.length ?? 0; await route.fulfill({ status: 200, body: "" }); });
-  await page.route("https://video.test/**", (route) => route.fulfill({ status: 200, contentType: "video/mp4", body: "" }));
+  await page.route("https://video.test/**", (route) => route.fulfill({ status: 200, contentType: "video/mp4", body: readFileSync(new URL("./fixtures/paysage.mp4", import.meta.url)) }));
   await page.goto("/reels/nouveau/ia");
   await page.getByLabel("Mon idée").fill(IDEA);
   await expect(page.getByLabel("Mascotte BeeRecos")).toBeChecked();
@@ -76,6 +76,43 @@ test("Réel IA : idée + mascotte → structure Hook → CTA, garder, modifier, 
   await page.getByRole("button", { name: "Modifier la structure" }).click();
   await expect(board).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("Réel IA : la vidéo compilée part au montage avec sa preuve de rendu", async ({ page }) => {
+  const saved: Record<string, unknown>[] = [];
+  const created: Record<string, unknown>[] = [];
+  let uploaded = 0;
+  const MONTAGE = "22222222-2222-4222-8222-222222222222";
+  await mockBee(page, {
+    "": () => ({ text: JSON.stringify(withVoice) }),
+    "research-facts": () => ({ facts: [], text: "", dropped: 0 }),
+    tts: () => ({ duration: 2.4, receiptId: "a".repeat(64), audioBase64: "bXAz", words: [] }),
+    "upload-url": () => ({ jobId: "11111111-1111-4111-8111-111111111111", uploadUrl: "https://upload.test/projet.zip" }),
+    jobs: () => ({ jobs: [] }),
+    submit: () => ({ renderId: "render-123" }),
+    status: () => ({ state: "done", narrationVerified: true, url: "https://video.test/reel.mp4", size: 1000 }),
+    "asset-save": (body) => { saved.push(body); return { asset: { id: "33333333-3333-4333-8333-333333333333", kind: "editorial", title: body.title, revision: 1, status: "draft", data: body.data, createdAt: "2026-11-11T00:00:00Z", updatedAt: "2026-11-11T00:00:00Z" } }; },
+    create: (body) => { created.push(body); return { id: MONTAGE, uploadUrl: "https://upload.test/montage.mp4" }; },
+    uploaded: () => { uploaded++; return {}; },
+    brief: () => ({ storyboardStatus: "draft" }),
+    get: () => ({ montage: { id: MONTAGE, updatedAt: "2026-11-11T00:00:00Z" }, videoUrl: null }),
+    "storyboard-save": () => ({ warnings: [] }),
+  });
+  await page.route("https://upload.test/**", (route) => route.fulfill({ status: 200, body: "" }));
+  await page.route("https://video.test/**", (route) => route.fulfill({ status: 200, contentType: "video/mp4", body: readFileSync(new URL("./fixtures/paysage.mp4", import.meta.url)) }));
+  await page.goto("/reels/nouveau/ia");
+  await page.getByLabel("Mon idée").fill(IDEA);
+  await page.getByRole("button", { name: "Structurer ma vidéo (Hook → CTA)" }).click();
+  await page.getByRole("button", { name: "Valider la structure" }).click();
+  await page.getByRole("button", { name: "Compiler la vidéo avec la voix d'Audrey" }).click();
+  await expect(page.getByText("✅ Vidéo compilée avec la voix d'Audrey")).toBeVisible({ timeout: 20000 });
+  await page.getByRole("button", { name: "Envoyer au montage" }).click();
+  await expect(page).toHaveURL(new RegExp(`/reels/${MONTAGE}$`), { timeout: 20000 });
+  // Source enregistrée (structure seule, sans voix générées), puis montage créé avec la preuve du rendu.
+  expect(saved[0]).toMatchObject({ kind: "editorial", title: IDEA.slice(0, 120) });
+  expect(saved[0].data).not.toHaveProperty("assets");
+  expect(created[0]).toMatchObject({ aiSource: { source: { assetId: "33333333-3333-4333-8333-333333333333", revision: 1, kind: "editorial" }, jobId: "11111111-1111-4111-8111-111111111111", renderId: "render-123" } });
+  expect(uploaded).toBe(1);
 });
 
 test("Réel IA : un chiffre absent de l'idée bloque la validation", async ({ page }) => {

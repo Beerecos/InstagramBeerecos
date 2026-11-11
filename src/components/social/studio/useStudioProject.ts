@@ -3,7 +3,8 @@ import { studioAssets } from "@/lib/social/studio-assets-api";
 import type { StudioAsset, StudioAssetData } from "@/domain/social/studio-assets";
 import { sourceData, sourceFingerprint, type StudioSourceKind, type StudioSourceRef } from "@/domain/social/studio-sources";
 
-export function useStudioProject<K extends StudioSourceKind>(kind: K, spec: StudioAssetData[K], onOpen: (data: StudioAssetData[K]) => void, sourceRef?: StudioSourceRef) {
+// Projets IA détaillés (motion, story) ; le Réel IA simple (editorial) enregistre sa source à l'envoi au montage.
+export function useStudioProject<K extends Exclude<StudioSourceKind, "editorial">>(kind: K, spec: StudioAssetData[K], onOpen: (data: StudioAssetData[K]) => void, sourceRef?: StudioSourceRef) {
   const [asset, setAsset] = useState<StudioAsset<K> | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
