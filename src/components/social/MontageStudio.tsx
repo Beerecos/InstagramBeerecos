@@ -429,8 +429,9 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   // garde tous les outils ; le choix est retenu sur cet appareil.
   // Refonte 2026-11-12 : le nouveau studio (« studio ») est l'écran par défaut ; le parcours guidé en 5 étapes
   // (« etapes ») et le mode avancé (« avance ») restent accessibles depuis Paramètres.
-  const [mode,setModeState]=useState<"studio"|"etapes"|"avance">(()=>{try{const v=typeof window==="undefined"?null:localStorage.getItem("ibr.studio.mode");return v==="avance"||v==="etapes"?v:"studio";}catch{return "studio";}});
-  const setMode=(next:"studio"|"etapes"|"avance")=>{setModeState(next);try{localStorage.setItem("ibr.studio.mode",next);}catch{/* stockage indisponible */}};
+  // Clé renommée le 2026-11-12 : un ancien choix (« avance » / « etapes » de l'ancien écran) ne masque plus le nouveau studio.
+  const [mode,setModeState]=useState<"studio"|"etapes"|"avance">(()=>{try{const v=typeof window==="undefined"?null:localStorage.getItem("ibr.studio.vue");return v==="avance"||v==="etapes"?v:"studio";}catch{return "studio";}});
+  const setMode=(next:"studio"|"etapes"|"avance")=>{setModeState(next);try{localStorage.setItem("ibr.studio.vue",next);}catch{/* stockage indisponible */}};
   const simple=mode!=="avance";
   const [simpleStep,setSimpleStep]=useState<StudioStep>("storyboard");
   const switchMode=(next:boolean)=>setMode(next?"etapes":"avance");

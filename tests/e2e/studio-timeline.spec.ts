@@ -117,7 +117,7 @@ test("pistes en plus : clip d'illustration au curseur, cadrage, musique baissée
     get: () => ({ montage: { id: "m4", title: "Prise", status: "ready", durationMs: 6000, keptMs: 6000, workspaceId: null, createdAt: "t", updatedAt: `v${version}`, renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit, captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: "https://bee-api.test/fichiers/prise.mp4" }),
     "save-edit": (body) => { edit = body.edit as typeof edit; saved.push(edit); version++; return {}; },
   });
-  await page.addInitScript(() => localStorage.setItem("ibr.studio.mode", "avance"));
+  await page.addInitScript(() => localStorage.setItem("ibr.studio.vue", "avance"));
   await page.goto("/reels/m4");
   await page.getByRole("button", { name: "Médias", exact: true }).click();
   await page.getByRole("button", { name: "Illustrer au curseur" }).click();
@@ -256,6 +256,6 @@ test("studio simple : quatre étapes, couleurs des sous-titres en un clic, mode 
 
   await page.getByRole("button", { name: "Mode avancé" }).filter({ visible: true }).click();
   await expect(page.getByRole("button", { name: "⚡ Tout auto" }).filter({ visible: true })).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem("ibr.studio.mode"))).toBe("avance");
+  expect(await page.evaluate(() => localStorage.getItem("ibr.studio.vue"))).toBe("avance");
   expect(errors).toEqual([]);
 });

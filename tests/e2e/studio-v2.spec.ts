@@ -20,7 +20,7 @@ test("nouveau studio : trois onglets, animation en 1 clic, coupe au curseur, Pub
     get: () => ({ montage: { id: "m9", title: "Conseils réseau", status: "ready", durationMs: DURATION, keptMs: DURATION, workspaceId: null, createdAt: "t", updatedAt: `v${version}`, renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit, captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: null }),
     "save-edit": (body) => { edit = body.edit as typeof edit; saved.push(edit); version++; return {}; },
   });
-  await page.addInitScript(() => localStorage.setItem("ibr.studio.mode", "studio"));
+  await page.addInitScript(() => localStorage.setItem("ibr.studio.vue", "studio"));
   await page.goto("/reels/m9");
   const studio = page.getByTestId("studio-v2");
   await expect(studio.getByRole("navigation", { name: "Studio" }).getByRole("button", { name: "Créer une vidéo" })).toBeVisible();
@@ -78,4 +78,15 @@ test("nouveau studio : trois onglets, animation en 1 clic, coupe au curseur, Pub
   await page.getByTestId("studio-v2").getByRole("button", { name: "Publier" }).click();
   await expect(page).toHaveURL(/\/calendar/);
   expect(errors).toEqual([]);
+});
+
+test("un ancien choix « mode avancé » enregistré sur l'appareil ouvre quand même le nouveau studio", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "disposition bureau");
+  await mockBee(page, {
+    list: () => ({ montages: [] }),
+    get: () => ({ montage: { id: "m9", title: "Conseils réseau", status: "ready", durationMs: DURATION, keptMs: DURATION, workspaceId: null, createdAt: "t", updatedAt: "v1", renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit: initialEdit("prise.mp4", DURATION), captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: null }),
+  });
+  await page.addInitScript(() => { localStorage.removeItem("ibr.studio.vue"); localStorage.setItem("ibr.studio.mode", "avance"); });
+  await page.goto("/reels/m9");
+  await expect(page.getByTestId("studio-v2").getByRole("tab", { name: "Animation" })).toBeVisible();
 });
