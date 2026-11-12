@@ -1,7 +1,7 @@
 "use client";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Film, Upload } from "lucide-react";
+import { Film, Upload, Volume2 } from "lucide-react";
 import { BriefSchema, StoryboardSchema } from "@/domain/social/montage/ideation";
 import { videoDurationMs } from "@/lib/social/video-duration";
 import { MOTION_STYLE_LABEL, motionPlan, PILLAR_LABEL, SEQUENCES, SEQUENCE_LABEL, type MotionSpec, type StorySpec } from "@/domain/social/reel-story";
@@ -47,6 +47,8 @@ import AiEditor from "@/components/reels/ai-editor";
 import { useWaveform } from "@/components/reels/use-waveform";
 import { pickVideos, sendTake, useVideoImport, VIDEO_ACCEPT } from "@/components/social/studio/video-import";
 import StudioImport from "@/components/social/studio/StudioImport";
+import { ajouterSon, SonsAvantPublication, SonsDeLaVideo, SonsPanel, SonsVerification, type SonsCible } from "@/components/social/studio/StudioSons";
+import { modifierSon, placeSons } from "@/domain/social/montage/sons";
 import { cutOutputZone, pieceAt, removePiece, splitAt, stepMs } from "@/domain/studio/timeline";
 import { HeaderMenu, PlayerBar, PublishButton, QuickAnimations, StudioHeader, StudioSidebar, StudioTabs, StudioTitle, type StudioTab } from "@/components/social/studio/StudioV2";
 import { sceneCardCandidate } from "@/domain/social/montage/scenes";
@@ -73,6 +75,9 @@ import type { AnimationTemplate } from "@/domain/social/montage/template";
  * (save-edit) et annulable. Lot S2 : « Tout auto », panneau Retours (Bee propose, rien sans « Appliquer ») et
  * planche contact validée avant tout rendu. Animations : MontageAnimations. Rendu et « Reels IA » : MontagePublish.
  */
+
+/** Heure courante, lue dans un gestionnaire d'événement (jamais pendant le rendu). */
+const nowMs = () => Date.now();
 
 const sec = (ms: number | null | undefined) => `${((ms ?? 0) / 1000).toFixed(1).replace(".", ",")} s`;
 
@@ -341,6 +346,11 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   const [tab,setTab]=useState<StudioTab>("animation");
   const [publishOpen,setPublishOpen]=useState(false);
   const [templatesOpen,setTemplatesOpen]=useState(false);
+  // Effets sonores SFX Kit (2026-11-12) : panneau « Sons », occurrence sélectionnée.
+  const [sonsOpen,setSonsOpen]=useState(false);
+  const [sonsCible,setSonsCible]=useState<SonsCible>({mode:"ajout"});
+  const [sonSel,setSonSel]=useState<string|null>(null);
+  const [sonsIndispo,setSonsIndispo]=useState<string[]>([]);
   const [importFiles,setImportFiles]=useState<File[]|null>(null);
   const [libraryTab,setLibraryTab]=useState<"animations"|"effects"|"sounds">("animations");
   const [expanded,setExpanded]=useState(()=>typeof window==="undefined"||window.innerWidth>=768);
@@ -564,7 +574,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   const seekOutput = (ms: number) => {
     const v = Math.max(0, Math.min(totalOut, Math.round(ms)));
     setMonitorView("edit");
-    manualSeek.current = { ms: v, at: Date.now(), last: null };
+    manualSeek.current = { ms: v, at: nowMs(), last: null };
     setPlayOut(v);
     if (player.current) player.current.seek(v / 1000); else pendingSeek.current = v / 1000;
   };
@@ -728,9 +738,34 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
         </section>
       </StudioLibraryDialog>
   );
+  // Sons : calculés sur le montage affiché (animations du brouillon comprises) ; seuls les champs des sons sont enregistrés.
+  const sonsEdit: Edit | null = m.edit ? { ...m.edit, custom: draft } : null;
+  const sonsLock = saving || frozen || Boolean(proposal) || !m.edit;
+  const saveSons = (next: Edit) => {
+    if (!m.edit) return;
+    const rest: Edit = { ...m.edit };
+    delete rest.sons; delete rest.sonsReglages; delete rest.sonsAutoIgnores;
+    void save({ ...rest, ...(next.sons ? { sons: next.sons } : {}), ...(next.sonsReglages ? { sonsReglages: next.sonsReglages } : {}), ...(next.sonsAutoIgnores ? { sonsAutoIgnores: next.sonsAutoIgnores } : {}) });
+  };
+  const sonsPlaces = sonsEdit ? placeSons(sonsEdit, []).placed : [];
+  const sonsBloquants = (sonsEdit?.sons ?? []).filter((o) => !o.muet && sonsIndispo.includes(o.id)).length;
+  const sourceAt = (outMs: number) => outputToSourceMs(segments, outMs);
+  const moveEffet = (id: string, delta: number) => {
+    if (!sonsEdit) return;
+    const o = sonsEdit.sons?.find((x) => x.id === id), p = sonsPlaces.find((x) => x.occ.id === id);
+    if (!o || !p) return;
+    if (o.ancre.type === "libre") saveSons({ ...sonsEdit, sons: sonsEdit.sons!.map((x) => x.id === id ? { ...x, ancre: { type: "libre" as const, debutMs: Math.max(0, Math.round(sourceAt(Math.max(0, p.startMs + delta)))) } } : x) });
+    else saveSons(modifierSon(sonsEdit, id, { decalageMs: Math.max(-3000, Math.min(3000, o.decalageMs + delta)) }));
+  };
+  // « Publier » (bureau et téléphone) : un effet sonore impossible à rendre arrête d'abord sur la vidéo finale.
+  const publier = () => {
+    if (sonsBloquants) { setNotice("Un effet sonore ne peut pas être rendu : corrige-le ou continue sans lui avant de publier."); setPublishOpen(true); return; }
+    if (canLeave()) onSwitch?.("__calendrier");
+  };
   const timeline = m.edit && m.durationMs ? (
         <StudioTimeline onDeleteScene={deleteScene} deleteDisabled={unsaved} onOpenSounds={()=>{setLibraryTab("sounds");setLibraryOpen(true);}} onOpenLibrary={()=>{setLibraryTab("animations");setLibraryOpen(true);}} scenes={scenes} selectedScene={activeScene?.index} onSelectScene={selectScene} onDropScene={(name,scene,fromIndex)=>animations.current?.place(name,scene,fromIndex)} durationMs={m.durationMs} ranges={proposal?.edit.ranges ?? m.edit.ranges} captions={m.captions} custom={proposal?.edit.custom ?? draft} sounds={proposal?.edit.sounds ?? m.edit.sounds} outroMs={(proposal?.edit??m.edit).outro ? END_VIDEO.durationMs : undefined} onSeekOutro={()=>{setMonitorView("edit");player.current?.seek(segments.reduce((n,s)=>n+s.toMs-s.fromMs,0)/1000);}} playheadMs={playSource}
-          onSeek={seekSource} selected={selectedAnim} onSelectAnimation={(i) => { setSelectedId(draft[i]?.id ?? null); const scene=scenes.find(s=>draft[i].fromMs>=s.startMs&&draft[i].fromMs<s.endMs); if(scene)setSelectedSceneIndex(scene.index); setPanel("animations"); }} takeBreaks={breaks} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChangeAnimation={(_i,a) => changeAnimation(a)} onChangeRanges={proposal ? undefined : (r) => { if (m.edit) void save({ ...m.edit, ranges: r }); }} waveform={wave} waveformNote={waveNote} broll={(proposal?.edit ?? m.edit).broll ?? []} zone={zone} onCutZone={cutZone} onClearZone={() => setZone({ in: null, out: null })} />
+          onSeek={seekSource} selected={selectedAnim} onSelectAnimation={(i) => { setSelectedId(draft[i]?.id ?? null); const scene=scenes.find(s=>draft[i].fromMs>=s.startMs&&draft[i].fromMs<s.endMs); if(scene)setSelectedSceneIndex(scene.index); setPanel("animations"); }} takeBreaks={breaks} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChangeAnimation={(_i,a) => changeAnimation(a)} onChangeRanges={proposal ? undefined : (r) => { if (m.edit) void save({ ...m.edit, ranges: r }); }} waveform={wave} waveformNote={waveNote} broll={(proposal?.edit ?? m.edit).broll ?? []} zone={zone} onCutZone={cutZone} onClearZone={() => setZone({ in: null, out: null })}
+          effets={sonsPlaces.map((p) => ({ id: p.occ.id, label: p.occ.son, startMs: p.startMs, durationMs: p.durationMs }))} selectedEffet={sonSel} onSelectEffet={(id) => { setSonSel(id); if (id) setTab("animation"); }} onMoveEffet={sonsLock ? undefined : moveEffet} />
   ) : null;
   const proposalBar = proposal?.source ? <section aria-label="Modification à enregistrer" className="card space-y-2 border-brand p-3">
         <p role="status" className="text-sm">{proposal.source==="sequence"?"Séquence retirée de l’aperçu. Le fichier source reste intact.":"Modification visible dans l’aperçu, pas encore enregistrée."}</p>
@@ -804,6 +839,13 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
       {m.error ? <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{m.error}</p> : null}
       {frozen ? <p role="status" className="rounded-2xl bg-black/[0.03] px-4 py-3 text-sm">{m.sentToReels ? "Vidéo déjà envoyée : elle ne se modifie plus (crée une nouvelle vidéo pour la changer)." : "Création de la vidéo en cours : le montage est figé jusqu’à la fin."}</p> : null}
       {libraryDialog}
+      <SonsVerification edit={sonsEdit} onResult={setSonsIndispo} />
+      <StudioLibraryDialog closeLabel="Fermer" title="Sons" open={sonsOpen} onClose={() => setSonsOpen(false)}>
+        <SonsPanel open={sonsOpen} cible={sonsCible} canAddHere={!sonsLock && playSource !== null} animationLabel={!sonsLock && selectedAnimation ? (ANIMATIONS[selectedAnimation.name]?.label ?? selectedAnimation.name) : null}
+          onAddHere={(id) => { if (!sonsEdit || playSource === null) return; const r = ajouterSon(sonsEdit, id, { type: "libre", debutMs: Math.round(playSource) }); saveSons(r.edit); setSonSel(r.id); setSonsOpen(false); setNotice("Son ajouté à la position de lecture."); }}
+          onAssociate={(id) => { if (!sonsEdit || !selectedAnimation?.id) return; const r = ajouterSon(sonsEdit, id, { type: "animation", animId: selectedAnimation.id, point: "debut" }); saveSons(r.edit); setSonSel(r.id); setSonsOpen(false); setNotice(`Son associé à « ${ANIMATIONS[selectedAnimation.name]?.label ?? selectedAnimation.name} ».`); }}
+          onReplace={(occId, id) => { if (!sonsEdit) return; saveSons(modifierSon(sonsEdit, occId, { son: id })); setSonSel(occId); setSonsOpen(false); }} />
+      </StudioLibraryDialog>
       {importFiles ? <StudioImport files={importFiles} onClose={() => setImportFiles(null)} onDone={(id) => { setImportFiles(null); if (canLeave()) onSwitch?.(id); else setNotice("Ta nouvelle vidéo est prête : ouvre-la depuis « Mes projets » une fois ce montage enregistré."); }} /> : null}
       {prompteur ? <Prompteur reel={prompteur} onClose={() => setPrompteur(null)} /> : null}
       <StudioLibraryDialog closeLabel="Fermer" title="Templates" open={templatesOpen} onClose={() => setTemplatesOpen(false)}>
@@ -820,7 +862,8 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             <StudioContactSheet edit={m.edit} words={m.captions} videoUrl={data.videoUrl} takeUrls={data.takeUrls} library={lib.library ?? []} storyboardApproved={m.storyboardStatus === "approved"} briefKeyword={m.brief?.motCle ?? null} approved={Boolean(m.previewApproved)} approvedAt={m.previewApprovedAt}
               unsaved={unsaved} disabled={saving || animationBusy || frozen} onApprove={async () => { await montage.approvePreview(m.id, m.updatedAt); load(); }} /></section>
           <section className="card space-y-3 p-4"><h3 className="font-semibold">2. Créer la vidéo finale</h3>
-            <MontagePublish m={m} disabled={unsaved || saving} showTransfer={false} showVideo={false} onChange={load} onOpenPlanche={() => {}} />
+            {sonsEdit ? <SonsAvantPublication edit={sonsEdit} indisponibles={sonsIndispo} disabled={sonsLock} onChange={saveSons} onReplace={(occId) => { setSonsCible({ mode: "remplacer", occId }); setSonsOpen(true); }} /> : null}
+            <MontagePublish m={m} disabled={unsaved || saving || sonsBloquants > 0} showTransfer={false} showVideo={false} onChange={load} onOpenPlanche={() => {}} />
             <h3 className="font-semibold">3. Légende et publication</h3>
             <PostPanel m={m} /></section>
         </div> : null}
@@ -840,7 +883,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             onFullscreen={() => { const node = preview.current; if (document.fullscreenElement) void document.exitFullscreen(); else void node?.requestFullscreen().catch(() => setError("Le plein écran n’est pas disponible dans ce navigateur.")); }} />
         </section>
         <aside aria-label="Outils du montage" className="sv2-panel sv2-tools">
-          <StudioTabs tab={tab} onTab={setTab} onPublish={() => { if (canLeave()) onSwitch?.("__calendrier"); }} />
+          <StudioTabs tab={tab} onTab={setTab} onPublish={publier} />
           {tab === "cadrage" ? <div className="sv2-section">
             <div><h3 className="sv2-h">Format</h3>
               <div className="mt-2 grid grid-cols-4 gap-2">
@@ -884,7 +927,14 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
           </div> : null}
           {tab === "animation" ? <div className="sv2-section">
             <QuickAnimations onAdd={quickAdd} disabled={lock || !m.edit} used={new Set(draft.map((a) => a.name))} />
-            <button type="button" className="sv2-action" disabled={lock || !m.edit} onClick={() => { setLibraryTab("animations"); setLibraryOpen(true); }}>Toute la bibliothèque…</button>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" className="sv2-action" disabled={lock || !m.edit} onClick={() => { setLibraryTab("animations"); setLibraryOpen(true); }}>Toute la bibliothèque…</button>
+              <button type="button" className="sv2-action" aria-haspopup="dialog" disabled={sonsLock} onClick={() => { setSonsCible({ mode: "ajout" }); setSonsOpen(true); }}><Volume2 aria-hidden size={18} /> Sons</button>
+            </div>
+            {sonsEdit ? <details className="sv2-details" open={Boolean(sonSel) || undefined}><summary>Sons de la vidéo ({(sonsEdit.sons ?? []).length})</summary>
+              <SonsDeLaVideo edit={sonsEdit} words={m.captions} selected={sonSel} disabled={sonsLock} onSelect={setSonSel} onChange={saveSons}
+                onReplace={(occId) => { setSonsCible({ mode: "remplacer", occId }); setSonsOpen(true); }} onSeek={(ms) => { player.current?.pause(); player.current?.seek(ms / 1000); }} sourceAt={sourceAt} />
+            </details> : null}
             {draft.length ? <section aria-label="Animations de la vidéo"><h3 className="sv2-h">Dans ta vidéo</h3><ul className="mt-2 space-y-1">{draft.map((a) => <li key={a.id} className="flex items-center gap-2">
               <button type="button" aria-pressed={a.id === selectedId} className="btn-ghost min-h-11 min-w-0 flex-1 justify-start truncate text-left text-sm" onClick={() => { setSelectedId(a.id ?? null); seekSource(a.fromMs); }}>{ANIMATIONS[a.name]?.label ?? a.name}{wordText(a) ? ` · ${wordText(a)}` : ""} · {sec(toOutputMs(segments, a.fromMs))}</button>
               <button type="button" aria-label={`Retirer ${ANIMATIONS[a.name]?.label ?? a.name}`} className="btn-ghost min-h-11 min-w-11 text-red-700" disabled={lock} onClick={() => { changeDraft(draft.filter((x) => x.id !== a.id)); if (selectedId === a.id) setSelectedId(null); }}>✕</button>
@@ -915,7 +965,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
         <div className="sv2-finish">
           <button type="button" className="sv2-action" disabled={!m.edit} onClick={() => setPublishOpen(true)}>Vidéo finale</button>
           {/* Demande de Cédric (2026-11-12) : « Publier » ouvre le calendrier de publication. */}
-          <PublishButton disabled={!m.edit} onClick={() => { if (canLeave()) onSwitch?.("__calendrier"); }} />
+          <PublishButton disabled={!m.edit} onClick={publier} />
         </div>
       </div>
     </div>
