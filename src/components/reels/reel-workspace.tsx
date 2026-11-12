@@ -9,7 +9,7 @@ export default function ReelWorkspace({ montageId, source = "reel", compact = fa
     <div className="social-studio -mx-4 min-h-full sm:-mx-8">
       <MontageStudio source={source} montageId={montageId} compact={compact}
         onOpenSource={(ref) => router.push(`/reels/nouveau/ia?${new URLSearchParams({ studioAsset: ref.assetId, studioRevision: String(ref.revision), studioKind: ref.kind })}`)}
-        onOpenMontage={(id) => { if (!id || id === "__tous") router.push("/"); else if (id === "__video") router.push("/reels/nouveau/video"); else if (id === "__ia") router.push("/reels/nouveau/ia"); else router.push(`/reels/${id}`); }} />
+        onOpenMontage={(id) => { if (!id || id === "__tous") router.push("/"); else if (id === "__video") router.push("/reels/nouveau/video"); else if (id === "__ia") router.push("/reels/nouveau/ia"); else if (id === "__tournage") router.push("/reels/tournage"); else if (id === "__calendrier") router.push("/calendar"); else router.push(`/reels/${id}`); }} />
     </div>
   );
 }
