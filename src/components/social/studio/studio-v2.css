@@ -98,3 +98,21 @@
 .studio-v2 .sv2-timeline .bg-black { background-color: #000; }
 .studio-v2 dialog { margin: auto; max-height: 92vh; overflow: auto; }
 .studio-v2 .text-mut { color: var(--sv2-mut); }
+/* Téléphone et tablette : navigation basse Cadrage / Coupe / Animation / Publier, timeline défilante. */
+.sv2-tab-publish { display: none; }
+@media (max-width: 1099px) {
+  .studio-v2 { padding-bottom: 84px; }
+  .sv2-tabs { position: fixed; left: 8px; right: 8px; bottom: 8px; top: auto; z-index: 40; grid-template-columns: repeat(4, 1fr); box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45); }
+  .sv2-tab { flex-direction: column; gap: 2px; font-size: 12px; min-height: 56px; }
+  .sv2-tab-publish { display: inline-flex; background: var(--sv2-blue); }
+  .sv2-finish .sv2-publish { display: none; }
+  .sv2-header .sv2-nav-btn { padding: 0 10px; font-size: 13px; }
+}
+/* Téléphone : les zones s'empilent à leur hauteur naturelle (pas de chevauchement), la page défile. */
+@media (max-width: 1099px) {
+  .sv2-grid { flex: none; }
+  .sv2-bottom { flex: none; }
+  .sv2-stage .studio-monitor-frame { height: min(560px, calc((100vw - 72px) * 16 / 9)); min-height: 0; }
+  .sv2-bottom .sv2-timeline { max-height: 220px; }
+  .sv2-add { flex-direction: row; flex-wrap: wrap; }
+}
