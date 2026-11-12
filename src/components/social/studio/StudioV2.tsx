@@ -5,7 +5,7 @@
  * présentation seulement : toute la logique reste dans MontageStudio (lecteur, coupes, animations, publication).
  */
 import { useEffect, useState, type ReactNode } from "react";
-import { CircleHelp, Crop, Film, FolderOpen, Maximize, Pause, Play, Scissors, Send, Settings, Sparkles, Subtitles, Upload, Video, Volume2 } from "lucide-react";
+import { Check, CircleHelp, Crop, Film, FolderOpen, Maximize, Pause, Pencil, Play, Scissors, Send, Settings, Sparkles, Subtitles, Upload, Video, Volume2, X } from "lucide-react";
 import { VIDEO_ACCEPT } from "@/components/social/studio/video-import";
 import { montage, type MontageSummary } from "@/lib/social/montage-api";
 import "./studio-v2.css";
@@ -143,5 +143,33 @@ export function PublishButton({ onClick, disabled }: { onClick: () => void; disa
     <button type="button" className="sv2-publish" disabled={disabled} onClick={onClick}>
       <span className="flex items-center gap-2 text-base font-bold"><Send aria-hidden size={18} /> Publier</span>
     </button>
+  );
+}
+
+/** Titre de la vidéo, renommable (le titre ne figure pas dans la vidéo : rendu et planche restent valables). */
+export function StudioTitle({ title, disabledReason, onRename }: { title: string; disabledReason: string | null; onRename: (title: string) => Promise<void> }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const save = async () => {
+    const next = (draft ?? "").trim();
+    if (!next) { setError("Donne un titre à ta vidéo."); return; }
+    if (next === title) { setDraft(null); return; }
+    setBusy(true); setError(null);
+    try { await onRename(next); setDraft(null); } catch (e) { setError(e instanceof Error ? e.message : "Renommage impossible."); } finally { setBusy(false); }
+  };
+  if (draft === null) return (
+    <div className="sv2-title">
+      <h1 className="min-w-0 flex-1 truncate text-base font-semibold" title={title}>{title}</h1>
+      <button type="button" className="sv2-icon-btn" aria-label="Renommer la vidéo" title={disabledReason ?? "Renommer la vidéo"} disabled={Boolean(disabledReason)} onClick={() => { setError(null); setDraft(title); }}><Pencil aria-hidden size={16} /></button>
+    </div>
+  );
+  return (
+    <form className="sv2-title" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+      <input autoFocus aria-label="Titre de la vidéo" value={draft} maxLength={160} disabled={busy} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") setDraft(null); }} className="sv2-title-input" />
+      <button type="submit" className="sv2-icon-btn" aria-label="Enregistrer le titre" disabled={busy}><Check aria-hidden size={16} /></button>
+      <button type="button" className="sv2-icon-btn" aria-label="Annuler le renommage" disabled={busy} onClick={() => setDraft(null)}><X aria-hidden size={16} /></button>
+      {error ? <p role="alert" className="w-full text-xs text-red-300">{error}</p> : null}
+    </form>
   );
 }

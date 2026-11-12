@@ -101,6 +101,8 @@ test("importer depuis le studio : le choix du fichier s'ouvre directement, la vi
     "": () => ({}), uploaded: () => ({}), transcribe: async () => { await gate; return { words: 3 }; }, "save-edit": () => ({}),
   });
   await page.addInitScript(() => localStorage.setItem("ibr.studio.vue", "studio"));
+  // Si un enregistrement du montage ouvert est encore en cours à l'arrivée de la nouvelle vidéo, le studio demande confirmation.
+  page.on("dialog", (d) => void d.accept());
   await page.goto("/reels/m9");
   const studio = page.getByTestId("studio-v2");
   await studio.getByLabel("Importer une vidéo").setInputFiles(`${process.cwd()}/tests/e2e/fixtures/paysage.mp4`);
@@ -112,4 +114,37 @@ test("importer depuis le studio : le choix du fichier s'ouvre directement, la vi
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/studio-v2-import-${info.project.name}.png` });
   release();
   await expect(page).toHaveURL(/\/reels\/m10$/);
+});
+
+test("renommer la vidéo depuis le studio : le titre change, la vidéo et le montage ne bougent pas", async ({ page }, info) => {
+  let title = "IMG_4521";
+  const base = { id: "m9", status: "ready", durationMs: DURATION, keptMs: DURATION, workspaceId: null, createdAt: "t", renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit: initialEdit("prise.mp4", DURATION), captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null };
+  let version = 1;
+  const calls = await mockBee(page, {
+    list: () => ({ montages: [] }),
+    get: () => ({ montage: { ...base, title, updatedAt: `v${version}` }, videoUrl: null }),
+    rename: (body) => { title = String(body.title).trim(); version++; return { title, changed: true }; },
+    "save-edit": () => ({}),
+  });
+  await page.addInitScript(() => localStorage.setItem("ibr.studio.vue", "studio"));
+  await page.goto("/reels/m9");
+  const studio = page.getByTestId("studio-v2");
+  await expect(studio.getByRole("heading", { name: "IMG_4521" })).toBeVisible();
+  await expect(studio.getByRole("button", { name: "Renommer la vidéo" })).toBeEnabled();
+  await studio.getByRole("button", { name: "Renommer la vidéo" }).click();
+  const input = studio.getByRole("textbox", { name: "Titre de la vidéo" });
+  await input.fill("   ");
+  await studio.getByRole("button", { name: "Enregistrer le titre" }).click();
+  await expect(studio.getByRole("alert").filter({ hasText: "Donne un titre" })).toBeVisible();
+  // Échap annule sans rien envoyer.
+  await input.fill("Autre");
+  await input.press("Escape");
+  await expect(studio.getByRole("heading", { name: "IMG_4521" })).toBeVisible();
+  expect(calls.some((c) => c.action === "rename")).toBe(false);
+  await studio.getByRole("button", { name: "Renommer la vidéo" }).click();
+  await studio.getByRole("textbox", { name: "Titre de la vidéo" }).fill("Une recommandation, ça vaut combien ?");
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/studio-v2-rename-${info.project.name}.png` });
+  await studio.getByRole("textbox", { name: "Titre de la vidéo" }).press("Enter");
+  await expect(studio.getByRole("heading", { name: "Une recommandation, ça vaut combien ?" })).toBeVisible();
+  expect(calls.filter((c) => c.action === "rename")).toEqual([expect.objectContaining({ id: "m9", title: "Une recommandation, ça vaut combien ?" })]);
 });

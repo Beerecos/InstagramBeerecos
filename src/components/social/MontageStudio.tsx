@@ -48,7 +48,7 @@ import { useWaveform } from "@/components/reels/use-waveform";
 import { pickVideos, sendTake, useVideoImport, VIDEO_ACCEPT } from "@/components/social/studio/video-import";
 import StudioImport from "@/components/social/studio/StudioImport";
 import { cutOutputZone, pieceAt, removePiece, splitAt, stepMs } from "@/domain/studio/timeline";
-import { HeaderMenu, PlayerBar, PublishButton, QuickAnimations, StudioHeader, StudioSidebar, StudioTabs, type StudioTab } from "@/components/social/studio/StudioV2";
+import { HeaderMenu, PlayerBar, PublishButton, QuickAnimations, StudioHeader, StudioSidebar, StudioTabs, StudioTitle, type StudioTab } from "@/components/social/studio/StudioV2";
 import { sceneCardCandidate } from "@/domain/social/montage/scenes";
 import { EditSync, History, type SyncState } from "@/domain/studio/edit-sync";
 import PostPanel from "@/components/reels/post-panel";
@@ -828,6 +828,8 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
       <div className="sv2-grid">
         <StudioSidebar currentId={m.id} onRecord={() => { if (canLeave()) onSwitch?.("__tournage"); }} onImport={(list) => { const r = pickVideos(list); if (!r) return; if ("error" in r) { setError(r.error); return; } setImportFiles(r.files); }} onOpen={(target) => { if (canLeave()) onSwitch?.(target); }} onAll={() => { if (canLeave()) onBack(); }} />
         <section ref={preview} aria-label="Moniteur du studio" className="sv2-panel sv2-stage">
+          <StudioTitle title={m.title} disabledReason={unsaved || sync.current?.busy || saving ? "Attends la fin de l’enregistrement pour renommer." : null}
+            onRename={async (title) => { await montage.rename(m.id, title); await load(); }} />
           <div className="studio-monitor-frame">
             <StudioCanvas animation={selectedAnimation} index={selectedAnim} disabled={lock} onChange={changeAnimation} player={player} time={playOut}>
               {html ? <ReelPreview ref={player} html={html} title={m.title} onTimeUpdate={onTime} onReady={() => { if (pendingSeek.current !== null) { player.current?.seek(pendingSeek.current); pendingSeek.current = null; } }} autoplay={false} preservePosition /> : <div className="grid aspect-[9/16] place-items-center rounded-2xl border border-dashed border-line p-4 text-center text-sm text-mut">La vidéo n’est pas encore reçue.</div>}
