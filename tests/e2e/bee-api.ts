@@ -9,6 +9,9 @@ const DEFAULTS: Record<string, unknown> = {
 };
 export async function mockBee(page: Page, handlers: Record<string, Handler> = {}) {
   const calls: Record<string, unknown>[] = [];
+  // Les parcours historiques testent le studio guidé en 5 étapes ; le nouveau studio (défaut depuis le 2026-11-12)
+  // a ses propres tests (studio-v2.spec.ts), qui choisissent leur mode après cet appel.
+  await page.addInitScript(() => { try { if (!localStorage.getItem("ibr.studio.mode")) localStorage.setItem("ibr.studio.mode", "etapes"); } catch { /* stockage indisponible */ } });
   await page.route("https://bee-api.test/**", async (route) => {
     let body: Record<string, unknown> = {};
     try { body = JSON.parse(route.request().postData() ?? "{}"); } catch { /* corps vide */ }
