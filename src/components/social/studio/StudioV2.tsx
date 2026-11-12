@@ -6,6 +6,7 @@
  */
 import { useEffect, useState, type ReactNode } from "react";
 import { CircleHelp, Crop, Film, FolderOpen, Maximize, Pause, Play, Scissors, Send, Settings, Sparkles, Subtitles, Upload, Video, Volume2 } from "lucide-react";
+import { VIDEO_ACCEPT } from "@/components/social/studio/video-import";
 import { montage, type MontageSummary } from "@/lib/social/montage-api";
 import "./studio-v2.css";
 
@@ -43,7 +44,8 @@ export function HeaderMenu({ label, icon, children }: { label: string; icon: "he
   );
 }
 
-export function StudioSidebar({ currentId, onRecord, onImport, onOpen, onAll }: { currentId: string; onRecord: () => void; onImport: () => void; onOpen: (id: string) => void; onAll: () => void }) {
+/** « Importer une vidéo » ouvre directement le choix des fichiers (mobile : pellicule ou fichiers ; ordinateur : explorateur). */
+export function StudioSidebar({ currentId, onRecord, onImport, onOpen, onAll }: { currentId: string; onRecord: () => void; onImport: (files: FileList | null) => void; onOpen: (id: string) => void; onAll: () => void }) {
   const [list, setList] = useState<MontageSummary[] | null>(null);
   useEffect(() => { montage.list().then((r) => setList(r.montages)).catch(() => setList([])); }, []);
   const projects = [...(list ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 6);
@@ -55,7 +57,8 @@ export function StudioSidebar({ currentId, onRecord, onImport, onOpen, onAll }: 
       <h2 className="sv2-h">Nouvelle vidéo</h2>
       <div className="grid grid-cols-2 gap-3">
         <button type="button" className="sv2-bigcard" onClick={onRecord}><Video aria-hidden size={30} /><span>Enregistrer en direct</span></button>
-        <button type="button" className="sv2-bigcard sv2-active" onClick={onImport}><Upload aria-hidden size={30} /><span>Importer une vidéo</span><small>mobile, PC, fichiers…</small></button>
+        <label className="sv2-bigcard sv2-active cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-white"><Upload aria-hidden size={30} /><span>Importer une vidéo</span><small>mobile, PC, fichiers…</small>
+          <input type="file" multiple aria-label="Importer une vidéo" accept={VIDEO_ACCEPT} className="sr-only" onChange={(e) => { onImport(e.target.files); e.target.value = ""; }} /></label>
       </div>
       <div className="mt-5 flex items-center justify-between">
         <h2 className="sv2-h">Mes projets</h2>

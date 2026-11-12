@@ -90,3 +90,26 @@ test("un ancien choix « mode avancé » enregistré sur l'appareil ouvre quand 
   await page.goto("/reels/m9");
   await expect(page.getByTestId("studio-v2").getByRole("tab", { name: "Animation" })).toBeVisible();
 });
+
+test("importer depuis le studio : le choix du fichier s'ouvre directement, la vidéo s'ouvre après la transcription", async ({ page }, info) => {
+  let release: () => void = () => {};
+  const gate = new Promise<void>((r) => { release = r; });
+  const calls = await mockBee(page, {
+    list: () => ({ montages: [] }),
+    get: () => ({ montage: { id: "m9", title: "Conseils réseau", status: "ready", durationMs: DURATION, keptMs: DURATION, workspaceId: null, createdAt: "t", updatedAt: "v1", renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit: initialEdit("prise.mp4", DURATION), captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: null }),
+    create: () => ({ id: "m10", uploadUrl: "https://bee-api.test/upload/m10" }),
+    "": () => ({}), uploaded: () => ({}), transcribe: async () => { await gate; return { words: 3 }; }, "save-edit": () => ({}),
+  });
+  await page.addInitScript(() => localStorage.setItem("ibr.studio.vue", "studio"));
+  await page.goto("/reels/m9");
+  const studio = page.getByTestId("studio-v2");
+  await studio.getByLabel("Importer une vidéo").setInputFiles(`${process.cwd()}/tests/e2e/fixtures/paysage.mp4`);
+  const dialog = page.getByRole("dialog", { name: "Importer une vidéo" });
+  await expect(dialog.getByText("paysage.mp4")).toBeVisible();
+  await expect.poll(() => calls.find((c) => c.action === "create")).toMatchObject({ fileName: "paysage.mp4", title: "paysage" });
+  await expect.poll(() => calls.some((c) => c.action === "transcribe" && c.id === "m10")).toBe(true);
+  await expect(dialog.getByRole("status")).toContainText("Transcription");
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/studio-v2-import-${info.project.name}.png` });
+  release();
+  await expect(page).toHaveURL(/\/reels\/m10$/);
+});

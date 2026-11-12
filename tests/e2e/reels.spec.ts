@@ -187,7 +187,7 @@ test("connexion : email et mot de passe, lien par email en secours", async ({ pa
   await expect(page.getByLabel("Mot de passe")).toHaveCount(0);
 });
 
-test("Réel filmé : zone d'import visible, choix de la vidéo puis envoi", async ({ page }) => {
+test("Réel filmé : zone d'import visible, l'envoi part dès le choix de la vidéo, titre = nom du fichier", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   const calls = await mockBee(page, { create: () => ({ id: "m9", uploadUrl: "https://bee-api.test/upload/m9" }) });
@@ -195,11 +195,21 @@ test("Réel filmé : zone d'import visible, choix de la vidéo puis envoi", asyn
   const form = page.getByRole("form", { name: "Nouveau montage" }).filter({ visible: true });
   await expect(form.getByText("Choisir mes vidéos")).toBeVisible();
   await expect(form.getByText("ou glisse-les ici")).toBeVisible();
-  await expect(form.getByRole("button", { name: "Envoyer et commencer" })).toBeDisabled();
+  await expect(form.getByRole("textbox", { name: "Titre" })).toHaveCount(0);
   await form.getByLabel("Prises filmées").setInputFiles(`${process.cwd()}/tests/e2e/fixtures/paysage.mp4`);
   await expect(form.getByText("paysage.mp4")).toBeVisible();
-  await expect(form.getByText("Changer de vidéo")).toBeVisible();
-  await form.getByRole("button", { name: "Envoyer et commencer" }).click();
-  await expect.poll(() => calls.some((c) => c.action === "create" && c.fileName === "paysage.mp4")).toBe(true);
+  await expect.poll(() => calls.find((c) => c.action === "create")).toMatchObject({ fileName: "paysage.mp4", title: "paysage" });
   expect(errors).toEqual([]);
+});
+
+test("Réel filmé : plusieurs prises, on vérifie l'ordre avant l'envoi", async ({ page }) => {
+  const calls = await mockBee(page, { create: () => ({ id: "m9", uploadUrl: "https://bee-api.test/upload/m9" }) });
+  await page.goto("/reels/nouveau/video");
+  const form = page.getByRole("form", { name: "Nouveau montage" }).filter({ visible: true });
+  const clip = `${process.cwd()}/tests/e2e/fixtures/paysage.mp4`;
+  await form.getByLabel("Prises filmées").setInputFiles([clip, clip]);
+  await expect(form.getByRole("list", { name: "Ordre des prises" }).getByRole("listitem")).toHaveCount(2);
+  expect(calls.some((c) => c.action === "create")).toBe(false);
+  await form.getByRole("button", { name: "Envoyer et commencer" }).click();
+  await expect.poll(() => calls.some((c) => c.action === "create")).toBe(true);
 });
