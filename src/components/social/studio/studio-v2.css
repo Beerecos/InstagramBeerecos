@@ -81,13 +81,14 @@
 .sv2-look-logo .sv2-anim-art::before { content: "BeeRecos"; color: #fff; background: var(--sv2-blue); }
 
 .sv2-bottom { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 1100px) { .sv2-bottom { grid-template-columns: minmax(0, 1fr) 150px 300px; align-items: stretch; } }
-.sv2-bottom .sv2-timeline { padding: 10px 14px; max-height: 250px; overflow: auto; }
+@media (min-width: 1100px) { .sv2-bottom { grid-template-columns: minmax(0, 1fr) 140px 170px; align-items: stretch; } }
+.sv2-bottom .sv2-timeline { padding: 8px 12px; max-height: 168px; overflow: auto; }
+.sv2-finish { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
 .sv2-bottom .sv2-timeline > section, .sv2-bottom .sv2-timeline .card { background: transparent; border: 0; box-shadow: none; padding: 0; }
-.sv2-add { display: flex; flex-direction: column; gap: 6px; padding: 10px; }
+.sv2-add { display: flex; flex-direction: column; gap: 2px; padding: 8px; }
 .sv2-add button { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 10px; border-radius: 12px; font-size: 14px; font-weight: 600; text-align: left; }
 .sv2-add button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
-.sv2-publish { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 110px; border-radius: 22px; color: #fff; background: linear-gradient(135deg, var(--sv2-blue), var(--sv2-blue2)); box-shadow: 0 14px 34px rgba(40, 81, 255, 0.45); transition: all 0.2s; }
+.sv2-publish { display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 16px; border-radius: 14px; color: #fff; background: linear-gradient(135deg, var(--sv2-blue), var(--sv2-blue2)); box-shadow: 0 8px 20px rgba(40, 81, 255, 0.35); transition: all 0.2s; }
 .sv2-publish:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
 @media (prefers-reduced-motion: reduce) { .studio-v2 * { transition: none !important; } }
 /* Timeline en thème sombre : séquences, morceaux et blocs d'animation lisibles. */

@@ -136,8 +136,7 @@ export function PlayerBar({ playing, timeMs, totalMs, onToggle, onSeek, onSound,
 export function PublishButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
   return (
     <button type="button" className="sv2-publish" disabled={disabled} onClick={onClick}>
-      <span className="flex items-center gap-3 text-2xl font-bold"><Send aria-hidden size={30} /> Publier</span>
-      <span className="text-xs font-medium opacity-90">Instagram • LinkedIn • Télécharger</span>
+      <span className="flex items-center gap-2 text-base font-bold"><Send aria-hidden size={18} /> Publier</span>
     </button>
   );
 }

@@ -894,7 +894,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
           {!ready ? <p className="text-sm text-mut">Disponible dès que la vidéo est transcrite.</p> : null}
         </div> : null}
       </StudioLibraryDialog>
-      <StudioLibraryDialog closeLabel="Fermer" title="Publier ma vidéo" open={publishOpen} onClose={() => setPublishOpen(false)}>
+      <StudioLibraryDialog closeLabel="Fermer" title="Vidéo finale" open={publishOpen} onClose={() => setPublishOpen(false)}>
         {publishOpen && m.edit ? <div className="grid gap-4 lg:grid-cols-2">
           <section className="card space-y-3 p-4"><h3 className="font-semibold">1. Vérifier l’aperçu</h3>
             <StudioContactSheet edit={m.edit} words={m.captions} videoUrl={data.videoUrl} takeUrls={data.takeUrls} library={lib.library ?? []} storyboardApproved={m.storyboardStatus === "approved"} briefKeyword={m.brief?.motCle ?? null} approved={Boolean(m.previewApproved)} approvedAt={m.previewApprovedAt}
@@ -971,7 +971,11 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
           <button type="button" disabled={lock || !m.edit} onClick={() => { setLibraryTab("animations"); setLibraryOpen(true); }}>＋ Élément</button>
           <button type="button" disabled={lock || !m.edit} onClick={() => { setLibraryTab("sounds"); setLibraryOpen(true); }}>＋ Audio</button>
         </div>
-        <PublishButton disabled={!m.edit} onClick={() => setPublishOpen(true)} />
+        <div className="sv2-finish">
+          <button type="button" className="sv2-action" disabled={!m.edit} onClick={() => setPublishOpen(true)}>Vidéo finale</button>
+          {/* Demande de Cédric (2026-11-12) : « Publier » ouvre le calendrier de publication. */}
+          <PublishButton disabled={!m.edit} onClick={() => { if (canLeave()) onSwitch?.("__calendrier"); }} />
+        </div>
       </div>
     </div>
   );

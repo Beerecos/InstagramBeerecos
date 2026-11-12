@@ -49,12 +49,11 @@ test("nouveau studio : trois onglets, animation en 1 clic, coupe au curseur, Pub
   await expect(studio.getByText("Afficher le logo BeeRecos")).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/studio-v2-cadrage.png` });
 
-  // Publier : une fenêtre simple.
-  await studio.getByRole("button", { name: /Publier/ }).click();
-  await expect(page.getByRole("dialog", { name: "Publier ma vidéo" })).toBeVisible();
-  await expect(page.getByRole("dialog", { name: "Publier ma vidéo" }).getByText("1. Vérifier l’aperçu")).toBeVisible();
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/studio-v2-publier.png` });
-  await page.getByRole("dialog", { name: "Publier ma vidéo" }).getByRole("button", { name: "Fermer", exact: true }).click();
+  // Vidéo finale : une fenêtre simple (vérifier, créer la vidéo, légende).
+  await studio.getByRole("button", { name: "Vidéo finale" }).click();
+  await expect(page.getByRole("dialog", { name: "Vidéo finale" }).getByText("1. Vérifier l’aperçu")).toBeVisible();
+  await page.getByRole("dialog", { name: "Vidéo finale" }).getByRole("button", { name: "Fermer", exact: true }).click();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/studio-v2-bas.png` });
 
   // Les outils experts restent accessibles.
   await studio.getByLabel("Paramètres").click();
@@ -62,5 +61,8 @@ test("nouveau studio : trois onglets, animation en 1 clic, coupe au curseur, Pub
   await expect(page.getByRole("toolbar", { name: "Outils du montage" })).toBeVisible();
   await page.getByRole("button", { name: "Nouveau studio" }).click();
   await expect(page.getByTestId("studio-v2")).toBeVisible();
+  // Publier ouvre le calendrier de publication.
+  await page.getByTestId("studio-v2").getByRole("button", { name: "Publier" }).click();
+  await expect(page).toHaveURL(/\/calendar/);
   expect(errors).toEqual([]);
 });
