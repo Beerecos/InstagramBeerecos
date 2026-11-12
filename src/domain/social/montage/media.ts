@@ -48,6 +48,8 @@ export function usedMedia(edit: Edit): string[] {
   if (edit.rythme?.sonAnimations) files.add(edit.rythme.sonAnimations);
   for (const c of edit.custom) if (c.name === "image" && typeof c.props.fichier === "string") files.add(c.props.fichier);
   for (const b of edit.broll ?? []) files.add(b.file);
+  // Images des mosaïques (Studio, lot 2).
+  for (const l of edit.miseEnPage ?? []) for (const f of l.images ?? []) files.add(f);
   return [...files];
 }
 
@@ -68,5 +70,8 @@ export function mediaErrors(edit: Edit, library: MediaRef[]): string[] {
   (edit.broll ?? []).forEach((b, i) => {
     if (kindOf.get(b.file) !== "video") errors.push(`• broll[${i}] → « ${b.file} » n'est pas un clip vidéo de la bibliothèque`);
   });
+  (edit.miseEnPage ?? []).forEach((l, i) => (l.images ?? []).forEach((f, j) => {
+    if (kindOf.get(f) !== "image") errors.push(`• miseEnPage[${i}].images[${j}] → « ${f} » n'est pas une image de la bibliothèque`);
+  }));
   return errors;
 }
