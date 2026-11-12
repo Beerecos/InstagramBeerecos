@@ -39,6 +39,7 @@ const BASE_CSS = `
       .anim-host { position: absolute; inset: 0; z-index: 6; }
       .anim-host.behind { z-index: 3; }
       .matte-wrap { position: absolute; inset: 0; z-index: 5; opacity: 0; }
+      .cadre { position: absolute; inset: 0; overflow: hidden; transform-origin: 50% 50%; }
       .broll { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 2; }`;
 
 /** Sous-titres : bloc centré en x = 540, deux lignes au plus, Poppins Medium, contraste sobre (CAPTION_DEFAULTS). */
@@ -96,6 +97,44 @@ export function speechWindows(words: CaptionWord[], segments: ReturnType<typeof 
     else out.push({ ...w });
   }
   return out;
+}
+
+/** Mots d'accentuation : plus grands, plus expressifs, selon le réglage (couleur, fond, taille). */
+const ACCENT_CSS = `
+      .caption .acc { display: inline-block; font-weight: 800; }
+      .caption .acc-couleur { color: ${COLORS.blue} !important; }
+      .caption .acc-fond { color: ${COLORS.white} !important; background: ${COLORS.blue}; padding: 0 12px; border-radius: 10px; }
+      .caption .acc-taille { color: ${COLORS.white} !important; font-size: 1.35em; }`;
+
+const LAYOUT_BG = { blanc: { fond: COLORS.white, texte: COLORS.black }, bleu: { fond: COLORS.blue, texte: COLORS.white }, noir: { fond: COLORS.black, texte: COLORS.white } } as const;
+const LAYOUT_CSS = `
+      .tuile { position: absolute; overflow: hidden; border-radius: 28px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); }
+      .tuile img { width: 100%; height: 100%; object-fit: cover; }
+      .mp-titre { position: absolute; z-index: 6; left: 90px; right: 170px; top: 250px; }
+      .mp-titre .t { margin: 0; font-size: 54px; font-weight: 700; line-height: 1.15; }
+      .mp-titre .d { margin: 10px 0 0; font-size: 34px; font-weight: 500; line-height: 1.3; opacity: 0.8; }`;
+
+/**
+ * Géométrie d'une mise en page (format 9:16, dans les zones de sécurité, au-dessus des sous-titres) :
+ * « carte » = la vidéo réduite et arrondie sous le titre ; « mosaique » = grille de 2 colonnes, la vidéo en première
+ * tuile, les images ensuite (6 tuiles au plus). `video` = transformation de l'enveloppe `.cadre` (x, y, échelle,
+ * découpe arrondie en pixels de l'image d'origine).
+ */
+export function videoLayout(l: { type: "carte" | "mosaique"; titre?: string; texte?: string; images?: string[] }) {
+  const radius = (px: number, scale: number) => Math.round(px / scale);
+  const top = l.titre || l.texte ? 420 : 300, bottom = 1400;
+  if (l.type === "carte") {
+    const h = bottom - top, scale = Math.round((h / REEL_HEIGHT) * 1000) / 1000;
+    const cy = top + h / 2;
+    return { tiles: [], video: { x: 0, y: Math.round(cy - REEL_HEIGHT / 2), scale, clip: `inset(0px 0px 0px 0px round ${radius(44, scale)}px)` } };
+  }
+  const n = Math.min(6, 1 + (l.images?.length ?? 0)), cols = 2, rows = Math.ceil(n / cols), gap = 24, left = 90, width = REEL_WIDTH - 90 - 170;
+  const w = Math.floor((width - gap) / cols), h = Math.min(Math.floor((bottom - top - gap * (rows - 1)) / rows), Math.round(w * 1.4));
+  const tiles = Array.from({ length: n }, (_, j) => ({ x: left + (j % cols) * (w + gap), y: top + Math.floor(j / cols) * (h + gap), w, h }));
+  const t = tiles[0];
+  const scale = Math.round(Math.max(w / REEL_WIDTH, h / REEL_HEIGHT) * 1000) / 1000;
+  const ix = Math.max(0, Math.round((REEL_WIDTH - w / scale) / 2)), iy = Math.max(0, Math.round((REEL_HEIGHT - h / scale) / 2));
+  return { tiles, video: { x: Math.round(t.x + w / 2 - REEL_WIDTH / 2), y: Math.round(t.y + h / 2 - REEL_HEIGHT / 2), scale, clip: `inset(${iy}px ${ix}px ${iy}px ${ix}px round ${radius(28, scale)}px)` } };
 }
 
 /** Morceaux d'un son baissé pendant la parole : début (montage), durée, point de lecture dans le fichier, volume. */
@@ -168,8 +207,9 @@ export function buildEditComposition(input: unknown, rawWords: CaptionWord[], op
   };
   segments.forEach((seg, i) => {
     const take = strip[takeIndexAt(strip, seg.fromMs)];
+    // Enveloppe `.cadre` : reçoit zooms et mises en page (même transformation que l'enveloppe du détourage).
     clips.push(
-      `      <video id="take-${i}" class="take" src="${media(take.file)}" data-start="${s(seg.atMs)}" data-duration="${s(seg.toMs - seg.fromMs)}" data-media-start="${s(seg.fromMs - take.fromMs)}" data-has-audio="true" data-volume="${edit.voiceGain}" data-track-index="0"${frame(i)}></video>`,
+      `      <div id="zw-${i}" class="cadre"><video id="take-${i}" class="take" src="${media(take.file)}" data-start="${s(seg.atMs)}" data-duration="${s(seg.toMs - seg.fromMs)}" data-media-start="${s(seg.fromMs - take.fromMs)}" data-has-audio="true" data-volume="${edit.voiceGain}" data-track-index="0"${frame(i)}></video></div>`,
     );
     shotCuts(`#take-${i}`, i);
   });
@@ -186,12 +226,53 @@ export function buildEditComposition(input: unknown, rawWords: CaptionWord[], op
     if (!matte || !mattes.has(matte) || !windows.length) return;
     const take = strip[takeIndexAt(strip, seg.fromMs)];
     clips.push(
-      `      <div id="mw-${i}" class="matte-wrap"><video id="matte-${i}" class="take" src="${media(matte)}" data-start="${s(seg.atMs)}" data-duration="${s(seg.toMs - seg.fromMs)}" data-media-start="${s(seg.fromMs - take.fromMs)}" data-has-audio="false" muted playsinline data-track-index="4"${frame(i)}></video></div>`,
+      `      <div id="mw-${i}" class="matte-wrap cadre"><video id="matte-${i}" class="take" src="${media(matte)}" data-start="${s(seg.atMs)}" data-duration="${s(seg.toMs - seg.fromMs)}" data-media-start="${s(seg.fromMs - take.fromMs)}" data-has-audio="false" muted playsinline data-track-index="4"${frame(i)}></video></div>`,
     );
     for (const w of windows) tweens.push(`tl.set("#mw-${i}", { opacity: 1 }, ${s(w.from)});`, `tl.set("#mw-${i}", { opacity: 0 }, ${s(w.to)});`);
     // Le détourage suit exactement les mêmes plans que la prise.
     shotCuts(`#matte-${i}`, i);
   });
+
+  // Zooms et mises en page (Studio, 2026-11-11) : même tween sur toutes les enveloppes `.cadre` (prises et détourages),
+  // si bien que la silhouette reste alignée sur la prise ; temps source recalés sur le montage (ils suivent les coupes).
+  const under: string[] = [];
+  for (const z of edit.zooms ?? []) {
+    const from = s(F(z.fromMs)), to = s(F(z.toMs));
+    if (to - from < 0.3) continue;
+    tweens.push(`tl.set(".cadre", { transformOrigin: "${z.focusX}% ${z.focusY}%" }, ${from});`);
+    if (z.type === "accent") {
+      tweens.push(`tl.to(".cadre", { scale: ${z.amplitude}, duration: 0.25, ease: "power3.out" }, ${from});`,
+        `tl.to(".cadre", { scale: 1, duration: 0.4, ease: "power2.inOut" }, ${s(Math.max(F(z.fromMs) + 250, F(z.toMs) - 400))});`);
+    } else {
+      tweens.push(`tl.to(".cadre", { scale: ${z.amplitude}, duration: ${Math.max(0.3, Math.round((to - from - 0.5) * 100) / 100)}, ease: "sine.inOut" }, ${from});`,
+        `tl.to(".cadre", { scale: 1, duration: 0.5, ease: "power2.inOut" }, ${s(Math.max(F(z.fromMs) + 300, F(z.toMs) - 500))});`);
+    }
+  }
+  (edit.miseEnPage ?? []).forEach((l, k) => {
+    const fromMs = F(l.fromMs), toMs = F(l.toMs);
+    if (toMs - fromMs < 1000) return;
+    const lay = videoLayout(l);
+    const bg = LAYOUT_BG[l.fond];
+    under.push(`      <div id="fond-${k}" class="clip" data-start="${s(fromMs)}" data-duration="${s(toMs - fromMs)}" data-track-index="10" style="position:absolute;inset:0;background:${bg.fond}"></div>`);
+    lay.tiles.forEach((t, j) => {
+      if (j === 0) return;
+      const file = l.images?.[j - 1];
+      if (!file) return;
+      under.push(`      <div id="tuile-${k}-${j}" class="clip tuile" data-start="${s(fromMs)}" data-duration="${s(toMs - fromMs)}" data-track-index="10" style="left:${t.x}px;top:${t.y}px;width:${t.w}px;height:${t.h}px"><img src="${media(file)}" alt="" /></div>`);
+      tweens.push(`tl.fromTo("#tuile-${k}-${j}", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.3, ease: "power3.out" }, ${s(fromMs + 350 + j * 110)});`);
+    });
+    if (l.titre || l.texte) {
+      clips.push(`      <div id="titre-mp-${k}" class="clip mp-titre" data-start="${s(fromMs)}" data-duration="${s(toMs - fromMs)}" data-track-index="11" style="color:${bg.texte}">${l.titre ? `<p class="t">${escapeHtml(l.titre)}</p>` : ""}${l.texte ? `<p class="d">${escapeHtml(l.texte)}</p>` : ""}</div>`);
+      tweens.push(`tl.fromTo("#titre-mp-${k}", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, ${s(fromMs + 200)});`,
+        `tl.to("#titre-mp-${k}", { opacity: 0, duration: 0.25, ease: "power2.in" }, ${s(toMs - 450)});`);
+    }
+    const v = lay.video;
+    // Point d'ancrage remis au centre (un zoom précédent l'a placé sur le visage).
+    tweens.push(`tl.set(".cadre", { transformOrigin: "50% 50%" }, ${s(fromMs)});`);
+    tweens.push(`tl.fromTo(".cadre", { x: 0, y: 0, scale: 1, clipPath: "inset(0px 0px 0px 0px round 0px)" }, { x: ${v.x}, y: ${v.y}, scale: ${v.scale}, clipPath: "${v.clip}", duration: 0.45, ease: "power3.inOut" }, ${s(fromMs)});`,
+      `tl.to(".cadre", { x: 0, y: 0, scale: 1, clipPath: "inset(0px 0px 0px 0px round 0px)", duration: 0.45, ease: "power3.inOut" }, ${s(toMs - 450)});`);
+  });
+  if ((edit.miseEnPage ?? []).length) css.add(LAYOUT_CSS);
 
   // Chaque animation se rend dans la version figée à l'enregistrement (BeeMotion) ; sans version, la version courante.
   const versioned = renderRegistry(registry);
@@ -233,16 +314,23 @@ export function buildEditComposition(input: unknown, rawWords: CaptionWord[], op
     css.add(captionCss(edit.captionStyle));
     const mode = CAPTION_MODE[captionModeOf(edit.captionStyle)];
     const lit = edit.captionStyle.highlightColor ?? COLORS.white;
+    // Mots d'accentuation : repérés par leur début dans la prise (ils restent les mêmes après une coupe).
+    const accents = new Set(edit.motsAccent ?? []);
+    const accentKind = edit.captionStyle.accent ?? "couleur";
+    if (accents.size) css.add(ACCENT_CSS);
     captionPages(remapCaptions(words, segments), { maxWords: mode.maxWords, maxChars: mode.maxChars }).forEach((page, i) => {
       // Sans karaoké, toute la phrase est déjà à la couleur pleine (lisible d'un coup).
       const plain = mode.karaoke ? "" : ` style="color: ${lit}"`;
-      const spans = page.words.map((w, j) => `<span id="c${i}-w${j}"${plain}>${escapeHtml(w.text)}</span>`).join(" ");
+      const isAccent = (w: { sourceMs?: number }) => w.sourceMs !== undefined && accents.has(w.sourceMs);
+      const spans = page.words.map((w, j) => `<span id="c${i}-w${j}"${isAccent(w) ? ` class="acc acc-${accentKind}"` : ""}${plain}>${escapeHtml(w.text)}</span>`).join(" ");
       clips.push(`      <div id="cap-${i}" class="clip caption" data-start="${s(page.startMs)}" data-duration="${s(Math.max(page.endMs - page.startMs, 100))}" data-track-index="1"><p>${spans}</p></div>`);
       page.words.forEach((w, j) => {
         // Apparition au moment où le mot est dit (le premier mot de la page est visible dès son début).
         if (mode.reveal && j > 0) tweens.push(`tl.fromTo("#c${i}-w${j}", { opacity: 0 }, { opacity: 1, duration: 0.06, ease: "none" }, ${s(w.startMs)});`);
         // Karaoké : chaque mot s'allume quand il est prononcé.
         if (mode.karaoke) tweens.push(`tl.to("#c${i}-w${j}", { color: "${lit}", duration: 0.08, ease: "none" }, ${s(w.startMs)});`);
+        // Mot d'accentuation : petit rebond au moment où il est dit.
+        if (isAccent(w)) tweens.push(`tl.fromTo("#c${i}-w${j}", { scale: 1.3 }, { scale: 1, duration: 0.2, ease: "back.out(2)" }, ${s(w.startMs)});`);
       });
     });
   }
@@ -291,7 +379,7 @@ export function buildEditComposition(input: unknown, rawWords: CaptionWord[], op
     clips.push(`      <video id="studio-end-video" class="end-video" src="${escapeHtml(base)}/${END_VIDEO.file}" data-start="${s(totalMs(segments))}" data-duration="${s(END_VIDEO.durationMs)}" data-has-audio="false" muted playsinline data-track-index="7"></video>`);
     css.add(".end-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 20; }");
   }
-  return documentShell({ title: edit.video, base, preview: opts.preview, css: [...css].join(""), clips, tweens, durationS: s(totalMs(segments) + (withEnd ? END_VIDEO.durationMs : 0)) });
+  return documentShell({ title: edit.video, base, preview: opts.preview, css: [...css].join(""), clips: [...under, ...clips], tweens, durationS: s(totalMs(segments) + (withEnd ? END_VIDEO.durationMs : 0)) });
 }
 
 /**
