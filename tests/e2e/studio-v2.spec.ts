@@ -13,7 +13,7 @@ test("nouveau studio : trois onglets, animation en 1 clic, coupe au curseur, Pub
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   let version = 1;
-  let edit = { ...initialEdit("prise.mp4", DURATION), custom: [{ name: "onglet", fromMs: 300, toMs: 2500, props: { texte: "RÉSEAU", variante: "blanc" } }] };
+  let edit: ReturnType<typeof initialEdit> & { zooms?: unknown[]; miseEnPage?: { type: string }[]; motsAccent?: number[] } = { ...initialEdit("prise.mp4", DURATION), custom: [{ name: "onglet", fromMs: 300, toMs: 2500, props: { texte: "RÉSEAU", variante: "blanc" } }] };
   const saved: typeof edit[] = [];
   await mockBee(page, {
     list: () => ({ montages: [{ id: "m9", title: "Conseils réseau", status: "ready", keptMs: DURATION, updatedAt: new Date().toISOString(), renderStatus: null, finalVideoUrl: null, sentToReels: false }] }),
@@ -48,6 +48,19 @@ test("nouveau studio : trois onglets, animation en 1 clic, coupe au curseur, Pub
   await studio.getByRole("tab", { name: "Cadrage" }).click();
   await expect(studio.getByText("Afficher le logo BeeRecos")).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/studio-v2-cadrage.png` });
+
+  // Zoom au curseur et vidéo en carte : enregistrés, listés, retirables.
+  await studio.getByRole("button", { name: "＋ Zoom d’accent" }).click();
+  await expect.poll(() => saved.at(-1)?.zooms?.length).toBe(1);
+  await studio.getByRole("button", { name: "＋ Vidéo en carte avec titre" }).click();
+  await expect.poll(() => saved.at(-1)?.miseEnPage?.[0]?.type).toBe("carte");
+  await expect(studio.getByRole("list", { name: "Zooms et mises en page" }).getByRole("listitem")).toHaveCount(2);
+  // Mots en surbrillance : un clic sur un mot.
+  await studio.getByRole("tab", { name: "Animation" }).click();
+  await studio.getByText(/^Mots en surbrillance/).click();
+  await studio.getByRole("group", { name: "Mots de la vidéo" }).getByRole("button", { name: "recommandation", exact: true }).click();
+  await expect.poll(() => saved.at(-1)?.motsAccent?.length).toBe(1);
+  await studio.getByRole("tab", { name: "Cadrage" }).click();
 
   // Vidéo finale : une fenêtre simple (vérifier, créer la vidéo, légende).
   await studio.getByRole("button", { name: "Vidéo finale" }).click();

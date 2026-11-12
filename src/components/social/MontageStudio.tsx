@@ -863,6 +863,20 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
     if (!next) { setNotice("Coupe d’abord au curseur avant et après le passage à retirer : le montage garde toujours au moins un morceau."); return; }
     setNotice(null); void save({ ...m.edit, ranges: next });
   };
+  const lastMs = m.edit?.ranges[m.edit.ranges.length - 1]?.toMs ?? 0;
+  const addZoom = (type: "accent" | "progressif") => {
+    if (!m.edit || playSource === null) return;
+    const toMs = Math.min(lastMs, playSource + (type === "accent" ? 1500 : 4000));
+    if (toMs - playSource < 600) { setNotice("Trop près de la fin de la vidéo pour un zoom : recule un peu le curseur."); return; }
+    setNotice(null); void save({ ...m.edit, zooms: [...(m.edit.zooms ?? []), { fromMs: Math.round(playSource), toMs, type, amplitude: type === "accent" ? 1.1 : 1.07, focusX: 50, focusY: 32 }].sort((a, b) => a.fromMs - b.fromMs) });
+  };
+  const addCard = () => {
+    if (!m.edit || playSource === null) return;
+    const toMs = Math.min(lastMs, playSource + 3500);
+    if (toMs - playSource < 1500) { setNotice("Trop près de la fin de la vidéo pour une vidéo en carte : recule un peu le curseur."); return; }
+    const titre = (sceneNow?.text ?? "").split(/\s+/).slice(0, 5).join(" ").slice(0, 48) || undefined;
+    setNotice(null); void save({ ...m.edit, miseEnPage: [...(m.edit.miseEnPage ?? []), { fromMs: Math.round(playSource), toMs, type: "carte" as const, fond: "blanc" as const, ...(titre ? { titre } : {}) }].sort((a, b) => a.fromMs - b.fromMs) });
+  };
   const isPlaying = !(player.current?.paused?.() ?? true);
   const cutLock = saving || animationBusy || frozen || unsaved;
   const contentV2 = (
@@ -918,7 +932,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             onFullscreen={() => { const node = preview.current; if (document.fullscreenElement) void document.exitFullscreen(); else void node?.requestFullscreen().catch(() => setError("Le plein écran n’est pas disponible dans ce navigateur.")); }} />
         </section>
         <aside aria-label="Outils du montage" className="sv2-panel sv2-tools">
-          <StudioTabs tab={tab} onTab={setTab} />
+          <StudioTabs tab={tab} onTab={setTab} onPublish={() => { if (canLeave()) onSwitch?.("__calendrier"); }} />
           {tab === "cadrage" ? <div className="sv2-section">
             <div><h3 className="sv2-h">Format</h3>
               <div className="mt-2 grid grid-cols-4 gap-2">
@@ -927,6 +941,18 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
               </div></div>
             {m.edit ? <section className="card p-3"><StudioFraming edit={m.edit} disabled={cutLock} videoUrl={data.videoUrl} onApply={(framing) => { void save({ ...m.edit!, framing }); }} /></section> : <p className="text-sm text-mut">Importe d’abord ta vidéo.</p>}
             <label className="sv2-details flex min-h-[48px] items-center gap-3 text-sm font-semibold"><input type="checkbox" checked={Boolean(logo)} disabled={lock} onChange={(e) => setLogo(e.target.checked ? { ...STUDIO_LOGO_DEFAULT } : undefined)} />Afficher le logo BeeRecos</label>
+            {m.edit && ready ? <section className="sv2-details space-y-2"><h3 className="sv2-h">Zoom et mise en page</h3>
+              <p className="text-xs text-mut">Ajouté à l’endroit du curseur de lecture ; il suit tes coupes.</p>
+              <div className="sv2-row">
+                <button type="button" className="sv2-action" disabled={cutLock || playSource === null} onClick={() => addZoom("accent")}>＋ Zoom d’accent</button>
+                <button type="button" className="sv2-action" disabled={cutLock || playSource === null} onClick={() => addZoom("progressif")}>＋ Zoom progressif</button>
+                <button type="button" className="sv2-action col-span-2" disabled={cutLock || playSource === null} onClick={addCard}>＋ Vidéo en carte avec titre</button>
+              </div>
+              {(m.edit.zooms ?? []).length || (m.edit.miseEnPage ?? []).length ? <ul aria-label="Zooms et mises en page" className="space-y-1 text-sm">
+                {(m.edit.zooms ?? []).map((z, i) => <li key={`z${i}`} className="flex items-center gap-2"><button type="button" className="btn-ghost min-h-11 flex-1 justify-start text-left text-sm" onClick={() => seekSource(z.fromMs)}>{z.type === "accent" ? "Zoom d’accent" : "Zoom progressif"} · {sec(toOutputMs(segments, z.fromMs))}</button><button type="button" aria-label="Retirer ce zoom" className="btn-ghost min-h-11 min-w-11 text-red-700" disabled={cutLock} onClick={() => { void save({ ...m.edit!, zooms: (m.edit!.zooms ?? []).filter((_, k) => k !== i) }); }}>✕</button></li>)}
+                {(m.edit.miseEnPage ?? []).map((l, i) => <li key={`l${i}`} className="flex items-center gap-2"><button type="button" className="btn-ghost min-h-11 min-w-0 flex-1 justify-start truncate text-left text-sm" onClick={() => seekSource(l.fromMs)}>Vidéo en carte{l.titre ? ` · ${l.titre}` : ""} · {sec(toOutputMs(segments, l.fromMs))}</button><button type="button" aria-label="Retirer cette mise en page" className="btn-ghost min-h-11 min-w-11 text-red-700" disabled={cutLock} onClick={() => { void save({ ...m.edit!, miseEnPage: (m.edit!.miseEnPage ?? []).filter((_, k) => k !== i) }); }}>✕</button></li>)}
+              </ul> : null}
+            </section> : null}
             {m.edit ? <details className="sv2-details"><summary>Détourage (texte derrière moi)</summary><MattesCard m={m} onChange={load} /></details> : null}
             <details className="sv2-details"><summary>Prises de la vidéo</summary><TakesCard m={m} onChange={load} /></details>
           </div> : null}
@@ -956,7 +982,14 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
               <button type="button" aria-label={`Retirer ${ANIMATIONS[a.name]?.label ?? a.name}`} className="btn-ghost min-h-11 min-w-11 text-red-700" disabled={lock} onClick={() => { changeDraft(draft.filter((x) => x.id !== a.id)); if (selectedId === a.id) setSelectedId(null); }}>✕</button>
             </li>)}</ul></section> : null}
             {selectedAnimation ? <section className="sv2-details"><h3 className="sv2-h mb-2">Personnaliser l’animation</h3>
-              <StudioInspector animation={selectedAnimation} ranges={m.edit?.ranges ?? []} words={m.captions} disabled={lock} onChange={changeAnimation} onRemove={() => { changeDraft(draft.filter((a) => a.id !== selectedAnimation.id)); setSelectedId(null); }} onTest={() => { seekSource(selectedAnimation.fromMs); player.current?.play(); }} /></section> : null}
+              <StudioInspector animation={selectedAnimation} ranges={m.edit?.ranges ?? []} words={m.captions} disabled={lock} onChange={changeAnimation} onRemove={() => { changeDraft(draft.filter((a) => a.id !== selectedAnimation.id)); setSelectedId(null); }} onTest={() => { seekSource(selectedAnimation.fromMs); player.current?.play(); }} />
+              <label className="mt-3 block text-sm font-semibold">Intensité du mouvement
+                <input type="range" min={0} max={2} step={0.1} value={selectedAnimation.intensite ?? 1} disabled={lock} onChange={(e) => changeAnimation({ ...selectedAnimation, intensite: e.target.valueAsNumber })} className="sv2-range mt-2 block w-full" aria-valuetext={(selectedAnimation.intensite ?? 1) < 0.7 ? "sobre" : (selectedAnimation.intensite ?? 1) > 1.3 ? "impact" : "dynamique"} />
+                <span className="flex justify-between text-xs font-normal text-mut"><span>Sobre</span><span>Dynamique</span><span>Impact</span></span></label></section> : null}
+            {ready && m.edit ? <details className="sv2-details"><summary>Mots en surbrillance ({(m.edit.motsAccent ?? []).length})</summary>
+              <p className="mb-2 text-xs text-mut">Clique sur un mot : il ressort dans les sous-titres au moment où tu le dis.</p>
+              <div role="group" aria-label="Style des mots en surbrillance" className="mb-2 grid grid-cols-3 gap-2">{(["couleur", "fond", "taille"] as const).map((k) => <button key={k} type="button" aria-pressed={(m.edit!.captionStyle.accent ?? "couleur") === k} className="btn-ghost min-h-10 text-xs" disabled={cutLock} onClick={() => { void save({ ...m.edit!, captionStyle: { ...m.edit!.captionStyle, accent: k } }); }}>{k === "couleur" ? "Bleu" : k === "fond" ? "Fond bleu" : "Plus gros"}</button>)}</div>
+              <div role="group" aria-label="Mots de la vidéo" className="flex max-h-40 flex-wrap gap-1 overflow-auto">{keptWords(m.captions, m.edit.ranges).map((w) => { const on = (m.edit!.motsAccent ?? []).includes(w.startMs); return <button key={w.startMs} type="button" aria-pressed={on} disabled={cutLock} className="btn-ghost min-h-9 px-2 py-1 text-xs" onClick={() => { const cur = m.edit!.motsAccent ?? []; if (!on && cur.length >= 80) return; void save({ ...m.edit!, motsAccent: on ? cur.filter((x) => x !== w.startMs) : [...cur, w.startMs].sort((a, b) => a - b) }); }}>{w.text.trim()}</button>; })}</div></details> : null}
             {ready && m.edit ? <details className="sv2-details"><summary>Sous-titres automatiques</summary><StudioSimpleCaptions edit={m.edit} disabled={lock} onChange={(patch) => { if (m.edit) void save({ ...m.edit, ...patch }); }} /></details> : null}
             {ready && m.edit ? <details className="sv2-details"><summary>Rythme des plans (zooms automatiques)</summary><StudioDirector edit={m.edit} disabled={lock} onChange={(patch) => { if (m.edit) void save({ ...m.edit, ...patch }); }} /></details> : null}
             <StudioAutoSave active={!proposal && !saving && !frozen && !animationBusy} unsaved={unsaved} contentKey={JSON.stringify({ draft, logo, animationChoices })} onSave={() => saveDraft()} canDelete={Boolean(selectedId) && !lock} onDelete={() => { if (!selectedId) return; changeDraft(draft.filter((x) => x.id !== selectedId)); setSelectedId(null); }} />

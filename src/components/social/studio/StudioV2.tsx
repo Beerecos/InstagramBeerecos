@@ -77,7 +77,7 @@ export function StudioSidebar({ currentId, onRecord, onImport, onOpen, onAll }: 
   );
 }
 
-export function StudioTabs({ tab, onTab }: { tab: StudioTab; onTab: (t: StudioTab) => void }) {
+export function StudioTabs({ tab, onTab, onPublish }: { tab: StudioTab; onTab: (t: StudioTab) => void; onPublish?: () => void }) {
   const tabs: { key: StudioTab; label: string; icon: ReactNode }[] = [
     { key: "cadrage", label: "Cadrage", icon: <Crop aria-hidden size={18} /> },
     { key: "coupe", label: "Coupe", icon: <Scissors aria-hidden size={18} /> },
@@ -86,6 +86,8 @@ export function StudioTabs({ tab, onTab }: { tab: StudioTab; onTab: (t: StudioTa
   return (
     <div role="tablist" aria-label="Outils" className="sv2-tabs">
       {tabs.map((t) => <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} className={`sv2-tab${tab === t.key ? " sv2-active" : ""}`} onClick={() => onTab(t.key)}>{t.icon} {t.label}</button>)}
+      {/* Téléphone : « Publier » rejoint la barre du bas (masqué sur grand écran). */}
+      {onPublish ? <button type="button" className="sv2-tab sv2-tab-publish" onClick={onPublish}><Send aria-hidden size={18} /> Publier</button> : null}
     </div>
   );
 }
