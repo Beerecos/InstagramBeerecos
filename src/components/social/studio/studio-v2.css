@@ -116,3 +116,15 @@
   .sv2-bottom .sv2-timeline { max-height: 220px; }
   .sv2-add { flex-direction: row; flex-wrap: wrap; }
 }
+/* Import dans le studio (2026-11-12) : fenêtre sombre au-dessus du studio, sans écran intermédiaire. */
+.sv2-import-backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgba(3, 8, 16, 0.72); }
+.sv2-import { display: flex; flex-direction: column; gap: 14px; width: min(520px, 100%); max-height: calc(100dvh - 32px); overflow: auto; color: #fff; }
+.sv2-spinner { width: 16px; height: 16px; border-radius: 999px; border: 2px solid rgba(255, 255, 255, 0.25); border-top-color: #fff; animation: sv2-spin 0.8s linear infinite; }
+@keyframes sv2-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sv2-spinner { animation-duration: 2.4s; } }
+/* Titre renommable au-dessus de la vidéo (2026-11-12). */
+.sv2-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; min-width: 0; }
+.sv2-title-input { flex: 1; min-width: 0; min-height: 40px; padding: 0 12px; border-radius: 12px; background: var(--sv2-card); border: 1px solid var(--sv2-blue); color: #fff; font-size: 16px; font-weight: 600; }
+.sv2-icon-btn { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 12px; background: var(--sv2-card); border: 1px solid var(--sv2-line); color: #fff; }
+.sv2-icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.sv2-icon-btn:hover:not(:disabled) { filter: brightness(1.2); }

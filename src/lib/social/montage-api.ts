@@ -75,6 +75,8 @@ export const montage = {
   /** Corbeille (Instagram BeeRecos) : suppression récupérable, aucun fichier effacé. */
   archive: (id: string) => call<{ archivedAt: string }>({ action: "archive", id }),
   restore: (id: string) => call<{ restored: boolean }>({ action: "restore", id }),
+  /** Titre seul : la vidéo, le rendu et la planche validée restent valables. */
+  rename: (id: string, title: string) => call<{ title: string; changed: boolean }>({ action: "rename", id, title }),
   // Sous-titres, storyboard et animations lisent « BeeRecos » même si la transcription a entendu « Biroco ».
   get: async (id: string) => {
     const r = await call<{ montage: MontageDetail; videoUrl: string | null; takeUrls?: Record<string, string>; mediaUrls?: Record<string, string>; matteUrls?: Record<string, string> }>({ action: "get", id });

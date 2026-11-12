@@ -45,8 +45,10 @@ import ReelBrandCharter from "@/components/social/ReelBrandCharter";
 import MontagePublish from "@/components/social/MontagePublish";
 import AiEditor from "@/components/reels/ai-editor";
 import { useWaveform } from "@/components/reels/use-waveform";
+import { pickVideos, sendTake, useVideoImport, VIDEO_ACCEPT } from "@/components/social/studio/video-import";
+import StudioImport from "@/components/social/studio/StudioImport";
 import { cutOutputZone, pieceAt, removePiece, splitAt, stepMs } from "@/domain/studio/timeline";
-import { HeaderMenu, PlayerBar, PublishButton, QuickAnimations, StudioHeader, StudioSidebar, StudioTabs, type StudioTab } from "@/components/social/studio/StudioV2";
+import { HeaderMenu, PlayerBar, PublishButton, QuickAnimations, StudioHeader, StudioSidebar, StudioTabs, StudioTitle, type StudioTab } from "@/components/social/studio/StudioV2";
 import { sceneCardCandidate } from "@/domain/social/montage/scenes";
 import { EditSync, History, type SyncState } from "@/domain/studio/edit-sync";
 import PostPanel from "@/components/reels/post-panel";
@@ -54,8 +56,7 @@ import { keptWords, type CustomAnimation } from "@/domain/social/montage/suggest
 import { stampMotionVersions } from "@/domain/social/montage/beemotion";
 import { isMontageConfigured, montage, reels, type MontageDetail, type MontageSummary } from "@/lib/social/montage-api";
 import { buildEditComposition } from "@/domain/social/montage/edit-composition";
-import { MAX_UPLOAD_BYTES, MONTAGE_STATUS_LABELS, takesOf } from "@/domain/social/montage/montage";
-import { energyFrames, speechIslands } from "@/domain/social/montage/pipeline";
+import { MONTAGE_STATUS_LABELS, takesOf } from "@/domain/social/montage/montage";
 import { layout, MAX_STRIP_MS, MAX_TAKES, takeBreaks, takeStrip, toOutputMs, type Edit } from "@/domain/social/montage/edit";
 import { checkStudioEdit, cutSource, outputToSourceMs, restoreSource, wordSpan } from "@/domain/social/montage/studio";
 import { MATTE_COMMAND, MATTE_MAX_BYTES, matteAt } from "@/domain/social/montage/matte";
@@ -76,125 +77,27 @@ import type { AnimationTemplate } from "@/domain/social/montage/template";
 const sec = (ms: number | null | undefined) => `${((ms ?? 0) / 1000).toFixed(1).replace(".", ",")} s`;
 
 
-/** Îlots de parole (énergie par fenêtres de 20 ms) pour recaler le transcript ; facultatif. */
-async function measureSpeech(file: File): Promise<{ fromMs: number; toMs: number }[] | null> {
-  if (file.size > 200 * 1024 * 1024) return null;
-  try {
-    const ctx = new AudioContext();
-    const audio = await ctx.decodeAudioData(await file.arrayBuffer());
-    await ctx.close();
-    const ch = audio.getChannelData(0);
-    const pcm = new Int16Array(ch.length);
-    for (let i = 0; i < ch.length; i++) pcm[i] = Math.max(-32768, Math.min(32767, Math.round(ch[i] * 32767)));
-    return speechIslands(energyFrames(pcm, audio.sampleRate));
-  } catch {
-    return null;
-  }
-}
-
-/** Envoie une prise de plus sur un montage existant (lot S3 bis) : dépôt signé, puis enregistrement mesuré. */
-async function sendTake(id: string, file: File, setStep: (s: string) => void, label: string) {
-  setStep(`Lecture de ${label}…`);
-  const [durationMs, islands] = await Promise.all([videoDurationMs(file), measureSpeech(file)]);
-  const added = await montage.addTake(id, { fileName: file.name, size: file.size });
-  setStep(`Envoi de ${label}…`);
-  const res = await fetch(added.uploadUrl, { method: "PUT", headers: { "Content-Type": file.type || "video/mp4" }, body: file });
-  if (!res.ok) throw new Error(`Envoi de ${label} interrompu (${res.status}) : relancez.`);
-  await montage.takeUploaded(id, { file: added.file, durationMs, islands });
-}
-
-/** `reelId` : prise d'un des 72 Reels (lot S7) — le montage lui est lié et prend son titre. */
+/** `reelId` : prise d'un des 72 Reels (lot S7) — le montage lui est lié et prend son titre. Le titre d'un import libre
+ * reprend le nom du fichier. Une seule prise part dès qu'elle est choisie ; plusieurs prises : on vérifie l'ordre, puis on envoie. */
 export function Uploader({ onDone, reelId }: { onDone: (id: string) => void; reelId?: string }) {
   const [files, setFiles] = useState<File[]>([]);
-  const [title, setTitle] = useState("");
-  const [step, setStep] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [receivedId, setReceivedId] = useState<string | null>(null);
-  const running = useRef(false);
-  const locked = Boolean(step) || Boolean(receivedId);
+  const imp = useVideoImport({ onDone, reelId });
+  const locked = imp.busy || Boolean(imp.receivedId);
   const [dragging, setDragging] = useState(false);
-  useEffect(() => {
-    if (!step) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [step]);
   const pick = (list: FileList | null) => {
-    const videos = [...(list ?? [])].filter((f) => f.type.startsWith("video/") || /\.(mp4|mov|m4v|webm)$/i.test(f.name));
-    if (list?.length && !videos.length) { setError("Ce fichier n'est pas une vidéo .mp4 ou .mov."); return; }
-    if (videos.length > MAX_TAKES) { setError(`${MAX_TAKES} prises au plus : sélectionne moins de vidéos.`); return; }
-    if (videos.some((file) => file.size > MAX_UPLOAD_BYTES)) { setError("Une prise dépasse 500 Mo : exporte-la plus légère."); return; }
-    setError(null);
-    setFiles(videos.sort((a, b) => a.name.localeCompare(b.name, "fr", { numeric: true })));
+    const r = pickVideos(list);
+    if (!r) return;
+    if ("error" in r) { imp.setError(r.error); return; }
+    imp.setError(null);
+    setFiles(r.files);
+    if (r.files.length === 1) void imp.start(r.files);
   };
-
-  async function transcribeReceived(id: string) {
-    setStep("Transcription et préparation des séquences…");
-    setError(null);
-    try {
-      await montage.transcribe(id);
-      onDone(id);
-    } catch (err) {
-      setError(`La vidéo est enregistrée, mais la transcription n’a pas abouti : ${err instanceof Error ? err.message : "service indisponible"}. Relancez sans renvoyer le fichier, ou ouvrez le montage pour reprendre.`);
-    } finally {
-      running.current = false;
-      setStep(null);
-    }
-  }
-
   const move = (i: number, by: number) => setFiles((f) => { const next = [...f]; [next[i], next[i + by]] = [next[i + by], next[i]]; return next; });
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (running.current) return;
-    if (receivedId) {
-      running.current = true;
-      await transcribeReceived(receivedId);
-      return;
-    }
-    const file = files[0];
-    if (!file) return setError("Choisissez une vidéo.");
-    if (files.length > MAX_TAKES) return setError(`${MAX_TAKES} prises au plus par montage.`);
-    if (files.some((f) => f.size > MAX_UPLOAD_BYTES)) return setError("Une prise dépasse 500 Mo : exportez-la plus légère.");
-    running.current = true;
-    setError(null);
-    let received: string | null = null;
-    try {
-      const label = files.length > 1 ? "la prise 1" : "la prise";
-      setStep(`Lecture de ${label}…`);
-      const [durationMs, islands] = await Promise.all([videoDurationMs(file), measureSpeech(file)]);
-      setStep("Préparation…");
-      const created = await montage.create({ title: title.trim() || file.name.replace(/\.[^.]+$/, ""), fileName: file.name, size: file.size, ...(reelId ? { reelId } : {}) });
-      setStep(`Envoi de ${label}…`);
-      const res = await fetch(created.uploadUrl, { method: "PUT", headers: { "Content-Type": file.type || "video/mp4" }, body: file });
-      if (!res.ok) throw new Error(`Envoi interrompu (${res.status}) : relancez.`);
-      setStep("Enregistrement…");
-      await montage.uploaded(created.id, { durationMs, islands });
-      received = created.id;
-      // Prises suivantes, une à une, dans l'ordre choisi : elles se posent bout à bout.
-      for (const [k, f] of files.slice(1).entries()) await sendTake(created.id, f, setStep, `la prise ${k + 2}`);
-      setReceivedId(created.id);
-      await transcribeReceived(created.id);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Envoi impossible.";
-      // Prise 1 reçue mais une suivante a échoué : le montage s'ouvre avec les prises reçues, la carte « Prises »
-      // permet d'ajouter les autres.
-      if (received) { window.alert(`${message}\nLe montage s'ouvre avec les prises déjà reçues : ajoutez les autres depuis « Prises ».`); onDone(received); }
-      else setError(message);
-    } finally {
-      running.current = false;
-      setStep(null);
-    }
-  }
-
   return (
-    <form onSubmit={submit} className="card space-y-3 p-5" aria-label={reelId ? `Prise de ${reelId}` : "Nouveau montage"}>
-      <h2 className="font-display text-lg">{reelId ? `Prise filmée de ${reelId}` : "Nouveau montage"}</h2>
-      {reelId ? <p className="text-xs text-mut">Le montage est lié à {reelId} et prend son titre. Gardez 2 s de prise après le dernier mot (carte de fin).</p> : (
-      <label className="block text-sm font-medium">
-        Titre
-        <input disabled={locked} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} placeholder="Ex. Une recommandation, ça vaut combien ?" className="mt-1 block w-full rounded-xl border border-line bg-white px-3 py-2 text-sm" />
-      </label>)}
+    <form onSubmit={(e) => { e.preventDefault(); if (imp.receivedId) void imp.retry(); else void imp.start(files); }} className="card space-y-3 p-5" aria-label={reelId ? `Prise de ${reelId}` : "Nouveau montage"}>
+      <h2 className="font-display text-lg">{reelId ? `Prise filmée de ${reelId}` : "Importer ma vidéo"}</h2>
+      {reelId ? <p className="text-xs text-mut">Le montage est lié à {reelId} et prend son titre. Gardez 2 s de prise après le dernier mot (carte de fin).</p> : null}
       {/* Zone d'import bien visible (le bouton natif « Sélect. fichiers » passait pour du texte) : clic ou glisser-déposer. */}
       <label
         onDragOver={(e) => { if (!locked) { e.preventDefault(); setDragging(true); } }}
@@ -203,11 +106,11 @@ export function Uploader({ onDone, reelId }: { onDone: (id: string) => void; ree
         className={`flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed px-4 py-8 text-center transition ${dragging ? "border-brand bg-brand-soft" : "border-line hover:border-brand hover:bg-brand-soft/40"} ${locked ? "pointer-events-none opacity-60" : ""}`}>
         <Upload aria-hidden size={32} className="text-brand" />
         <span className="btn-red pointer-events-none min-h-11 px-5">{files.length ? "Changer de vidéo" : "Choisir mes vidéos"}</span>
-        <span className="text-sm text-mut">ou glisse-les ici</span>
+        <span className="text-sm text-mut">ou glisse-les ici · l’envoi démarre tout seul</span>
         <span className="text-xs text-mut">Verticale ou paysage (recadrage 9:16 dans le studio) · .mp4 ou .mov · 500 Mo au plus chacune · {MAX_TAKES} prises au plus · {MAX_STRIP_MS / 60_000} min en tout</span>
-        <input disabled={locked} type="file" multiple aria-label="Prises filmées" accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.m4v,.webm" onChange={(e) => { pick(e.target.files); e.target.value = ""; }} className="sr-only" />
+        <input disabled={locked} type="file" multiple aria-label="Prises filmées" accept={VIDEO_ACCEPT} onChange={(e) => { pick(e.target.files); e.target.value = ""; }} className="sr-only" />
       </label>
-      {files.length === 1 ? <p className="flex items-center gap-2 rounded-lg bg-black/[0.03] px-3 py-2 text-sm"><Film aria-hidden size={16} className="text-brand" /><span className="min-w-0 flex-1 truncate">{files[0].name}</span><span className="text-xs text-mut">{Math.round(files[0].size / 1024 / 1024)} Mo</span><button type="button" disabled={locked} className="btn-ghost" onClick={() => setFiles([])}>Retirer</button></p> : null}
+      {files.length === 1 ? <p className="flex items-center gap-2 rounded-lg bg-black/[0.03] px-3 py-2 text-sm"><Film aria-hidden size={16} className="text-brand" /><span className="min-w-0 flex-1 truncate">{files[0].name}</span><span className="text-xs text-mut">{Math.round(files[0].size / 1024 / 1024)} Mo</span></p> : null}
       {files.length > 1 ? (
         <ol aria-label="Ordre des prises" className="space-y-1 text-sm">
           {files.map((f, i) => (
@@ -221,13 +124,13 @@ export function Uploader({ onDone, reelId }: { onDone: (id: string) => void; ree
         </ol>
       ) : null}
       {files.length > 1 ? <p className="text-xs text-mut">Les prises sont montées bout à bout dans cet ordre. La coupe auto propose de garder la dernière version d&apos;une phrase redite d&apos;une prise à l&apos;autre.</p> : null}
-      <p className="text-xs text-mut">La transcription démarre automatiquement après l’envoi de toutes les prises sélectionnées. Gardez cette page ouverte : le studio s’ouvrira avec vos séquences dès la fin du traitement.</p>
-      {step ? <p role="status" className="text-sm text-brand">{step}</p> : null}
-      <button type="submit" className="btn-red min-h-[44px] w-full disabled:cursor-not-allowed disabled:opacity-40" disabled={!files.length || Boolean(step)} aria-busy={Boolean(step)}>
-        {step ?? (receivedId ? "Relancer la transcription" : "Envoyer et commencer")}
-      </button>
-      {receivedId && !step ? <button type="button" className="btn-ghost min-h-[44px]" onClick={() => onDone(receivedId)}>Ouvrir le montage enregistré</button> : null}
-      {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
+      <p className="text-xs text-mut">Le titre reprend le nom du fichier. Gardez cette page ouverte : le studio s’ouvrira avec vos séquences dès la fin de la transcription.</p>
+      {imp.step ? <p role="status" className="text-sm text-brand">{imp.step}</p> : null}
+      {files.length > 1 || imp.receivedId ? <button type="submit" className="btn-red min-h-[44px] w-full disabled:cursor-not-allowed disabled:opacity-40" disabled={!files.length || imp.busy} aria-busy={imp.busy}>
+        {imp.step ?? (imp.receivedId ? "Relancer la transcription" : "Envoyer et commencer")}
+      </button> : null}
+      {imp.receivedId && !imp.step ? <button type="button" className="btn-ghost min-h-[44px]" onClick={() => onDone(imp.receivedId!)}>Ouvrir le montage enregistré</button> : null}
+      {imp.error ? <p role="alert" className="text-sm text-red-700">{imp.error}</p> : null}
     </form>
   );
 }
@@ -438,6 +341,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   const [tab,setTab]=useState<StudioTab>("animation");
   const [publishOpen,setPublishOpen]=useState(false);
   const [templatesOpen,setTemplatesOpen]=useState(false);
+  const [importFiles,setImportFiles]=useState<File[]|null>(null);
   const [libraryTab,setLibraryTab]=useState<"animations"|"effects"|"sounds">("animations");
   const [expanded,setExpanded]=useState(()=>typeof window==="undefined"||window.innerWidth>=768);
   const [monitorView, setMonitorView] = useState<"edit"|"render">("edit");
@@ -900,6 +804,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
       {m.error ? <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{m.error}</p> : null}
       {frozen ? <p role="status" className="rounded-2xl bg-black/[0.03] px-4 py-3 text-sm">{m.sentToReels ? "Vidéo déjà envoyée : elle ne se modifie plus (crée une nouvelle vidéo pour la changer)." : "Création de la vidéo en cours : le montage est figé jusqu’à la fin."}</p> : null}
       {libraryDialog}
+      {importFiles ? <StudioImport files={importFiles} onClose={() => setImportFiles(null)} onDone={(id) => { setImportFiles(null); if (canLeave()) onSwitch?.(id); else setNotice("Ta nouvelle vidéo est prête : ouvre-la depuis « Mes projets » une fois ce montage enregistré."); }} /> : null}
       {prompteur ? <Prompteur reel={prompteur} onClose={() => setPrompteur(null)} /> : null}
       <StudioLibraryDialog closeLabel="Fermer" title="Templates" open={templatesOpen} onClose={() => setTemplatesOpen(false)}>
         {templatesOpen ? <div className="space-y-3">
@@ -921,8 +826,10 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
         </div> : null}
       </StudioLibraryDialog>
       <div className="sv2-grid">
-        <StudioSidebar currentId={m.id} onRecord={() => { if (canLeave()) onSwitch?.("__tournage"); }} onImport={() => { if (canLeave()) onSwitch?.("__video"); }} onOpen={(target) => { if (canLeave()) onSwitch?.(target); }} onAll={() => { if (canLeave()) onBack(); }} />
+        <StudioSidebar currentId={m.id} onRecord={() => { if (canLeave()) onSwitch?.("__tournage"); }} onImport={(list) => { const r = pickVideos(list); if (!r) return; if ("error" in r) { setError(r.error); return; } setImportFiles(r.files); }} onOpen={(target) => { if (canLeave()) onSwitch?.(target); }} onAll={() => { if (canLeave()) onBack(); }} />
         <section ref={preview} aria-label="Moniteur du studio" className="sv2-panel sv2-stage">
+          <StudioTitle title={m.title} disabledReason={unsaved || sync.current?.busy || saving ? "Attends la fin de l’enregistrement pour renommer." : null}
+            onRename={async (title) => { await montage.rename(m.id, title); await load(); }} />
           <div className="studio-monitor-frame">
             <StudioCanvas animation={selectedAnimation} index={selectedAnim} disabled={lock} onChange={changeAnimation} player={player} time={playOut}>
               {html ? <ReelPreview ref={player} html={html} title={m.title} onTimeUpdate={onTime} onReady={() => { if (pendingSeek.current !== null) { player.current?.seek(pendingSeek.current); pendingSeek.current = null; } }} autoplay={false} preservePosition /> : <div className="grid aspect-[9/16] place-items-center rounded-2xl border border-dashed border-line p-4 text-center text-sm text-mut">La vidéo n’est pas encore reçue.</div>}
