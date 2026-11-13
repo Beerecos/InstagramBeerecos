@@ -50,7 +50,7 @@ import StudioImport from "@/components/social/studio/StudioImport";
 import { ajouterSon, SonsAvantPublication, SonsDeLaVideo, SonsPanel, SonsVerification, type SonsCible } from "@/components/social/studio/StudioSons";
 import { modifierSon, placeSons } from "@/domain/social/montage/sons";
 import { cutOutputZone, pieceAt, removePiece, splitAt, stepMs } from "@/domain/studio/timeline";
-import { HeaderMenu, PlayerBar, PublishButton, QuickAnimations, StudioHeader, StudioSidebar, StudioTabs, StudioTitle, type StudioTab } from "@/components/social/studio/StudioV2";
+import { HeaderMenu, PlayerBar, PublishButton, QuickAnimations, SimpleAnimationPicker, StudioHeader, StudioSidebar, StudioTabs, StudioTitle, type StudioTab } from "@/components/social/studio/StudioV2";
 import { sceneCardCandidate } from "@/domain/social/montage/scenes";
 import { EditSync, History, type SyncState } from "@/domain/studio/edit-sync";
 import PostPanel from "@/components/reels/post-panel";
@@ -333,6 +333,8 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
   const [panelParams] = useSearchParams();
   const [panel, setPanel] = useState<Panel>(() => PANELS.some((p) => p.key === panelParams.get("panel")) ? panelParams.get("panel") as Panel : "animations");
   const [libraryOpen,setLibraryOpen]=useState(false);
+  // Nouveau studio : « choix » = grille simple ; « reglages » = fiche à compléter (mot-clé du CTA…), rare.
+  const [libMode,setLibMode]=useState<"choix"|"reglages">("choix");
   // Mode simple (par défaut) : 4 étapes (cadrage, coupes, sous-titres, animations) puis « Terminer ». Le mode avancé
   // garde tous les outils ; le choix est retenu sur cet appareil.
   // Refonte 2026-11-12 : le nouveau studio (« studio ») est l'écran par défaut ; le parcours guidé en 5 étapes
@@ -712,15 +714,17 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
     try { setPrompteur((await reels.get(m.reel.reelId)).reel.data); } catch (e) { setError(e instanceof Error ? e.message : "Prompteur indisponible."); }
   };
 
+  const v2 = mode === "studio";
   const libraryDialog = (
-      <StudioLibraryDialog title={libraryTab==="sounds"?"Choisir un son":"Choisir une animation"} open={libraryOpen} onClose={()=>setLibraryOpen(false)}>
-        <section aria-label="Bibliothèque du studio" className="studio-library card p-3">
-          <h3 className="mb-2 font-semibold">Bibliothèque</h3>
+      <StudioLibraryDialog closeLabel={v2 ? "Fermer" : undefined} title={v2 ? (libMode === "reglages" ? "Compléter l’animation" : "Ajouter une animation") : libraryTab==="sounds"?"Choisir un son":"Choisir une animation"} open={libraryOpen} onClose={()=>{setLibraryOpen(false);setLibMode("choix");}}>
+        {v2 && libMode === "choix" ? <SimpleAnimationPicker disabled={saving || animationBusy || frozen || Boolean(proposal) || !m.edit} used={new Set(draft.map((a) => a.name))} onPick={(name) => { setLibraryOpen(false); quickAdd(name); }} /> : null}
+        <section aria-label="Bibliothèque du studio" className="studio-library card p-3" hidden={v2 && libMode === "choix"}>
+          {!v2 ? <><h3 className="mb-2 font-semibold">Bibliothèque</h3>
           <div role="group" aria-label="Bibliothèque du studio : catégories" className="mb-3 flex gap-2">
             <button type="button" aria-pressed={libraryTab==="animations"} className="btn-ghost min-h-[44px] text-xs" onClick={()=>setLibraryTab("animations")}>Animations</button>
             <button type="button" aria-pressed={libraryTab==="effects"} className="btn-ghost min-h-[44px] text-xs" onClick={()=>setLibraryTab("effects")}>Mes effets</button>
             <button type="button" aria-pressed={libraryTab==="sounds"} className="btn-ghost min-h-[44px] text-xs" onClick={()=>setLibraryTab("sounds")}>Sons</button>
-          </div>
+          </div></> : null}
           {m.edit && libraryTab==="sounds" ? <StudioMedia library={lib.library?.filter(item=>item.kind==="son") ?? null} onRefresh={lib.refresh} editor={{edit:m.edit,playheadMs:playSource,disabled:saving||frozen||unsaved,onSave:async(edit)=>{await montage.saveEdit(m.id,edit,m.updatedAt);await load(true);setLibraryOpen(false);}}}/> : null}
           {m.edit && libraryTab==="effects" ? <StudioEffectLibrary custom={draft} selected={selectedAnimation} ranges={m.edit.ranges} disabled={saving || animationBusy || frozen || Boolean(proposal)} onApply={effect=>{
             const next=[...draft,...placeStudioEffect(effect,m.edit!.ranges,playOut??0)];
@@ -728,7 +732,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
             if(!checked.ok) throw new Error(checked.errors.join("\n"));
             changeDraft(next);setPanel("animations");setLibraryTab("animations");setLibraryOpen(false);
           }}/> : null}
-            {m.edit ? <div hidden={libraryTab!=="animations"}><MontageAnimations ref={animations} studioMode activeScene={activeScene} onAppendOutro={appendOutro} onPlaced={a=>{setLibraryOpen(false);setSelectedId(a.id??null);setPanel("animations");seekSource(a.fromMs);}} key={m.updatedAt} m={m} draft={draft} onDraft={changeDraft} choices={animationChoices} onChoices={setAnimationChoices} onBusy={setAnimationBusy}
+            {m.edit ? <div hidden={libraryTab!=="animations"}><MontageAnimations ref={animations} studioMode activeScene={activeScene} onAppendOutro={appendOutro} onForm={(r)=>{if(mode!=="studio")return;if(r.timing){setLibraryOpen(false);setLibMode("choix");setNotice("Trop près d’une autre animation (une seule à l’écran à la fois) : avance ou recule la lecture d’au moins une seconde, puis réessaie.");return;}setLibMode("reglages");setLibraryOpen(true);}} onPlaced={a=>{setLibraryOpen(false);setSelectedId(a.id??null);setPanel("animations");seekSource(a.fromMs);}} key={m.updatedAt} m={m} draft={draft} onDraft={changeDraft} choices={animationChoices} onChoices={setAnimationChoices} onBusy={setAnimationBusy}
               disabled={saving || animationBusy || frozen || transcribing || m.status === "transcribing" || Boolean(proposal)} playheadMs={playSource}
               onTest={(sourceMs) => {
                 seekSource(sourceMs); player.current?.play();
@@ -763,7 +767,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
     if (canLeave()) onSwitch?.("__calendrier");
   };
   const timeline = m.edit && m.durationMs ? (
-        <StudioTimeline onDeleteScene={deleteScene} deleteDisabled={unsaved} onOpenSounds={()=>{setLibraryTab("sounds");setLibraryOpen(true);}} onOpenLibrary={()=>{setLibraryTab("animations");setLibraryOpen(true);}} scenes={scenes} selectedScene={activeScene?.index} onSelectScene={selectScene} onDropScene={(name,scene,fromIndex)=>animations.current?.place(name,scene,fromIndex)} durationMs={m.durationMs} ranges={proposal?.edit.ranges ?? m.edit.ranges} captions={m.captions} custom={proposal?.edit.custom ?? draft} sounds={proposal?.edit.sounds ?? m.edit.sounds} outroMs={(proposal?.edit??m.edit).outro ? END_VIDEO.durationMs : undefined} onSeekOutro={()=>{setMonitorView("edit");player.current?.seek(segments.reduce((n,s)=>n+s.toMs-s.fromMs,0)/1000);}} playheadMs={playSource}
+        <StudioTimeline onDeleteScene={deleteScene} deleteDisabled={unsaved} onOpenSounds={()=>{if(mode==="studio"){setSonsCible({mode:"ajout"});setSonsOpen(true);return;}setLibraryTab("sounds");setLibraryOpen(true);}} onOpenLibrary={()=>{setLibMode("choix");setLibraryTab("animations");setLibraryOpen(true);}} scenes={scenes} selectedScene={activeScene?.index} onSelectScene={selectScene} onDropScene={(name,scene,fromIndex)=>animations.current?.place(name,scene,fromIndex)} durationMs={m.durationMs} ranges={proposal?.edit.ranges ?? m.edit.ranges} captions={m.captions} custom={proposal?.edit.custom ?? draft} sounds={proposal?.edit.sounds ?? m.edit.sounds} outroMs={(proposal?.edit??m.edit).outro ? END_VIDEO.durationMs : undefined} onSeekOutro={()=>{setMonitorView("edit");player.current?.seek(segments.reduce((n,s)=>n+s.toMs-s.fromMs,0)/1000);}} playheadMs={playSource}
           onSeek={seekSource} selected={selectedAnim} onSelectAnimation={(i) => { setSelectedId(draft[i]?.id ?? null); const scene=scenes.find(s=>draft[i].fromMs>=s.startMs&&draft[i].fromMs<s.endMs); if(scene)setSelectedSceneIndex(scene.index); setPanel("animations"); }} takeBreaks={breaks} disabled={saving || animationBusy || frozen || Boolean(proposal)} onChangeAnimation={(_i,a) => changeAnimation(a)} onChangeRanges={proposal ? undefined : (r) => { if (m.edit) void save({ ...m.edit, ranges: r }); }} waveform={wave} waveformNote={waveNote} broll={(proposal?.edit ?? m.edit).broll ?? []} zone={zone} onCutZone={cutZone} onClearZone={() => setZone({ in: null, out: null })}
           effets={sonsPlaces.map((p) => ({ id: p.occ.id, label: p.occ.son, startMs: p.startMs, durationMs: p.durationMs }))} selectedEffet={sonSel} onSelectEffet={(id) => { setSonSel(id); if (id) setTab("animation"); }} onMoveEffet={sonsLock ? undefined : moveEffet} />
   ) : null;
@@ -784,10 +788,15 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
     if (!sceneNow) return;
     if (name === "titre-derriere" && !matteAt(m.edit, sceneNow.startMs)) { setNotice("Pour placer un texte derrière toi, la vidéo doit d’abord être détourée : onglet Cadrage, « Détourage »."); setTab("cadrage"); return; }
     // Une seule animation à l'écran à la fois (1 s d'écart) : le dire clairement plutôt que d'échouer en silence.
-    if (draft.some((a) => a.fromMs < sceneNow.endMs && a.toMs > sceneNow.startMs - 1000)) { setNotice("Ce passage a déjà une animation (une seule à l’écran à la fois). Place le curseur sur un autre passage, ou retire d’abord celle-ci dans « Dans ta vidéo »."); return; }
+    if (draft.some((a) => a.name !== "logo-fin" && a.fromMs < sceneNow.endMs && a.toMs > sceneNow.startMs - 1000)) { setNotice("Ce passage a déjà une animation (une seule à l’écran à la fois). Place le curseur sur un autre passage, ou retire d’abord celle-ci dans « Dans ta vidéo »."); return; }
     const c = sceneCardCandidate(name, sceneNow, { canBehind: true, keyword: m.reel?.keyword ?? null });
     // Réglage impossible à deviner depuis ce qui est dit (ex. mot-clé du CTA) : la bibliothèque s'ouvre sur la fiche.
-    if (!c || c.note?.startsWith("Réglages à compléter") || c.note?.startsWith("Mot-clé")) { setLibraryTab("animations"); setLibraryOpen(true); return; }
+    if (!c || c.note?.startsWith("Réglages à compléter") || c.note?.startsWith("Mot-clé")) {
+      setLibraryTab("animations"); setLibraryOpen(true);
+      // Nouveau studio : seule la fiche à compléter s'affiche, déjà remplie autant que possible.
+      if (mode === "studio") { setLibMode("reglages"); animations.current?.place(name, sceneNow); }
+      return;
+    }
     animations.current?.place(name, sceneNow);
   };
   const splitHere = () => {
@@ -928,7 +937,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
           {tab === "animation" ? <div className="sv2-section">
             <QuickAnimations onAdd={quickAdd} disabled={lock || !m.edit} used={new Set(draft.map((a) => a.name))} />
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" className="sv2-action" disabled={lock || !m.edit} onClick={() => { setLibraryTab("animations"); setLibraryOpen(true); }}>Toute la bibliothèque…</button>
+              <button type="button" className="sv2-action" disabled={lock || !m.edit} onClick={() => { setLibMode("choix"); setLibraryTab("animations"); setLibraryOpen(true); }}>Plus d’animations…</button>
               <button type="button" className="sv2-action" aria-haspopup="dialog" disabled={sonsLock} onClick={() => { setSonsCible({ mode: "ajout" }); setSonsOpen(true); }}><Volume2 aria-hidden size={18} /> Sons</button>
             </div>
             {sonsEdit ? <details className="sv2-details" open={Boolean(sonSel) || undefined}><summary>Sons de la vidéo ({(sonsEdit.sons ?? []).length})</summary>
@@ -959,8 +968,8 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
         <div className="sv2-panel sv2-timeline">{timeline ?? <p className="text-sm text-mut">La timeline apparaît dès que la vidéo est reçue.</p>}</div>
         <div className="sv2-panel sv2-add" role="group" aria-label="Ajouter">
           <button type="button" disabled={lock} onClick={() => { setTab("animation"); quickAdd("titre"); }}>＋ Texte</button>
-          <button type="button" disabled={lock || !m.edit} onClick={() => { setLibraryTab("animations"); setLibraryOpen(true); }}>＋ Élément</button>
-          <button type="button" disabled={lock || !m.edit} onClick={() => { setLibraryTab("sounds"); setLibraryOpen(true); }}>＋ Audio</button>
+          <button type="button" disabled={lock || !m.edit} onClick={() => { setLibMode("choix"); setLibraryTab("animations"); setLibraryOpen(true); }}>＋ Élément</button>
+          <button type="button" disabled={sonsLock} onClick={() => { setSonsCible({ mode: "ajout" }); setSonsOpen(true); }}>＋ Son</button>
         </div>
         <div className="sv2-finish">
           <button type="button" className="sv2-action" disabled={!m.edit} onClick={() => setPublishOpen(true)}>Vidéo finale</button>

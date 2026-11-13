@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { Check, CircleHelp, Crop, Film, FolderOpen, Maximize, Pause, Pencil, Play, Scissors, Send, Settings, Sparkles, Subtitles, Trash2, Upload, Video, Volume2, X } from "lucide-react";
 import { VIDEO_ACCEPT } from "@/components/social/studio/video-import";
+import { ANIMATIONS } from "@/domain/social/montage/registry";
 import { montage, type MontageSummary } from "@/lib/social/montage-api";
 import "./studio-v2.css";
 
@@ -144,6 +145,39 @@ export function QuickAnimations({ onAdd, disabled, used }: { onAdd: (name: strin
         ))}
       </div>
     </section>
+  );
+}
+
+/**
+ * Bibliothèque simple du nouveau studio (demande de Cédric, 2026-11-13 : « extrêmement simple ») : une recherche et une
+ * grille. Un clic pose l'animation à l'endroit de la lecture, avec le texte tiré de ce qui est dit ; rien d'autre à
+ * régler ici. Les animations rapides d'abord, puis toutes les autres de la bibliothèque.
+ */
+export function SimpleAnimationPicker({ onPick, disabled, used }: { onPick: (name: string) => void; disabled: boolean; used: Set<string> }) {
+  const [q, setQ] = useState("");
+  const quick = new Set(QUICK_ANIMATIONS.map((a) => a.name));
+  const all = [
+    ...QUICK_ANIMATIONS.map((a) => ({ name: a.name, label: a.label, description: ANIMATIONS[a.name]?.description ?? "" })),
+    ...Object.entries(ANIMATIONS).filter(([name]) => !quick.has(name)).map(([name, def]) => ({ name, label: def.label, description: def.description })),
+  ];
+  const fold = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const words = fold(q).split(/\s+/).filter(Boolean);
+  const shown = all.filter((a) => words.every((w) => fold(`${a.label} ${a.description}`).includes(w)));
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-[#AAB4C3]">Place la lecture où tu veux l’animation, puis clique sur une carte. Le texte vient de ce que tu dis.</p>
+      <input type="search" aria-label="Rechercher une animation" placeholder="Rechercher : titre, chiffre, liste, logo…" value={q} onChange={(e) => setQ(e.target.value)} className="sv2-input w-full" />
+      <ul aria-label="Animations" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {shown.map((a) => (
+          <li key={a.name}>
+            <button type="button" disabled={disabled} onClick={() => onPick(a.name)} className={`sv2-pick${used.has(a.name) ? " sv2-used" : ""}`} title={a.description}>
+              <span className="block font-semibold">{a.label}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {!shown.length ? <p className="text-sm text-[#AAB4C3]">Aucune animation ne correspond.</p> : null}
+    </div>
   );
 }
 
