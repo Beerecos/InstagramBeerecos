@@ -25,7 +25,7 @@ test("nouveau studio : trois onglets, animation en 1 clic, coupe au curseur, Pub
   const studio = page.getByTestId("studio-v2");
   await expect(studio.getByRole("navigation", { name: "Studio" }).getByRole("button", { name: "Créer une vidéo" })).toBeVisible();
   await expect(studio.getByRole("button", { name: "Importer une vidéo" })).toBeVisible();
-  await expect(studio.getByRole("button", { name: /Conseils réseau/ })).toBeVisible();
+  await expect(studio.getByRole("button", { name: /^Conseils réseau/ })).toBeVisible();
   // Uniquement trois onglets.
   await expect(studio.getByRole("tab")).toHaveText([/Cadrage/, /Coupe/, /Animation/]);
   await expect(studio.getByRole("tab", { name: "Animation" })).toHaveAttribute("aria-selected", "true");
@@ -147,4 +147,26 @@ test("renommer la vidéo depuis le studio : le titre change, la vidéo et le mon
   await studio.getByRole("textbox", { name: "Titre de la vidéo" }).press("Enter");
   await expect(studio.getByRole("heading", { name: "Une recommandation, ça vaut combien ?" })).toBeVisible();
   expect(calls.filter((c) => c.action === "rename")).toEqual([expect.objectContaining({ id: "m9", title: "Une recommandation, ça vaut combien ?" })]);
+});
+
+test("mes projets : mettre un réel à la corbeille depuis le studio, avec confirmation", async ({ page }) => {
+  const base = { status: "ready", durationMs: DURATION, keptMs: DURATION, workspaceId: null, createdAt: "t", updatedAt: "v1", renderStatus: null, sentToReels: false, finalVideoUrl: null };
+  const calls = await mockBee(page, {
+    list: () => ({ montages: [{ id: "m9", title: "Conseils réseau", ...base, updatedAt: new Date().toISOString() }, { id: "m8", title: "Ancien essai", ...base, updatedAt: new Date(Date.now() - 86_400_000).toISOString() }] }),
+    get: () => ({ montage: { id: "m9", title: "Conseils réseau", ...base, aiSource: null, edit: initialEdit("prise.mp4", DURATION), captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: null }),
+    archive: () => ({ archivedAt: "2026-11-13T08:00:00Z" }),
+    "save-edit": () => ({}),
+  });
+  await page.addInitScript(() => localStorage.setItem("ibr.studio.vue", "studio"));
+  await page.goto("/reels/m9");
+  const side = page.getByTestId("studio-v2").getByRole("complementary", { name: "Nouvelle vidéo et projets" });
+  await side.getByRole("button", { name: "Mettre « Ancien essai » à la corbeille" }).click();
+  // Rien ne part avant la confirmation ; « Annuler » revient en arrière.
+  expect(calls.some((c) => c.action === "archive")).toBe(false);
+  await side.getByRole("button", { name: "Annuler" }).click();
+  await side.getByRole("button", { name: "Mettre « Ancien essai » à la corbeille" }).click();
+  await side.getByRole("button", { name: "Corbeille", exact: true }).click();
+  await expect(side.getByText("« Ancien essai » est dans la corbeille")).toBeVisible();
+  await expect(side.getByRole("button", { name: /Ancien essai/ })).toHaveCount(0);
+  expect(calls.filter((c) => c.action === "archive")).toEqual([expect.objectContaining({ id: "m8" })]);
 });
