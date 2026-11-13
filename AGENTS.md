@@ -12,3 +12,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Règles du dépôt : `CLAUDE.md`. Historique, architecture des deux dépôts et pièges connus :
 `docs/REPRISE-DEVELOPPEUR.md` du dépôt BeeMarketing (`Beerecos/bee-marketing-agent`).
+Journal des changements du Studio : `CHANGELOG.md` (une ligne par PR fusionnée).
