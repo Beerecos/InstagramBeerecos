@@ -11,6 +11,10 @@ Skills métier : `agent/skills/beerecos-*` (liés dans `.claude/skills/`).
 
 La chaîne vidéo historique ci-dessous (motion design, rushs) reste disponible.
 
+**Reprise par un nouveau développeur** : lire d'abord le document de reprise commun aux deux dépôts,
+`docs/REPRISE-DEVELOPPEUR.md` du dépôt BeeMarketing (`Beerecos/bee-marketing-agent`) — architecture, moteur de
+montage partagé avec BeeMarketing, déploiement, historique, pièges connus, points ouverts.
+
 ## Point d'entrée
 Pour toute demande de montage, de Reel, de storyboard, de sous-titres ou de motion :
 charge le skill **`motion-design-reel`**. Il orchestre les autres skills et impose les
