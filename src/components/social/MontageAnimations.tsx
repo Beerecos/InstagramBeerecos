@@ -55,6 +55,11 @@ type Props = {
   activeScene?: Scene;
   onAppendOutro?: () => void;
   onPlaced?: (animation: CustomAnimation) => void;
+  /**
+   * Le formulaire s'ouvre (réglages à compléter) : le nouveau studio l'affiche au lieu de la grille. `timing` = seul
+   * souci, la place (trop près d'une autre animation) : un message suffit, sans formulaire.
+   */
+  onForm?: (reason: { timing: boolean }) => void;
   studioMode?: boolean;
   m: MontageDetail;
   draft: CustomAnimation[];
@@ -68,7 +73,7 @@ type Props = {
   disabled: boolean;
 };
 
-const MontageAnimations = forwardRef<MontageAnimationsHandle, Props>(function MontageAnimations({ m, draft, onDraft, onSave, choices, onChoices, onBusy, playheadMs, onTest, disabled, activeScene, studioMode = false, onPlaced, onAppendOutro }, ref) {
+const MontageAnimations = forwardRef<MontageAnimationsHandle, Props>(function MontageAnimations({ m, draft, onDraft, onSave, choices, onChoices, onBusy, playheadMs, onTest, disabled, activeScene, studioMode = false, onPlaced, onAppendOutro, onForm }, ref) {
   const [advanced, setAdvanced] = useState(false);
   const words = useMemo(() => (m.edit ? keptWords(m.captions, m.edit.ranges) : []), [m.captions, m.edit]);
   const [name, setName] = useState(NAMES[0]);
@@ -94,7 +99,7 @@ const MontageAnimations = forwardRef<MontageAnimationsHandle, Props>(function Mo
     return () => { alive = false; };
   }, []);
   const approved = new Set(listMotions(undefined, kept).filter((x) => x.status === "approved").map((x) => x.id));
-  const toForm = () => { setAdvanced(true); requestAnimationFrame(() => document.getElementById("montage-anim-form")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "nearest" })); };
+  const toForm = (reason = { timing: false }) => { setAdvanced(true); onForm?.(reason); requestAnimationFrame(() => document.getElementById("montage-anim-form")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "nearest" })); };
 
   /** Choisit une animation ; un préréglage (scène BeeMotion, remplacement) peut fixer réglages, début et durée. */
   const pick = (n: string, preset?: { values?: Record<string, string>; anchorMs?: number; lengthMs?: number }) => {
@@ -155,7 +160,7 @@ const MontageAnimations = forwardRef<MontageAnimationsHandle, Props>(function Mo
         setAnchor(null); setError("Déplacement impossible : la carte reste sur sa scène d’origine. " + issues.join(" ")); return;
       }
       setError(toMs - fromMs < 500 ? "Scène trop courte : choisissez un autre début dans le formulaire." : "Complétez ou ajustez les réglages ci-dessous avant d’ajouter cette carte. " + issues.join(" "));
-      toForm();
+      toForm({ timing: toMs - fromMs < 500 || issues.filter(Boolean).every((i) => Boolean(i?.includes("une seule animation à l'écran"))) });
       return;
     }
     onDraft(sorted([...others, next])); if(!advanced)onPlaced?.(next);

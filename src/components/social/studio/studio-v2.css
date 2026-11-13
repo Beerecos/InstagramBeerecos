@@ -144,3 +144,8 @@
 @media (max-width: 640px) { .sv2-son-actions { width: 100%; } .sv2-son-actions .sv2-mini { flex: 1 1 0; justify-content: center; } }
 /* Fenêtres du studio (Sons, Templates, Vidéo finale) : fond opaque, le studio ne transparaît plus entre les lignes. */
 .studio-v2 dialog.studio-library-dialog { background-color: var(--sv2-panel); }
+/* Bibliothèque simple (2026-11-13) : une carte = un clic. */
+.sv2-pick { display: flex; align-items: center; width: 100%; min-height: 56px; padding: 10px 12px; border-radius: 14px; background: var(--sv2-card); border: 1px solid var(--sv2-line); text-align: left; font-size: 14px; color: #fff; transition: all 0.18s; }
+.sv2-pick:hover:not(:disabled) { border-color: var(--sv2-blue); filter: brightness(1.15); }
+.sv2-pick:disabled { opacity: 0.45; cursor: not-allowed; }
+.sv2-pick.sv2-used { border-color: var(--sv2-blue); }

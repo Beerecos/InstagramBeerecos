@@ -37,7 +37,9 @@ export function checkTimeline(custom: CustomAnimation[]): string[] {
     const previous = groups.get(key);
     groups.set(key, previous ? {...previous, fromMs: Math.min(previous.fromMs, c.fromMs), toMs: Math.max(previous.toMs, c.toMs)} : c);
   });
-  const sorted = [...groups.values()].sort((a, b) => a.fromMs - b.fromMs);
+  // Le logo de fin n'est pas à l'écran pendant le montage : il devient la vidéo de fin officielle, jouée APRÈS la
+  // dernière image (2026-11-10). Il ne compte donc pas dans « une seule animation à l'écran à la fois ».
+  const sorted = [...groups.values()].filter((c) => c.name !== "logo-fin").sort((a, b) => a.fromMs - b.fromMs);
   sorted.forEach((c, i) => {
     const next = sorted[i + 1];
     if (next && next.fromMs - c.toMs < MIN_GAP_MS) errors.push(`« ${c.name} » (${sec(c.fromMs)}) et « ${next.name} » (${sec(next.fromMs)}) se suivent de moins d'1 s : une seule animation à l'écran à la fois.`);

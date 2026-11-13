@@ -170,3 +170,51 @@ test("mes projets : mettre un réel à la corbeille depuis le studio, avec confi
   await expect(side.getByRole("button", { name: /Ancien essai/ })).toHaveCount(0);
   expect(calls.filter((c) => c.action === "archive")).toEqual([expect.objectContaining({ id: "m8" })]);
 });
+
+test("bibliothèque simple : une recherche, une grille, un clic pose l'animation à l'endroit de la lecture", async ({ page }, info) => {
+  let version = 1;
+  let edit: ReturnType<typeof initialEdit> = { ...initialEdit("prise.mp4", DURATION), custom: [{ name: "onglet", fromMs: 300, toMs: 2500, props: { texte: "RÉSEAU", variante: "blanc" } }] };
+  await mockBee(page, {
+    list: () => ({ montages: [] }),
+    get: () => ({ montage: { id: "m9", title: "Conseils réseau", status: "ready", durationMs: DURATION, keptMs: DURATION, workspaceId: null, createdAt: "t", updatedAt: `v${version}`, renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit, captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: null }),
+    "save-edit": (body) => { edit = body.edit as typeof edit; version++; return {}; },
+  });
+  await page.addInitScript(() => localStorage.setItem("ibr.studio.vue", "studio"));
+  await page.goto("/reels/m9");
+  const studio = page.getByTestId("studio-v2");
+  await studio.getByRole("tab", { name: "Animation" }).click();
+  await studio.getByRole("button", { name: "Sélectionner la séquence 3" }).click();
+  await studio.getByRole("button", { name: "Plus d’animations…" }).click();
+  const dialog = page.getByRole("dialog", { name: "Ajouter une animation" });
+  // Rien d'autre qu'une recherche et une grille : pas d'onglets, d'étapes ni de scènes.
+  await expect(dialog.getByRole("searchbox", { name: "Rechercher une animation" })).toBeVisible();
+  for (const hidden of ["Créez vos animations sur cette vidéo", "Mes effets", "2. Placer les cartes sur les scènes"]) await expect(dialog.getByText(hidden)).toBeHidden();
+  await dialog.getByRole("searchbox").fill("barr");
+  await expect(dialog.getByRole("button", { name: /^Idée barrée/ })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: /^Chiffre clé/ })).toHaveCount(0);
+  await dialog.getByRole("searchbox").fill("");
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/bibliotheque-simple-${info.project.name}.png` });
+  await dialog.getByRole("button", { name: /^Mot impact/ }).click();
+  await expect(dialog).toBeHidden();
+  await expect(studio.getByRole("region", { name: "Animations de la vidéo" }).getByRole("button", { name: /^Mot impact/ })).toBeVisible();
+});
+
+test("vidéo sans animation : le titre et le logo de fin posés d'office n'empêchent pas d'ajouter une animation près de la fin", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "disposition bureau");
+  let version = 1;
+  let edit: ReturnType<typeof initialEdit> = { ...initialEdit("prise.mp4", DURATION), custom: [] };
+  await mockBee(page, {
+    list: () => ({ montages: [] }),
+    get: () => ({ montage: { id: "m9", title: "Conseils réseau", status: "ready", durationMs: DURATION, keptMs: DURATION, workspaceId: null, createdAt: "t", updatedAt: `v${version}`, renderStatus: null, sentToReels: false, finalVideoUrl: null, aiSource: null, edit, captions: WORDS, canUndo: false, canRedo: false, previewApproved: false, error: null, renderError: null, reel: null, brief: null, storyboard: null }, videoUrl: null }),
+    "save-edit": (body) => { edit = body.edit as typeof edit; version++; return {}; },
+  });
+  await page.addInitScript(() => localStorage.setItem("ibr.studio.vue", "studio"));
+  await page.goto("/reels/m9");
+  const studio = page.getByTestId("studio-v2");
+  await studio.getByRole("tab", { name: "Animation" }).click();
+  await expect.poll(() => edit.custom.map((c) => c.name)).toEqual(["onglet", "logo-fin"]);
+  await studio.getByRole("button", { name: "Sélectionner la séquence 3" }).click();
+  await studio.getByRole("region", { name: "Animations rapides" }).getByRole("button", { name: "Mot impact" }).click();
+  await expect(studio.getByRole("region", { name: "Animations de la vidéo" }).getByRole("button", { name: /^Mot impact/ })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});
