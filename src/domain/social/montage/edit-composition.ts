@@ -6,6 +6,7 @@ import { studioSequences } from "./studio-sequences";
 import { captionPages, layout, parseEdit, remapCaptions, takeIndexAt, takeStrip, toOutputMs, totalMs, type CaptionWord, type Edit } from "./edit";
 import { ERROR_CSS, renderAnimation, type AnimationDef, type SfxKind } from "./animations";
 import { SFX_FILES } from "./fx";
+import { fadeLane, placeSons } from "./sons";
 import { ANIMATIONS } from "./registry";
 import { isBehind, usedMattes } from "./matte";
 import { motionRegistryKey, renderRegistry } from "./beemotion";
@@ -370,6 +371,13 @@ export function buildEditComposition(input: unknown, rawWords: CaptionWord[], op
     }
     const dur = snd.durationMs !== undefined ? ` data-duration="${s(snd.durationMs)}"` : "";
     clips.push(`      <audio id="sfx-${i}" src="${media(snd.file)}" data-start="${s(F(snd.atMs))}"${dur} data-volume="${snd.volume}" data-track-index="3"></audio>`);
+  });
+
+  // Effets sonores SFX Kit (piste 12) : mêmes positions, rognages, volumes et fondus dans l'aperçu et le rendu.
+  // Atténuation sous la voix : les mêmes fenêtres de parole que la musique (speechWindows).
+  placeSons(edit, speech, { segments, endMs: end }).placed.forEach((p) => {
+    const lane = fadeLane(p);
+    clips.push(`      <audio id="son-${p.occ.id}" src="${escapeHtml(base)}/${p.file}" data-start="${s(p.startMs)}" data-duration="${s(p.durationMs)}"${p.mediaStartMs ? ` data-media-start="${s(p.mediaStartMs)}"` : ""} data-volume="${p.volume}"${lane ? ` data-automation='${lane}'` : ""} data-track-index="12"></audio>`);
   });
 
   // Vidéo de fin officielle (2026-11-10), en remplacement de la page blanche : pour tout Reel qui se termine par le logo

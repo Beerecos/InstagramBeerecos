@@ -148,6 +148,44 @@ export const MotionStyleSchema = z.strictObject({
 });
 export type MotionStyle = z.infer<typeof MotionStyleSchema>;
 
+/**
+ * Effets sonores SFX Kit (Wyzowl, CC0, 2026-11-12) : une entrée par occurrence (plusieurs occurrences d'un même son
+ * possibles). Le placement est calculé à chaque lecture (sons.ts), avec la règle du kit : début du son = instant visé −
+ * sync.at. L'ancrage dit à quoi le son est relié :
+ * - « libre » : début du FICHIER posé à un instant de la prise (ms, temps source : il suit le passage filmé) ;
+ * - « animation » : relié à une animation (son début ou sa fin) ; il la suit quand elle bouge, se tait si elle disparaît ;
+ * - « repere » : instant de la prise visé par la génération automatique (zoom, transition, mise en page) ;
+ * - « logo » : apparition de la vidéo de fin officielle.
+ * `decalageMs` : réglage de l'utilisateur, ajouté à l'instant visé. `dureeMs` : durée utile maximale (coupe la fin).
+ * Origine « auto » : `cle` identifie l'événement (pas de doublon à la relance) ; `modifie` liste ce que l'utilisateur
+ * a changé à la main et que la relance doit garder.
+ */
+export const SON_LIB = "sfx-kit@1.0.0";
+const occurrenceId = z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/);
+export const SonAncreSchema = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("libre"), debutMs: ms }),
+  z.strictObject({ type: z.literal("animation"), animId: z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/), point: z.enum(["debut", "fin"]).default("debut") }),
+  z.strictObject({ type: z.literal("repere"), atMs: ms, nature: z.enum(["zoom", "transition", "mise-en-page"]) }),
+  z.strictObject({ type: z.literal("logo") }),
+]);
+export const SonSchema = z.strictObject({
+  id: occurrenceId,
+  son: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "identifiant de son SFX Kit attendu"),
+  lib: z.literal(SON_LIB).default(SON_LIB),
+  ancre: SonAncreSchema,
+  decalageMs: z.number().int().min(-3000).max(3000).default(0),
+  volume: z.number().min(0).max(1.5).default(0.7),
+  muet: z.boolean().default(false),
+  dureeMs: z.number().int().min(50).max(30_000).optional(),
+  fonduEntreeMs: z.number().int().min(0).max(2000).optional(),
+  fonduSortieMs: z.number().int().min(0).max(3000).optional(),
+  origine: z.enum(["manuel", "auto"]).default("manuel"),
+  cle: z.string().regex(/^[a-zA-Z0-9:_-]{1,140}$/).optional(),
+  modifie: z.array(z.enum(["son", "volume", "muet", "decalage"])).max(4).optional(),
+});
+export type Son = z.infer<typeof SonSchema>;
+export type SonAncre = z.infer<typeof SonAncreSchema>;
+
 const videoFile = () => fileName(/\.(mp4|mov|m4v|webm)$/i, "vidéo (.mp4, .mov, .m4v, .webm)");
 
 /** Nombre de prises et durée cumulée maximale d'un montage (décision du 2026-10-22). */
@@ -216,6 +254,12 @@ export const EditSchema = z.strictObject({
   zooms: z.array(ZoomSchema).max(40, "40 zooms au plus").optional(),
   /** Vidéo en carte ou en mosaïque (absent = plein cadre). */
   miseEnPage: z.array(LayoutSchema).max(20, "20 mises en page au plus").optional(),
+  /** Effets sonores SFX Kit (absent = aucun : ancien montage, piste d'effets vide). */
+  sons: z.array(SonSchema).max(200, "200 effets sonores au plus").refine((l) => new Set(l.map((x) => x.id)).size === l.length, "chaque effet sonore a un identifiant unique").optional(),
+  /** Réglages des effets : « Son automatique » (désactivé par défaut) et volume global des effets. */
+  sonsReglages: z.strictObject({ auto: z.boolean().default(false), volume: z.number().min(0).max(1.5).default(1) }).optional(),
+  /** Événements dont l'utilisateur a supprimé le son automatique : la relance ne les recrée pas. */
+  sonsAutoIgnores: z.array(z.string().regex(/^[a-zA-Z0-9:_-]{1,140}$/)).max(400).optional(),
   /** Optional official BeeRecos logo, kept separate from timed animation cards. */
   logo: z.strictObject({
     width: z.number().int().min(150).max(360).default(220),

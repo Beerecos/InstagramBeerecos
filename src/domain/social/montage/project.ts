@@ -6,6 +6,7 @@ import { END_LOGO, END_VIDEO, STUDIO_LOGO } from "./brand";
 import { usedMattes } from "./matte";
 import { ANIMATIONS } from "./registry";
 import { SFX_FILES } from "./fx";
+import { usedSfxFiles } from "./sons";
 
 /**
  * Projet Hyperframes complet d'un montage (index.html + prises + polices + GSAP + logo officiel), assemblé en ZIP pour
@@ -60,9 +61,12 @@ export async function buildMontageProject(edit: Edit, captions: CaptionWord[], v
     entries.push({ path: file, data });
   }
   // Accents sonores des animations (Studio, 2026-11-11) : ajoutés seulement quand le montage les active.
-  for (const path of [...MONTAGE_ASSETS, ...(edit.effetsSonores?.actif ? Object.values(SFX_FILES) : [])]) {
-    const data = await loadAsset(path);
-    if (!data?.length) throw new Error(`Ressource de rendu introuvable : ${path}`);
+  // Effets SFX Kit : seulement les fichiers qui sonnent (un effet muet n'est pas embarqué).
+  const sfx = new Set(usedSfxFiles(edit));
+  for (const path of [...MONTAGE_ASSETS, ...(edit.effetsSonores?.actif ? Object.values(SFX_FILES) : []), ...sfx]) {
+    let data: Uint8Array | undefined;
+    try { data = await loadAsset(path); } catch (e) { if (!sfx.has(path)) throw e; }
+    if (!data?.length) throw new Error(sfx.has(path) ? `Effet sonore introuvable : ${path.split("/").pop()?.replace(/\.flac$/, "")} (remplacez-le ou supprimez-le)` : `Ressource de rendu introuvable : ${path}`);
     entries.push({ path, data });
   }
   if (entries.reduce((n, e) => n + e.data.byteLength, 0) > MAX_PROJECT_BYTES) throw new Error("Projet trop lourd pour le rendu en ligne (200 Mo au plus avec les médias) : allégez la prise ou retirez des médias.");

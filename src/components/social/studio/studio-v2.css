@@ -128,3 +128,19 @@
 .sv2-icon-btn { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 12px; background: var(--sv2-card); border: 1px solid var(--sv2-line); color: #fff; }
 .sv2-icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .sv2-icon-btn:hover:not(:disabled) { filter: brightness(1.2); }
+/* Effets sonores SFX Kit (2026-11-12) : panneau « Sons » et sons de la vidéo. */
+.sv2-input { min-height: 44px; padding: 0 12px; border-radius: 12px; background: var(--sv2-card); border: 1px solid var(--sv2-line); color: #fff; font-size: 16px; }
+.sv2-input::placeholder { color: #8090a6; }
+.sv2-chip { flex: none; min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--sv2-line); background: var(--sv2-card); color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.sv2-chip[aria-pressed="true"] { background: var(--sv2-blue); border-color: var(--sv2-blue); }
+.sv2-son { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px; border-radius: 14px; background: var(--sv2-card); border: 1px solid var(--sv2-line); }
+.sv2-son .sv2-icon-btn[aria-pressed="true"] { background: var(--sv2-blue); border-color: var(--sv2-blue); }
+.sv2-mini { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 0 10px; border-radius: 10px; background: rgba(40, 81, 255, 0.18); border: 1px solid rgba(40, 81, 255, 0.55); color: #fff; font-size: 13px; font-weight: 600; }
+.sv2-mini:disabled { opacity: 0.4; cursor: not-allowed; }
+.sv2-mini:hover:not(:disabled) { background: rgba(40, 81, 255, 0.35); }
+.sv2-son-occ { padding: 8px 10px; border-radius: 14px; background: var(--sv2-card); border: 1px solid var(--sv2-line); }
+.sv2-son-occ-on { border-color: var(--sv2-blue); box-shadow: 0 0 0 1px var(--sv2-blue) inset; }
+.sv2-son-actions { display: flex; gap: 8px; margin-left: auto; }
+@media (max-width: 640px) { .sv2-son-actions { width: 100%; } .sv2-son-actions .sv2-mini { flex: 1 1 0; justify-content: center; } }
+/* Fenêtres du studio (Sons, Templates, Vidéo finale) : fond opaque, le studio ne transparaît plus entre les lignes. */
+.studio-v2 dialog.studio-library-dialog { background-color: var(--sv2-panel); }
