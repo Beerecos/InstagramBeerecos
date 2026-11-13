@@ -869,7 +869,7 @@ function Editor({ id, onBack, onOpenSource, onSwitch }: { id: string; onBack: ()
         </div> : null}
       </StudioLibraryDialog>
       <div className="sv2-grid">
-        <StudioSidebar currentId={m.id} onRecord={() => { if (canLeave()) onSwitch?.("__tournage"); }} onImport={(list) => { const r = pickVideos(list); if (!r) return; if ("error" in r) { setError(r.error); return; } setImportFiles(r.files); }} onOpen={(target) => { if (canLeave()) onSwitch?.(target); }} onAll={() => { if (canLeave()) onBack(); }} />
+        <StudioSidebar currentId={m.id} onRecord={() => { if (canLeave()) onSwitch?.("__tournage"); }} onImport={(list) => { const r = pickVideos(list); if (!r) return; if ("error" in r) { setError(r.error); return; } setImportFiles(r.files); }} onOpen={(target) => { if (canLeave()) onSwitch?.(target); }} onAll={() => { if (canLeave()) onBack(); }} onRemovedCurrent={() => onBack()} />
         <section ref={preview} aria-label="Moniteur du studio" className="sv2-panel sv2-stage">
           <StudioTitle title={m.title} disabledReason={unsaved || sync.current?.busy || saving ? "Attends la fin de l’enregistrement pour renommer." : null}
             onRename={async (title) => { await montage.rename(m.id, title); await load(); }} />

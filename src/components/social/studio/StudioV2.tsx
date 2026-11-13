@@ -4,8 +4,9 @@
  * (en-tête, colonne gauche, vidéo, panneau Cadrage / Coupe / Animation, timeline, Publier). Composants de
  * présentation seulement : toute la logique reste dans MontageStudio (lecteur, coupes, animations, publication).
  */
+import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
-import { Check, CircleHelp, Crop, Film, FolderOpen, Maximize, Pause, Pencil, Play, Scissors, Send, Settings, Sparkles, Subtitles, Upload, Video, Volume2, X } from "lucide-react";
+import { Check, CircleHelp, Crop, Film, FolderOpen, Maximize, Pause, Pencil, Play, Scissors, Send, Settings, Sparkles, Subtitles, Trash2, Upload, Video, Volume2, X } from "lucide-react";
 import { VIDEO_ACCEPT } from "@/components/social/studio/video-import";
 import { montage, type MontageSummary } from "@/lib/social/montage-api";
 import "./studio-v2.css";
@@ -45,8 +46,24 @@ export function HeaderMenu({ label, icon, children }: { label: string; icon: "he
 }
 
 /** « Importer une vidéo » ouvre directement le choix des fichiers (mobile : pellicule ou fichiers ; ordinateur : explorateur). */
-export function StudioSidebar({ currentId, onRecord, onImport, onOpen, onAll }: { currentId: string; onRecord: () => void; onImport: (files: FileList | null) => void; onOpen: (id: string) => void; onAll: () => void }) {
+export function StudioSidebar({ currentId, onRecord, onImport, onOpen, onAll, onRemovedCurrent }: { currentId: string; onRecord: () => void; onImport: (files: FileList | null) => void; onOpen: (id: string) => void; onAll: () => void; onRemovedCurrent?: () => void }) {
   const [list, setList] = useState<MontageSummary[] | null>(null);
+  // Corbeille (récupérable) : un clic sur la poubelle demande confirmation sur la ligne même.
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ tone: "ok" | "ko"; text: string } | null>(null);
+  const remove = async (p: MontageSummary) => {
+    setBusy(true); setMessage(null);
+    try {
+      await montage.archive(p.id);
+      setList((l) => (l ?? []).filter((x) => x.id !== p.id));
+      setConfirm(null);
+      setMessage({ tone: "ok", text: `« ${p.title} » est dans la corbeille : rien n’est effacé, tu peux le restaurer.` });
+      if (p.id === currentId) onRemovedCurrent?.();
+    } catch (e) {
+      setMessage({ tone: "ko", text: e instanceof Error ? e.message : "Mise à la corbeille impossible." });
+    } finally { setBusy(false); }
+  };
   useEffect(() => { montage.list().then((r) => setList(r.montages)).catch(() => setList([])); }, []);
   const projects = [...(list ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 6);
   // « Aujourd'hui » / « Hier » : l'heure est lue une fois, à l'ouverture (pas pendant le rendu).
@@ -68,14 +85,19 @@ export function StudioSidebar({ currentId, onRecord, onImport, onOpen, onAll }: 
       {list && !projects.length ? <p className="mt-2 text-sm text-[#AAB4C3]">Aucun projet pour l’instant.</p> : null}
       <ul className="mt-2 space-y-2">
         {projects.map((p) => (
-          <li key={p.id}>
-            <button type="button" aria-current={p.id === currentId ? "true" : undefined} className="sv2-project" onClick={() => { if (p.id !== currentId) onOpen(p.id); }}>
+          <li key={p.id} className="flex items-center gap-2">
+            <button type="button" aria-current={p.id === currentId ? "true" : undefined} className="sv2-project min-w-0 flex-1" onClick={() => { if (p.id !== currentId) onOpen(p.id); }}>
               <span className="sv2-thumb"><Film aria-hidden size={18} /></span>
               <span className="min-w-0 flex-1 text-left"><span className="block truncate font-semibold">{p.title}</span><span className="block text-xs text-[#AAB4C3]">{p.keptMs ? `${clock(p.keptMs)} • ` : ""}{day(p.updatedAt)}</span></span>
             </button>
+            {confirm === p.id ? <span className="flex flex-col gap-1">
+              <button type="button" className="sv2-mini justify-center bg-red-600/80" disabled={busy} onClick={() => { void remove(p); }}>Corbeille</button>
+              <button type="button" className="sv2-mini justify-center" disabled={busy} onClick={() => setConfirm(null)}>Annuler</button>
+            </span> : <button type="button" className="sv2-icon-btn" aria-label={`Mettre « ${p.title} » à la corbeille`} title={p.renderStatus === "rendering" ? "Vidéo finale en cours de création : attends la fin" : "Mettre à la corbeille (récupérable)"} disabled={busy || p.renderStatus === "rendering"} onClick={() => { setMessage(null); setConfirm(p.id); }}><Trash2 aria-hidden size={16} /></button>}
           </li>
         ))}
       </ul>
+      {message ? <p role={message.tone === "ko" ? "alert" : "status"} className={`mt-2 text-xs ${message.tone === "ko" ? "text-red-300" : "text-[#AAB4C3]"}`}>{message.text} {message.tone === "ok" ? <Link href="/reels" className="underline">Corbeille des projets</Link> : null}</p> : null}
     </aside>
   );
 }
