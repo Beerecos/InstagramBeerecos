@@ -6,6 +6,7 @@ Règle : chaque PR fusionnée ajoute sa ligne en haut, à la date de fusion, ave
 
 ## 2026-11-13
 
+- Docs : renvoi vers le document de reprise développeur et CHANGELOG.md du Studio (#41)
 - Studio : bibliothèque d'animations très simple, et clic sans effet près de la fin corrigé (#40)
 - Studio : mettre un réel à la corbeille depuis « Mes projets » (#39)
 - Studio : effets sonores SFX Kit (Wyzowl) pour les réels filmés (#38)
